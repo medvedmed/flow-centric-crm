@@ -13,16 +13,15 @@ import {
 } from "@/components/ui/sidebar";
 import { 
   LayoutDashboard, 
-  Contact, 
+  Calendar, 
   Users, 
-  Database,
-  DatabaseBackup,
-  Calendar,
-  Mail,
+  Scissors,
+  Package,
+  UserCheck,
   FileText,
   Settings,
   HelpCircle,
-  Cog
+  Sparkles
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -33,34 +32,29 @@ const mainMenuItems = [
     icon: LayoutDashboard,
   },
   {
-    title: "Contacts",
-    url: "/contacts",
-    icon: Contact,
-  },
-  {
-    title: "Leads", 
-    url: "/leads",
-    icon: Users,
-  },
-  {
-    title: "Deals",
-    url: "/deals", 
-    icon: Database,
-  },
-  {
-    title: "Companies",
-    url: "/companies",
-    icon: DatabaseBackup,
-  },
-  {
-    title: "Tasks",
-    url: "/tasks",
+    title: "Appointments",
+    url: "/appointments",
     icon: Calendar,
   },
   {
-    title: "Email",
-    url: "/email",
-    icon: Mail,
+    title: "Clients", 
+    url: "/clients",
+    icon: Users,
+  },
+  {
+    title: "Services",
+    url: "/services", 
+    icon: Scissors,
+  },
+  {
+    title: "Staff",
+    url: "/staff",
+    icon: UserCheck,
+  },
+  {
+    title: "Inventory",
+    url: "/inventory",
+    icon: Package,
   },
   {
     title: "Reports",
@@ -70,11 +64,6 @@ const mainMenuItems = [
 ];
 
 const adminMenuItems = [
-  {
-    title: "User Management",
-    url: "/users",
-    icon: Users,
-  },
   {
     title: "Settings",
     url: "/settings",
@@ -94,14 +83,14 @@ export function AppSidebar() {
     <Sidebar className="border-r bg-white/95 backdrop-blur-sm">
       <SidebarHeader className="border-b p-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-            <Cog className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center">
+            <Sparkles className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Aura CRM
+            <h1 className="text-xl font-bold bg-gradient-to-r from-teal-500 to-cyan-600 bg-clip-text text-transparent">
+              Aura Platform
             </h1>
-            <p className="text-sm text-muted-foreground">Professional Edition</p>
+            <p className="text-sm text-muted-foreground">Salon Management</p>
           </div>
         </div>
       </SidebarHeader>
@@ -109,7 +98,7 @@ export function AppSidebar() {
       <SidebarContent className="p-4">
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Main Menu
+            Salon Management
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -118,7 +107,7 @@ export function AppSidebar() {
                   <SidebarMenuButton 
                     asChild 
                     isActive={location.pathname === item.url}
-                    className="hover:bg-blue-50 hover:text-blue-700 data-[state=open]:bg-blue-50 data-[state=open]:text-blue-700"
+                    className="hover:bg-teal-50 hover:text-teal-700 data-[state=open]:bg-teal-50 data-[state=open]:text-teal-700"
                   >
                     <Link to={item.url} className="flex items-center gap-3">
                       <item.icon className="w-5 h-5" />
@@ -142,7 +131,7 @@ export function AppSidebar() {
                   <SidebarMenuButton 
                     asChild 
                     isActive={location.pathname === item.url}
-                    className="hover:bg-blue-50 hover:text-blue-700 data-[state=open]:bg-blue-50 data-[state=open]:text-blue-700"
+                    className="hover:bg-teal-50 hover:text-teal-700 data-[state=open]:bg-teal-50 data-[state=open]:text-teal-700"
                   >
                     <Link to={item.url} className="flex items-center gap-3">
                       <item.icon className="w-5 h-5" />
@@ -157,13 +146,13 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t p-4">
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-            <span className="text-white font-semibold text-sm">JD</span>
+        <div className="flex items-center gap-3 p-2 rounded-lg bg-gradient-to-r from-teal-50 to-cyan-50">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center">
+            <span className="text-white font-semibold text-sm">SA</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">John Doe</p>
-            <p className="text-xs text-muted-foreground truncate">Sales Manager</p>
+            <p className="text-sm font-medium truncate">Salon Admin</p>
+            <p className="text-xs text-muted-foreground truncate">Manager</p>
           </div>
         </div>
       </SidebarFooter>

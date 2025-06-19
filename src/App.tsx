@@ -8,14 +8,12 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import Dashboard from "./pages/Dashboard";
-import Contacts from "./pages/Contacts";
-import Leads from "./pages/Leads";
-import Deals from "./pages/Deals";
-import Companies from "./pages/Companies";
-import Tasks from "./pages/Tasks";
-import Email from "./pages/Email";
+import Appointments from "./pages/Appointments";
+import Clients from "./pages/Clients";
+import Services from "./pages/Services";
+import Staff from "./pages/Staff";
+import Inventory from "./pages/Inventory";
 import Reports from "./pages/Reports";
-import UserManagement from "./pages/UserManagement";
 import Settings from "./pages/Settings";
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
@@ -29,7 +27,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <SidebarProvider>
-          <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-blue-50">
+          <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-teal-50">
             <AppSidebar />
             <main className="flex-1 flex flex-col">
               <div className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-40">
@@ -41,14 +39,12 @@ const App = () => (
               <div className="flex-1 p-6">
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
-                  <Route path="/contacts" element={<Contacts />} />
-                  <Route path="/leads" element={<Leads />} />
-                  <Route path="/deals" element={<Deals />} />
-                  <Route path="/companies" element={<Companies />} />
-                  <Route path="/tasks" element={<Tasks />} />
-                  <Route path="/email" element={<Email />} />
+                  <Route path="/appointments" element={<Appointments />} />
+                  <Route path="/clients" element={<Clients />} />
+                  <Route path="/services" element={<Services />} />
+                  <Route path="/staff" element={<Staff />} />
+                  <Route path="/inventory" element={<Inventory />} />
                   <Route path="/reports" element={<Reports />} />
-                  <Route path="/users" element={<UserManagement />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/help" element={<Help />} />
                   <Route path="*" element={<NotFound />} />

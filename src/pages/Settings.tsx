@@ -4,29 +4,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { settings, cog, shield, mail, calendar, bell } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Settings as SettingsIcon, Save, Upload, Bell, Shield, Database, Mail, Palette } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const Settings = () => {
-  const [companySettings, setCompanySettings] = useState({
+  const [companyInfo, setCompanyInfo] = useState({
     name: "Aura CRM Company",
-    industry: "Technology",
-    size: "51-200",
-    website: "https://auracrm.com",
-    address: "123 Business St, San Francisco, CA 94105",
+    address: "123 Business Street",
+    city: "San Francisco",
+    state: "CA",
+    zipCode: "94105",
     phone: "+1 (555) 123-4567",
-    email: "info@auracrm.com"
-  });
-
-  const [systemSettings, setSystemSettings] = useState({
-    timezone: "America/Los_Angeles",
-    dateFormat: "MM/DD/YYYY",
-    currency: "USD",
-    language: "en"
+    email: "contact@auracrm.com",
+    website: "https://auracrm.com",
+    logo: ""
   });
 
   const [emailSettings, setEmailSettings] = useState({
@@ -34,36 +30,23 @@ const Settings = () => {
     smtpPort: "587",
     username: "noreply@auracrm.com",
     password: "",
-    fromName: "Aura CRM",
-    signature: "Best regards,\nThe Aura CRM Team"
+    useSSL: true,
+    senderName: "Aura CRM"
   });
 
-  const [notificationSettings, setNotificationSettings] = useState({
+  const [notifications, setNotifications] = useState({
     emailNotifications: true,
-    taskReminders: true,
+    pushNotifications: false,
+    newLeads: true,
     dealUpdates: true,
-    leadAssignments: true,
-    systemAlerts: false
+    taskReminders: true,
+    systemAlerts: true
   });
 
-  const [securitySettings, setSecuritySettings] = useState({
-    twoFactorAuth: false,
-    sessionTimeout: "30",
-    passwordPolicy: "strong",
-    loginAttempts: "5"
-  });
-
-  const handleSaveCompanySettings = () => {
+  const handleSaveCompanyInfo = () => {
     toast({
       title: "Success",
-      description: "Company settings updated successfully!",
-    });
-  };
-
-  const handleSaveSystemSettings = () => {
-    toast({
-      title: "Success", 
-      description: "System settings updated successfully!",
+      description: "Company information updated successfully!",
     });
   };
 
@@ -74,17 +57,10 @@ const Settings = () => {
     });
   };
 
-  const handleSaveNotificationSettings = () => {
+  const handleSaveNotifications = () => {
     toast({
       title: "Success",
-      description: "Notification settings updated successfully!",
-    });
-  };
-
-  const handleSaveSecuritySettings = () => {
-    toast({
-      title: "Success",
-      description: "Security settings updated successfully!",
+      description: "Notification preferences updated successfully!",
     });
   };
 
@@ -96,43 +72,42 @@ const Settings = () => {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Settings
           </h1>
-          <p className="text-muted-foreground mt-1">Configure your CRM system preferences and integrations.</p>
+          <p className="text-muted-foreground mt-1">Configure your CRM system preferences and settings.</p>
         </div>
       </div>
 
-      {/* Settings Tabs */}
       <Tabs defaultValue="company" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6">
           <TabsTrigger value="company" className="flex items-center gap-2">
-            <cog className="w-4 h-4" />
+            <SettingsIcon className="w-4 h-4" />
             Company
           </TabsTrigger>
-          <TabsTrigger value="system" className="flex items-center gap-2">
-            <settings className="w-4 h-4" />
-            System
-          </TabsTrigger>
           <TabsTrigger value="email" className="flex items-center gap-2">
-            <mail className="w-4 h-4" />
+            <Mail className="w-4 h-4" />
             Email
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <bell className="w-4 h-4" />
+            <Bell className="w-4 h-4" />
             Notifications
           </TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-2">
-            <shield className="w-4 h-4" />
+            <Shield className="w-4 h-4" />
             Security
+          </TabsTrigger>
+          <TabsTrigger value="data" className="flex items-center gap-2">
+            <Database className="w-4 h-4" />
+            Data
+          </TabsTrigger>
+          <TabsTrigger value="appearance" className="flex items-center gap-2">
+            <Palette className="w-4 h-4" />
+            Appearance
           </TabsTrigger>
         </TabsList>
 
-        {/* Company Settings */}
         <TabsContent value="company" className="space-y-6">
           <Card className="border-0 shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <cog className="w-5 h-5" />
-                Company Profile
-              </CardTitle>
+              <CardTitle>Company Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -140,166 +115,96 @@ const Settings = () => {
                   <Label htmlFor="companyName">Company Name</Label>
                   <Input
                     id="companyName"
-                    value={companySettings.name}
-                    onChange={(e) => setCompanySettings({...companySettings, name: e.target.value})}
+                    value={companyInfo.name}
+                    onChange={(e) => setCompanyInfo({...companyInfo, name: e.target.value})}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="industry">Industry</Label>
-                  <Select value={companySettings.industry} onValueChange={(value) => setCompanySettings({...companySettings, industry: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Technology">Technology</SelectItem>
-                      <SelectItem value="Healthcare">Healthcare</SelectItem>
-                      <SelectItem value="Finance">Finance</SelectItem>
-                      <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                      <SelectItem value="Retail">Retail</SelectItem>
-                      <SelectItem value="Education">Education</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="companySize">Company Size</Label>
-                  <Select value={companySettings.size} onValueChange={(value) => setCompanySettings({...companySettings, size: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1-10">1-10 employees</SelectItem>
-                      <SelectItem value="11-50">11-50 employees</SelectItem>
-                      <SelectItem value="51-200">51-200 employees</SelectItem>
-                      <SelectItem value="201-500">201-500 employees</SelectItem>
-                      <SelectItem value="500+">500+ employees</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="website">Website</Label>
+                  <Label htmlFor="companyPhone">Phone</Label>
                   <Input
-                    id="website"
-                    value={companySettings.website}
-                    onChange={(e) => setCompanySettings({...companySettings, website: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={companySettings.phone}
-                    onChange={(e) => setCompanySettings({...companySettings, phone: e.target.value})}
+                    id="companyPhone"
+                    value={companyInfo.phone}
+                    onChange={(e) => setCompanyInfo({...companyInfo, phone: e.target.value})}
                   />
                 </div>
                 <div>
                   <Label htmlFor="companyEmail">Email</Label>
                   <Input
                     id="companyEmail"
-                    value={companySettings.email}
-                    onChange={(e) => setCompanySettings({...companySettings, email: e.target.value})}
+                    type="email"
+                    value={companyInfo.email}
+                    onChange={(e) => setCompanyInfo({...companyInfo, email: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="companyWebsite">Website</Label>
+                  <Input
+                    id="companyWebsite"
+                    value={companyInfo.website}
+                    onChange={(e) => setCompanyInfo({...companyInfo, website: e.target.value})}
                   />
                 </div>
               </div>
+              
               <div>
-                <Label htmlFor="address">Address</Label>
-                <Textarea
-                  id="address"
-                  value={companySettings.address}
-                  onChange={(e) => setCompanySettings({...companySettings, address: e.target.value})}
-                  rows={3}
+                <Label htmlFor="companyAddress">Address</Label>
+                <Input
+                  id="companyAddress"
+                  value={companyInfo.address}
+                  onChange={(e) => setCompanyInfo({...companyInfo, address: e.target.value})}
                 />
               </div>
-              <Button onClick={handleSaveCompanySettings} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                Save Company Settings
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* System Settings */}
-        <TabsContent value="system" className="space-y-6">
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <settings className="w-5 h-5" />
-                System Preferences
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <Select value={systemSettings.timezone} onValueChange={(value) => setSystemSettings({...systemSettings, timezone: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="America/Los_Angeles">Pacific Time (US)</SelectItem>
-                      <SelectItem value="America/Denver">Mountain Time (US)</SelectItem>
-                      <SelectItem value="America/Chicago">Central Time (US)</SelectItem>
-                      <SelectItem value="America/New_York">Eastern Time (US)</SelectItem>
-                      <SelectItem value="Europe/London">London (GMT)</SelectItem>
-                      <SelectItem value="Europe/Paris">Paris (CET)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="companyCity">City</Label>
+                  <Input
+                    id="companyCity"
+                    value={companyInfo.city}
+                    onChange={(e) => setCompanyInfo({...companyInfo, city: e.target.value})}
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="dateFormat">Date Format</Label>
-                  <Select value={systemSettings.dateFormat} onValueChange={(value) => setSystemSettings({...systemSettings, dateFormat: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-                      <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                      <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="companyState">State</Label>
+                  <Input
+                    id="companyState"
+                    value={companyInfo.state}
+                    onChange={(e) => setCompanyInfo({...companyInfo, state: e.target.value})}
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="currency">Currency</Label>
-                  <Select value={systemSettings.currency} onValueChange={(value) => setSystemSettings({...systemSettings, currency: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USD">USD ($)</SelectItem>
-                      <SelectItem value="EUR">EUR (€)</SelectItem>
-                      <SelectItem value="GBP">GBP (£)</SelectItem>
-                      <SelectItem value="CAD">CAD ($)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="language">Language</Label>
-                  <Select value={systemSettings.language} onValueChange={(value) => setSystemSettings({...systemSettings, language: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="es">Spanish</SelectItem>
-                      <SelectItem value="fr">French</SelectItem>
-                      <SelectItem value="de">German</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="companyZip">ZIP Code</Label>
+                  <Input
+                    id="companyZip"
+                    value={companyInfo.zipCode}
+                    onChange={(e) => setCompanyInfo({...companyInfo, zipCode: e.target.value})}
+                  />
                 </div>
               </div>
-              <Button onClick={handleSaveSystemSettings} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                Save System Settings
+
+              <div>
+                <Label htmlFor="companyLogo">Company Logo</Label>
+                <div className="flex items-center gap-4 mt-2">
+                  <Input type="file" accept="image/*" />
+                  <Button variant="outline">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload
+                  </Button>
+                </div>
+              </div>
+
+              <Button onClick={handleSaveCompanyInfo}>
+                <Save className="w-4 h-4 mr-2" />
+                Save Company Information
               </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Email Settings */}
         <TabsContent value="email" className="space-y-6">
           <Card className="border-0 shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <mail className="w-5 h-5" />
-                Email Configuration
-              </CardTitle>
+              <CardTitle>Email Configuration</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -334,170 +239,298 @@ const Settings = () => {
                     type="password"
                     value={emailSettings.password}
                     onChange={(e) => setEmailSettings({...emailSettings, password: e.target.value})}
-                    placeholder="Enter password"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="fromName">From Name</Label>
-                  <Input
-                    id="fromName"
-                    value={emailSettings.fromName}
-                    onChange={(e) => setEmailSettings({...emailSettings, fromName: e.target.value})}
                   />
                 </div>
               </div>
+
               <div>
-                <Label htmlFor="signature">Email Signature</Label>
-                <Textarea
-                  id="signature"
-                  value={emailSettings.signature}
-                  onChange={(e) => setEmailSettings({...emailSettings, signature: e.target.value})}
-                  rows={4}
+                <Label htmlFor="senderName">Sender Name</Label>
+                <Input
+                  id="senderName"
+                  value={emailSettings.senderName}
+                  onChange={(e) => setEmailSettings({...emailSettings, senderName: e.target.value})}
                 />
               </div>
-              <Button onClick={handleSaveEmailSettings} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="useSSL"
+                  checked={emailSettings.useSSL}
+                  onCheckedChange={(checked) => setEmailSettings({...emailSettings, useSSL: checked})}
+                />
+                <Label htmlFor="useSSL">Use SSL/TLS Encryption</Label>
+              </div>
+
+              <Button onClick={handleSaveEmailSettings}>
+                <Save className="w-4 h-4 mr-2" />
                 Save Email Settings
               </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Notification Settings */}
         <TabsContent value="notifications" className="space-y-6">
           <Card className="border-0 shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <bell className="w-5 h-5" />
-                Notification Preferences
-              </CardTitle>
+              <CardTitle>Notification Preferences</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Email Notifications</h4>
-                    <p className="text-sm text-muted-foreground">Receive email notifications for important events</p>
+                <h3 className="text-lg font-medium">General Notifications</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="emailNotifications"
+                      checked={notifications.emailNotifications}
+                      onCheckedChange={(checked) => setNotifications({...notifications, emailNotifications: checked})}
+                    />
+                    <Label htmlFor="emailNotifications">Email Notifications</Label>
                   </div>
-                  <Switch 
-                    checked={notificationSettings.emailNotifications}
-                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, emailNotifications: checked})}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Task Reminders</h4>
-                    <p className="text-sm text-muted-foreground">Get reminded about upcoming task deadlines</p>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="pushNotifications"
+                      checked={notifications.pushNotifications}
+                      onCheckedChange={(checked) => setNotifications({...notifications, pushNotifications: checked})}
+                    />
+                    <Label htmlFor="pushNotifications">Push Notifications</Label>
                   </div>
-                  <Switch 
-                    checked={notificationSettings.taskReminders}
-                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, taskReminders: checked})}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Deal Updates</h4>
-                    <p className="text-sm text-muted-foreground">Notifications when deals change stages</p>
-                  </div>
-                  <Switch 
-                    checked={notificationSettings.dealUpdates}
-                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, dealUpdates: checked})}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Lead Assignments</h4>
-                    <p className="text-sm text-muted-foreground">Notifications when leads are assigned to you</p>
-                  </div>
-                  <Switch 
-                    checked={notificationSettings.leadAssignments}
-                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, leadAssignments: checked})}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">System Alerts</h4>
-                    <p className="text-sm text-muted-foreground">Technical and system-related notifications</p>
-                  </div>
-                  <Switch 
-                    checked={notificationSettings.systemAlerts}
-                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, systemAlerts: checked})}
-                  />
                 </div>
               </div>
-              <Button onClick={handleSaveNotificationSettings} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+
+              <Separator />
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Activity Notifications</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="newLeads"
+                      checked={notifications.newLeads}
+                      onCheckedChange={(checked) => setNotifications({...notifications, newLeads: checked})}
+                    />
+                    <Label htmlFor="newLeads">New Leads</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="dealUpdates"
+                      checked={notifications.dealUpdates}
+                      onCheckedChange={(checked) => setNotifications({...notifications, dealUpdates: checked})}
+                    />
+                    <Label htmlFor="dealUpdates">Deal Updates</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="taskReminders"
+                      checked={notifications.taskReminders}
+                      onCheckedChange={(checked) => setNotifications({...notifications, taskReminders: checked})}
+                    />
+                    <Label htmlFor="taskReminders">Task Reminders</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="systemAlerts"
+                      checked={notifications.systemAlerts}
+                      onCheckedChange={(checked) => setNotifications({...notifications, systemAlerts: checked})}
+                    />
+                    <Label htmlFor="systemAlerts">System Alerts</Label>
+                  </div>
+                </div>
+              </div>
+
+              <Button onClick={handleSaveNotifications}>
+                <Save className="w-4 h-4 mr-2" />
                 Save Notification Settings
               </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Security Settings */}
         <TabsContent value="security" className="space-y-6">
           <Card className="border-0 shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <shield className="w-5 h-5" />
-                Security & Access Control
-              </CardTitle>
+              <CardTitle>Security Settings</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Two-Factor Authentication</h4>
-                    <p className="text-sm text-muted-foreground">Add an extra layer of security to your account</p>
-                  </div>
-                  <Switch 
-                    checked={securitySettings.twoFactorAuth}
-                    onCheckedChange={(checked) => setSecuritySettings({...securitySettings, twoFactorAuth: checked})}
-                  />
-                </div>
+                <h3 className="text-lg font-medium">Password Policy</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
-                    <Select value={securitySettings.sessionTimeout} onValueChange={(value) => setSecuritySettings({...securitySettings, sessionTimeout: value})}>
+                    <Label htmlFor="minPasswordLength">Minimum Password Length</Label>
+                    <Select defaultValue="8">
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="15">15 minutes</SelectItem>
-                        <SelectItem value="30">30 minutes</SelectItem>
-                        <SelectItem value="60">1 hour</SelectItem>
-                        <SelectItem value="120">2 hours</SelectItem>
-                        <SelectItem value="480">8 hours</SelectItem>
+                        <SelectItem value="6">6 characters</SelectItem>
+                        <SelectItem value="8">8 characters</SelectItem>
+                        <SelectItem value="10">10 characters</SelectItem>
+                        <SelectItem value="12">12 characters</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="passwordPolicy">Password Policy</Label>
-                    <Select value={securitySettings.passwordPolicy} onValueChange={(value) => setSecuritySettings({...securitySettings, passwordPolicy: value})}>
+                    <Label htmlFor="passwordExpiry">Password Expiry</Label>
+                    <Select defaultValue="90">
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="basic">Basic (8+ characters)</SelectItem>
-                        <SelectItem value="strong">Strong (8+ chars, mixed case, numbers)</SelectItem>
-                        <SelectItem value="complex">Complex (12+ chars, mixed case, numbers, symbols)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="loginAttempts">Max Login Attempts</Label>
-                    <Select value={securitySettings.loginAttempts} onValueChange={(value) => setSecuritySettings({...securitySettings, loginAttempts: value})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="3">3 attempts</SelectItem>
-                        <SelectItem value="5">5 attempts</SelectItem>
-                        <SelectItem value="10">10 attempts</SelectItem>
+                        <SelectItem value="30">30 days</SelectItem>
+                        <SelectItem value="60">60 days</SelectItem>
+                        <SelectItem value="90">90 days</SelectItem>
+                        <SelectItem value="never">Never</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
               </div>
-              <Button onClick={handleSaveSecuritySettings} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+
+              <Separator />
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Two-Factor Authentication</h3>
+                <div className="flex items-center space-x-2">
+                  <Switch id="twoFactor" />
+                  <Label htmlFor="twoFactor">Enable Two-Factor Authentication</Label>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Session Management</h3>
+                <div>
+                  <Label htmlFor="sessionTimeout">Session Timeout</Label>
+                  <Select defaultValue="60">
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15 minutes</SelectItem>
+                      <SelectItem value="30">30 minutes</SelectItem>
+                      <SelectItem value="60">1 hour</SelectItem>
+                      <SelectItem value="120">2 hours</SelectItem>
+                      <SelectItem value="480">8 hours</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Button>
+                <Save className="w-4 h-4 mr-2" />
                 Save Security Settings
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="data" className="space-y-6">
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle>Data Management</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Data Export</h3>
+                <p className="text-sm text-muted-foreground">Export your CRM data for backup or migration purposes.</p>
+                <div className="flex gap-2">
+                  <Button variant="outline">Export Contacts</Button>
+                  <Button variant="outline">Export Leads</Button>
+                  <Button variant="outline">Export Deals</Button>
+                  <Button variant="outline">Export All Data</Button>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Data Import</h3>
+                <p className="text-sm text-muted-foreground">Import data from CSV files or other CRM systems.</p>
+                <div className="flex gap-2">
+                  <Button variant="outline">Import Contacts</Button>
+                  <Button variant="outline">Import Leads</Button>
+                  <Button variant="outline">Import Companies</Button>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-red-600">Data Cleanup</h3>
+                <p className="text-sm text-muted-foreground">Clean up duplicate or outdated data.</p>
+                <div className="flex gap-2">
+                  <Button variant="outline">Find Duplicates</Button>
+                  <Button variant="outline">Clean Inactive Records</Button>
+                  <Button variant="destructive">Delete All Test Data</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="appearance" className="space-y-6">
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle>Appearance Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Theme</h3>
+                <Select defaultValue="light">
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">Light</SelectItem>
+                    <SelectItem value="dark">Dark</SelectItem>
+                    <SelectItem value="system">System</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Color Scheme</h3>
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="p-4 border rounded-lg cursor-pointer hover:border-blue-500">
+                    <div className="w-full h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded mb-2"></div>
+                    <p className="text-sm text-center">Blue & Purple</p>
+                  </div>
+                  <div className="p-4 border rounded-lg cursor-pointer hover:border-green-500">
+                    <div className="w-full h-8 bg-gradient-to-r from-green-600 to-teal-600 rounded mb-2"></div>
+                    <p className="text-sm text-center">Green & Teal</p>
+                  </div>
+                  <div className="p-4 border rounded-lg cursor-pointer hover:border-orange-500">
+                    <div className="w-full h-8 bg-gradient-to-r from-orange-600 to-red-600 rounded mb-2"></div>
+                    <p className="text-sm text-center">Orange & Red</p>
+                  </div>
+                  <div className="p-4 border rounded-lg cursor-pointer hover:border-gray-500">
+                    <div className="w-full h-8 bg-gradient-to-r from-gray-600 to-slate-600 rounded mb-2"></div>
+                    <p className="text-sm text-center">Gray & Slate</p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Layout</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Switch id="compactMode" />
+                    <Label htmlFor="compactMode">Compact Mode</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch id="sidebarCollapsed" />
+                    <Label htmlFor="sidebarCollapsed">Start with Sidebar Collapsed</Label>
+                  </div>
+                </div>
+              </div>
+
+              <Button>
+                <Save className="w-4 h-4 mr-2" />
+                Save Appearance Settings
               </Button>
             </CardContent>
           </Card>

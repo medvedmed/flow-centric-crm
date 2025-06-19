@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { help-circle, search, mail, book, users } from "lucide-react";
+import { HelpCircle, Search, Mail, Book, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const faqData = [

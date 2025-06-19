@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { plus, search, filter, database-backup, arrow-up, edit, delete } from "lucide-react";
+import { Plus, Search, Filter, DatabaseBackup, ArrowUp, Edit, Trash } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const companiesData = [

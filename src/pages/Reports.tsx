@@ -1,10 +1,9 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { file, download, filter, calendar } from "lucide-react";
+import { FileText, Download, Filter, Calendar } from "lucide-react";
 
 const salesReportData = [
   { month: 'Jan', revenue: 45000, deals: 12, leads: 120 },
@@ -54,11 +53,11 @@ const Reports = () => {
             </SelectContent>
           </Select>
           <Button variant="outline" className="flex items-center gap-2">
-            <filter className="w-4 h-4" />
+            <Filter className="w-4 h-4" />
             Filters
           </Button>
           <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-            <download className="w-4 h-4 mr-2" />
+            <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
         </div>
@@ -69,7 +68,7 @@ const Reports = () => {
         <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-700">Total Revenue</CardTitle>
-            <file className="h-4 w-4 text-green-600" />
+            <FileText className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-900">$328,000</div>
@@ -80,7 +79,7 @@ const Reports = () => {
         <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-700">Deals Closed</CardTitle>
-            <file className="h-4 w-4 text-blue-600" />
+            <FileText className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-900">92</div>
@@ -91,7 +90,7 @@ const Reports = () => {
         <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-purple-700">Conversion Rate</CardTitle>
-            <file className="h-4 w-4 text-purple-600" />
+            <FileText className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-900">9.2%</div>
@@ -102,7 +101,7 @@ const Reports = () => {
         <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-50 to-orange-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-orange-700">Avg Deal Size</CardTitle>
-            <file className="h-4 w-4 text-orange-600" />
+            <FileText className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-900">$3,565</div>
@@ -241,15 +240,15 @@ const Reports = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Button variant="outline" className="flex items-center gap-2 h-12">
-              <download className="w-4 h-4" />
+              <Download className="w-4 h-4" />
               Export Sales Report
             </Button>
             <Button variant="outline" className="flex items-center gap-2 h-12">
-              <download className="w-4 h-4" />
+              <Download className="w-4 h-4" />
               Export Lead Report
             </Button>
             <Button variant="outline" className="flex items-center gap-2 h-12">
-              <download className="w-4 h-4" />
+              <Download className="w-4 h-4" />
               Export Activity Report
             </Button>
           </div>

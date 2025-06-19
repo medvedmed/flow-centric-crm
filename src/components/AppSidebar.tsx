@@ -12,17 +12,17 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { 
-  layout-dashboard, 
-  contact, 
-  users, 
-  database,
-  database-backup,
-  calendar,
-  mail,
-  file,
-  settings,
-  help-circle,
-  cog
+  LayoutDashboard, 
+  Contact, 
+  Users, 
+  Database,
+  DatabaseBackup,
+  Calendar,
+  Mail,
+  FileText,
+  Settings,
+  HelpCircle,
+  Cog
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -30,42 +30,42 @@ const mainMenuItems = [
   {
     title: "Dashboard",
     url: "/",
-    icon: layout-dashboard,
+    icon: LayoutDashboard,
   },
   {
     title: "Contacts",
     url: "/contacts",
-    icon: contact,
+    icon: Contact,
   },
   {
     title: "Leads", 
     url: "/leads",
-    icon: users,
+    icon: Users,
   },
   {
     title: "Deals",
     url: "/deals", 
-    icon: database,
+    icon: Database,
   },
   {
     title: "Companies",
     url: "/companies",
-    icon: database-backup,
+    icon: DatabaseBackup,
   },
   {
     title: "Tasks",
     url: "/tasks",
-    icon: calendar,
+    icon: Calendar,
   },
   {
     title: "Email",
     url: "/email",
-    icon: mail,
+    icon: Mail,
   },
   {
     title: "Reports",
     url: "/reports",
-    icon: file,
+    icon: FileText,
   },
 ];
 
@@ -73,17 +73,17 @@ const adminMenuItems = [
   {
     title: "User Management",
     url: "/users",
-    icon: users,
+    icon: Users,
   },
   {
     title: "Settings",
     url: "/settings",
-    icon: settings,
+    icon: Settings,
   },
   {
     title: "Help & Support",
     url: "/help",
-    icon: help-circle,
+    icon: HelpCircle,
   },
 ];
 
@@ -95,7 +95,7 @@ export function AppSidebar() {
       <SidebarHeader className="border-b p-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-            <cog className="w-6 h-6 text-white" />
+            <Cog className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">

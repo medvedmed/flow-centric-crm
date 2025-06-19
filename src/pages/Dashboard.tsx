@@ -1,9 +1,8 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { users, database, calendar, mail, arrow-up, arrow-down, plus } from "lucide-react";
+import { Users, Database, Calendar, Mail, ArrowUp, ArrowDown, Plus } from "lucide-react";
 
 const salesData = [
   { month: 'Jan', sales: 45000, leads: 120 },
@@ -41,7 +40,7 @@ const Dashboard = () => {
           <p className="text-muted-foreground mt-1">Welcome back! Here's what's happening with your business.</p>
         </div>
         <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-          <plus className="w-4 h-4 mr-2" />
+          <Plus className="w-4 h-4 mr-2" />
           Quick Add
         </Button>
       </div>
@@ -51,12 +50,12 @@ const Dashboard = () => {
         <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-700">Total Contacts</CardTitle>
-            <users className="h-4 w-4 text-blue-600" />
+            <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-900">2,847</div>
             <p className="text-xs text-blue-600 flex items-center mt-1">
-              <arrow-up className="w-3 h-3 mr-1" />
+              <ArrowUp className="w-3 h-3 mr-1" />
               +12% from last month
             </p>
           </CardContent>
@@ -65,12 +64,12 @@ const Dashboard = () => {
         <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-purple-700">Active Deals</CardTitle>
-            <database className="h-4 w-4 text-purple-600" />
+            <Database className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-900">156</div>
             <p className="text-xs text-purple-600 flex items-center mt-1">
-              <arrow-up className="w-3 h-3 mr-1" />
+              <ArrowUp className="w-3 h-3 mr-1" />
               +8% from last month
             </p>
           </CardContent>
@@ -79,12 +78,12 @@ const Dashboard = () => {
         <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-700">Revenue</CardTitle>
-            <database className="h-4 w-4 text-green-600" />
+            <Database className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-900">$67,000</div>
             <p className="text-xs text-green-600 flex items-center mt-1">
-              <arrow-up className="w-3 h-3 mr-1" />
+              <ArrowUp className="w-3 h-3 mr-1" />
               +15% from last month
             </p>
           </CardContent>
@@ -93,12 +92,12 @@ const Dashboard = () => {
         <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-50 to-orange-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-orange-700">Tasks Due</CardTitle>
-            <calendar className="h-4 w-4 text-orange-600" />
+            <Calendar className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-900">24</div>
             <p className="text-xs text-orange-600 flex items-center mt-1">
-              <arrow-down className="w-3 h-3 mr-1" />
+              <ArrowDown className="w-3 h-3 mr-1" />
               -3% from last week
             </p>
           </CardContent>

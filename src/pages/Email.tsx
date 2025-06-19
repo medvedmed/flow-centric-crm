@@ -6,101 +6,96 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { plus, search, mail, mail-minus, mail-plus, edit, delete } from "lucide-react";
+import { Plus, Search, Filter, Mail, Send, Reply, Archive, Trash, Star } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const emailsData = [
   {
     id: 1,
-    from: "john.doe@company.com",
-    to: "sarah.johnson@email.com",
-    subject: "Follow-up on Enterprise Software Discussion",
-    preview: "Thank you for taking the time to discuss your enterprise software needs...",
-    date: "2024-06-24 10:30 AM",
-    status: "Sent",
-    type: "Outbound",
-    contact: "Sarah Johnson"
+    from: "sarah.johnson@techsolutions.com",
+    subject: "Re: Enterprise Software Proposal",
+    preview: "Thank you for the detailed proposal. I have a few questions about the implementation timeline...",
+    date: "2 hours ago",
+    isRead: false,
+    isStarred: true,
+    contact: "Sarah Johnson",
+    company: "Tech Solutions Inc."
   },
   {
     id: 2,
     from: "m.chen@designstudio.com",
-    to: "info@company.com",
-    subject: "Re: Marketing Automation Proposal",
-    preview: "We've reviewed your proposal and have some questions about the implementation timeline...",
-    date: "2024-06-23 2:15 PM",
-    status: "Received",
-    type: "Inbound",
-    contact: "Michael Chen"
+    subject: "Meeting Follow-up",
+    preview: "It was great meeting with you yesterday. As discussed, I'm attaching the requirements document...",
+    date: "1 day ago",
+    isRead: true,
+    isStarred: false,
+    contact: "Michael Chen",
+    company: "Design Studio"
   },
   {
     id: 3,
-    from: "jane.smith@company.com",
-    to: "emily@startup.co",
-    subject: "Welcome to Our Service!",
-    preview: "Welcome aboard! We're excited to help you achieve your business goals...",
-    date: "2024-06-22 9:00 AM",
-    status: "Delivered",
-    type: "Outbound",
-    contact: "Emily Rodriguez"
+    from: "emily@startup.co",
+    subject: "Partnership Opportunity",
+    preview: "We're interested in exploring a potential partnership with your company...",
+    date: "3 days ago",
+    isRead: true,
+    isStarred: false,
+    contact: "Emily Rodriguez",
+    company: "Startup Co."
   },
 ];
 
-const templatesData = [
+const templateData = [
   {
     id: 1,
     name: "Welcome Email",
     subject: "Welcome to [Company Name]!",
-    content: "Dear [Name],\n\nWelcome to our service! We're excited to help you achieve your goals...",
+    body: "Dear [Name],\n\nWelcome to our company! We're excited to work with you...",
     category: "Onboarding"
   },
   {
     id: 2,
-    name: "Follow-up Template",
+    name: "Follow-up",
     subject: "Following up on our conversation",
-    content: "Hi [Name],\n\nI wanted to follow up on our recent conversation about...",
+    body: "Hi [Name],\n\nI wanted to follow up on our recent conversation about...",
     category: "Sales"
   },
   {
     id: 3,
-    name: "Proposal Follow-up",
-    subject: "Your proposal is ready for review",
-    content: "Dear [Name],\n\nI'm pleased to share your customized proposal...",
+    name: "Proposal",
+    subject: "Proposal for [Project Name]",
+    body: "Dear [Name],\n\nPlease find attached our proposal for your project...",
     category: "Sales"
   },
 ];
 
 const Email = () => {
   const [emails, setEmails] = useState(emailsData);
-  const [templates, setTemplates] = useState(templatesData);
+  const [templates, setTemplates] = useState(templateData);
   const [searchTerm, setSearchTerm] = useState("");
   const [isComposeOpen, setIsComposeOpen] = useState(false);
-  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [selectedEmail, setSelectedEmail] = useState(null);
 
   const [newEmail, setNewEmail] = useState({
     to: "",
+    cc: "",
+    bcc: "",
     subject: "",
-    content: "",
+    body: "",
     template: ""
-  });
-
-  const [newTemplate, setNewTemplate] = useState({
-    name: "",
-    subject: "",
-    content: "",
-    category: "General"
   });
 
   const filteredEmails = emails.filter(email =>
     email.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    email.contact.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    email.preview.toLowerCase().includes(searchTerm.toLowerCase())
+    email.from.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    email.contact.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleSendEmail = () => {
-    if (!newEmail.to || !newEmail.subject || !newEmail.content) {
+    if (!newEmail.to || !newEmail.subject || !newEmail.body) {
       toast({
         title: "Error",
         description: "Please fill in all required fields.",
@@ -109,75 +104,42 @@ const Email = () => {
       return;
     }
 
-    const email = {
-      id: emails.length + 1,
-      from: "john.doe@company.com",
-      to: newEmail.to,
-      subject: newEmail.subject,
-      preview: newEmail.content.substring(0, 100) + "...",
-      date: new Date().toLocaleString(),
-      status: "Sent",
-      type: "Outbound",
-      contact: newEmail.to.split("@")[0]
-    };
-
-    setEmails([email, ...emails]);
-    setNewEmail({
-      to: "",
-      subject: "",
-      content: "",
-      template: ""
-    });
-    setIsComposeOpen(false);
-    
     toast({
       title: "Success",
       description: "Email sent successfully!",
     });
-  };
 
-  const handleSaveTemplate = () => {
-    if (!newTemplate.name || !newTemplate.subject || !newTemplate.content) {
-      toast({
-        title: "Error",
-        description: "Please fill in all template fields.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const template = {
-      id: templates.length + 1,
-      ...newTemplate
-    };
-
-    setTemplates([...templates, template]);
-    setNewTemplate({
-      name: "",
+    setNewEmail({
+      to: "",
+      cc: "",
+      bcc: "",
       subject: "",
-      content: "",
-      category: "General"
+      body: "",
+      template: ""
     });
-    setIsTemplateDialogOpen(false);
-    
-    toast({
-      title: "Success",
-      description: "Template saved successfully!",
+    setIsComposeOpen(false);
+  };
+
+  const handleUseTemplate = (template) => {
+    setNewEmail({
+      ...newEmail,
+      subject: template.subject,
+      body: template.body,
+      template: template.name
     });
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Sent': return 'bg-green-100 text-green-800';
-      case 'Delivered': return 'bg-blue-100 text-blue-800';
-      case 'Received': return 'bg-purple-100 text-purple-800';
-      case 'Draft': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const markAsRead = (id) => {
+    setEmails(emails.map(email => 
+      email.id === id ? { ...email, isRead: true } : email
+    ));
   };
 
-  const sentEmails = emails.filter(e => e.type === 'Outbound');
-  const receivedEmails = emails.filter(e => e.type === 'Inbound');
+  const toggleStar = (id) => {
+    setEmails(emails.map(email => 
+      email.id === id ? { ...email, isStarred: !email.isStarred } : email
+    ));
+  };
 
   return (
     <div className="space-y-6">
@@ -187,152 +149,98 @@ const Email = () => {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Email Center
           </h1>
-          <p className="text-muted-foreground mt-1">Manage your email communication and templates efficiently.</p>
+          <p className="text-muted-foreground mt-1">Manage your email communications and templates.</p>
         </div>
-        <div className="flex gap-2">
-          <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <plus className="w-4 h-4 mr-2" />
-                Template
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Create Email Template</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
+        <Dialog open={isComposeOpen} onOpenChange={setIsComposeOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Compose Email
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Compose New Email</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="to">To *</Label>
+                <Input
+                  id="to"
+                  value={newEmail.to}
+                  onChange={(e) => setNewEmail({...newEmail, to: e.target.value})}
+                  placeholder="recipient@email.com"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="templateName">Template Name *</Label>
+                  <Label htmlFor="cc">CC</Label>
                   <Input
-                    id="templateName"
-                    value={newTemplate.name}
-                    onChange={(e) => setNewTemplate({...newTemplate, name: e.target.value})}
-                    placeholder="Enter template name"
+                    id="cc"
+                    value={newEmail.cc}
+                    onChange={(e) => setNewEmail({...newEmail, cc: e.target.value})}
+                    placeholder="cc@email.com"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="templateCategory">Category</Label>
-                  <Select value={newTemplate.category} onValueChange={(value) => setNewTemplate({...newTemplate, category: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="General">General</SelectItem>
-                      <SelectItem value="Sales">Sales</SelectItem>
-                      <SelectItem value="Onboarding">Onboarding</SelectItem>
-                      <SelectItem value="Support">Support</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="templateSubject">Subject Line *</Label>
+                  <Label htmlFor="bcc">BCC</Label>
                   <Input
-                    id="templateSubject"
-                    value={newTemplate.subject}
-                    onChange={(e) => setNewTemplate({...newTemplate, subject: e.target.value})}
-                    placeholder="Enter subject line"
+                    id="bcc"
+                    value={newEmail.bcc}
+                    onChange={(e) => setNewEmail({...newEmail, bcc: e.target.value})}
+                    placeholder="bcc@email.com"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="templateContent">Email Content *</Label>
-                  <Textarea
-                    id="templateContent"
-                    value={newTemplate.content}
-                    onChange={(e) => setNewTemplate({...newTemplate, content: e.target.value})}
-                    placeholder="Enter email content..."
-                    rows={6}
-                  />
-                </div>
-                <div className="flex gap-2 pt-4">
-                  <Button onClick={handleSaveTemplate} className="flex-1">
-                    Save Template
-                  </Button>
-                  <Button variant="outline" onClick={() => setIsTemplateDialogOpen(false)}>
-                    Cancel
-                  </Button>
                 </div>
               </div>
-            </DialogContent>
-          </Dialog>
-          
-          <Dialog open={isComposeOpen} onOpenChange={setIsComposeOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                <plus className="w-4 h-4 mr-2" />
-                Compose
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Compose Email</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="to">To *</Label>
-                  <Input
-                    id="to"
-                    value={newEmail.to}
-                    onChange={(e) => setNewEmail({...newEmail, to: e.target.value})}
-                    placeholder="recipient@email.com"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="template">Use Template (Optional)</Label>
-                  <Select value={newEmail.template} onValueChange={(value) => {
-                    const template = templates.find(t => t.id.toString() === value);
-                    if (template) {
-                      setNewEmail({
-                        ...newEmail,
-                        template: value,
-                        subject: template.subject,
-                        content: template.content
-                      });
-                    }
-                  }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a template" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {templates.map((template) => (
-                        <SelectItem key={template.id} value={template.id.toString()}>
-                          {template.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="subject">Subject *</Label>
-                  <Input
-                    id="subject"
-                    value={newEmail.subject}
-                    onChange={(e) => setNewEmail({...newEmail, subject: e.target.value})}
-                    placeholder="Enter subject line"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="content">Message *</Label>
-                  <Textarea
-                    id="content"
-                    value={newEmail.content}
-                    onChange={(e) => setNewEmail({...newEmail, content: e.target.value})}
-                    placeholder="Type your message here..."
-                    rows={8}
-                  />
-                </div>
-                <div className="flex gap-2 pt-4">
-                  <Button onClick={handleSendEmail} className="flex-1">
-                    Send Email
-                  </Button>
-                  <Button variant="outline" onClick={() => setIsComposeOpen(false)}>
-                    Cancel
-                  </Button>
-                </div>
+              <div>
+                <Label htmlFor="template">Use Template</Label>
+                <Select value={newEmail.template} onValueChange={(value) => {
+                  const template = templates.find(t => t.name === value);
+                  if (template) handleUseTemplate(template);
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.name}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+              <div>
+                <Label htmlFor="subject">Subject *</Label>
+                <Input
+                  id="subject"
+                  value={newEmail.subject}
+                  onChange={(e) => setNewEmail({...newEmail, subject: e.target.value})}
+                  placeholder="Email subject"
+                />
+              </div>
+              <div>
+                <Label htmlFor="body">Message *</Label>
+                <Textarea
+                  id="body"
+                  value={newEmail.body}
+                  onChange={(e) => setNewEmail({...newEmail, body: e.target.value})}
+                  placeholder="Type your message here..."
+                  rows={8}
+                />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button onClick={handleSendEmail} className="flex-1">
+                  <Send className="w-4 h-4 mr-2" />
+                  Send Email
+                </Button>
+                <Button variant="outline" onClick={() => setIsComposeOpen(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats */}
@@ -340,101 +248,116 @@ const Email = () => {
         <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-700">Total Emails</CardTitle>
-            <mail className="h-4 w-4 text-blue-600" />
+            <Mail className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-900">{emails.length}</div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-700">Sent</CardTitle>
-            <mail-plus className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-900">{sentEmails.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-700">Received</CardTitle>
-            <mail-minus className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-900">{receivedEmails.length}</div>
-          </CardContent>
-        </Card>
-
         <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-50 to-orange-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-orange-700">Templates</CardTitle>
-            <mail className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-sm font-medium text-orange-700">Unread</CardTitle>
+            <Mail className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-900">{templates.length}</div>
+            <div className="text-2xl font-bold text-orange-900">
+              {emails.filter(e => !e.isRead).length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-yellow-50 to-yellow-100">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-yellow-700">Starred</CardTitle>
+            <Star className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-900">
+              {emails.filter(e => e.isStarred).length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-green-700">Sent Today</CardTitle>
+            <Send className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-900">12</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Email Management Tabs */}
-      <Tabs defaultValue="emails" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="emails">Email History</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="emails" className="space-y-6">
-          {/* Search */}
-          <Card className="border-0 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="relative flex-1">
-                  <search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    placeholder="Search emails by subject, contact, or content..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Email List */}
+      {/* Main Email Interface */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Email List */}
+        <div className="lg:col-span-2">
           <Card className="border-0 shadow-lg">
             <CardHeader>
-              <CardTitle>Email History</CardTitle>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <CardTitle>Inbox</CardTitle>
+                <div className="flex gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="Search emails..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 w-64"
+                    />
+                  </div>
+                  <Button variant="outline" size="sm">
+                    <Filter className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="p-0">
+              <div className="space-y-1">
                 {filteredEmails.map((email) => (
-                  <div key={email.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                  <div 
+                    key={email.id} 
+                    className={`p-4 border-b hover:bg-muted/50 cursor-pointer transition-colors ${
+                      !email.isRead ? 'bg-blue-50/50' : ''
+                    } ${selectedEmail?.id === email.id ? 'bg-blue-100' : ''}`}
+                    onClick={() => {
+                      setSelectedEmail(email);
+                      markAsRead(email.id);
+                    }}
+                  >
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge className={getStatusColor(email.status)}>
-                            {email.status}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`font-medium truncate ${!email.isRead ? 'font-bold' : ''}`}>
+                            {email.contact}
+                          </span>
+                          <Badge variant="secondary" className="text-xs">
+                            {email.company}
                           </Badge>
-                          <Badge variant="outline">
-                            {email.type}
-                          </Badge>
-                          <span className="text-sm text-muted-foreground">{email.date}</span>
+                          {email.isStarred && <Star className="w-4 h-4 text-yellow-500 fill-current" />}
                         </div>
-                        <h4 className="font-semibold mb-1">{email.subject}</h4>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {email.type === 'Outbound' ? `To: ${email.to}` : `From: ${email.from}`}
-                        </p>
-                        <p className="text-sm">{email.preview}</p>
+                        <div className={`text-sm truncate mb-1 ${!email.isRead ? 'font-semibold' : ''}`}>
+                          {email.subject}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {email.preview}
+                        </div>
                       </div>
-                      <div className="flex gap-2 ml-4">
-                        <Button variant="ghost" size="sm">
-                          <edit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                          <delete className="w-4 h-4" />
+                      <div className="flex items-center gap-2 ml-4">
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {email.date}
+                        </span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleStar(email.id);
+                          }}
+                        >
+                          <Star className={`w-4 h-4 ${email.isStarred ? 'text-yellow-500 fill-current' : ''}`} />
                         </Button>
                       </div>
                     </div>
@@ -443,51 +366,79 @@ const Email = () => {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="templates" className="space-y-6">
+        {/* Email Templates */}
+        <div>
           <Card className="border-0 shadow-lg">
             <CardHeader>
               <CardTitle>Email Templates</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-3">
                 {templates.map((template) => (
-                  <Card key={template.id} className="border hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">{template.name}</CardTitle>
-                        <Badge variant="secondary">{template.category}</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Subject:</p>
-                        <p className="text-sm">{template.subject}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Content Preview:</p>
-                        <p className="text-sm line-clamp-3">{template.content.substring(0, 100)}...</p>
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                        <Button variant="outline" size="sm" className="flex-1">
-                          Use Template
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <edit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                          <delete className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div key={template.id} className="p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-sm">{template.name}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {template.category}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {template.subject}
+                    </p>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2 p-0 h-auto text-blue-600"
+                      onClick={() => handleUseTemplate(template)}
+                    >
+                      Use Template
+                    </Button>
+                  </div>
                 ))}
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
+
+      {/* Email Detail View */}
+      {selectedEmail && (
+        <Card className="border-0 shadow-lg">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold">{selectedEmail.subject}</h3>
+                <p className="text-sm text-muted-foreground">
+                  From: {selectedEmail.contact} &lt;{selectedEmail.from}&gt;
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm">
+                  <Reply className="w-4 h-4 mr-2" />
+                  Reply
+                </Button>
+                <Button variant="outline" size="sm">
+                  <Archive className="w-4 h-4 mr-2" />
+                  Archive
+                </Button>
+                <Button variant="outline" size="sm">
+                  <Trash className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="prose max-w-none">
+              <p>{selectedEmail.preview}</p>
+              <br />
+              <p>This is a sample email content. In a real application, this would contain the full email body with proper formatting and attachments support.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

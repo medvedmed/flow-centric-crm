@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { plus, search, filter, users, arrow-up, edit, delete } from "lucide-react";
+import { Plus, Search, Filter, Users, ArrowUp, Edit, Trash } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const leadsData = [

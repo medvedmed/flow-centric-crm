@@ -78,26 +78,23 @@ const AppointmentBlock: React.FC<{
     isDragging: isSortableDragging,
   } = useSortable({ id: appointment.id });
 
-  const style = {
+  const bgColor = serviceColors[appointment.service as keyof typeof serviceColors] || '#8b5cf6';
+
+  const combinedStyle = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging || isSortableDragging ? 0.6 : 1,
+    borderLeftColor: bgColor,
+    minHeight: `${Math.max(appointment.duration / 15 * 16, 48)}px`
   };
-
-  const bgColor = serviceColors[appointment.service as keyof typeof serviceColors] || '#8b5cf6';
 
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={combinedStyle}
       {...attributes}
       {...listeners}
       className={`fresha-appointment cursor-grab active:cursor-grabbing absolute inset-x-1 z-10 ${isDragging ? 'z-50' : ''}`}
-      style={{
-        ...style,
-        borderLeftColor: bgColor,
-        minHeight: `${Math.max(appointment.duration / 15 * 16, 48)}px`
-      }}
     >
       <div className="fresha-appointment-content">
         <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>

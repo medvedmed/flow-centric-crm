@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Book, Users, HelpCircle, Mail, Plus } from "lucide-react";
+import { Book, Users, HelpCircle, Mail } from "lucide-react";
 
 const Help = () => {
   const faqData = [
@@ -51,19 +51,22 @@ const Help = () => {
 
       {/* Quick Help Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {quickLinks.map((link, index) => (
-          <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-            <CardHeader className="text-center">
-              <div className="mx-auto w-12 h-12 rounded-full bg-gradient-to-br from-teal-100 to-cyan-100 flex items-center justify-center mb-2">
-                <link.icon className="w-6 h-6 text-teal-600" />
-              </div>
-              <CardTitle className="text-lg">{link.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground text-center">{link.description}</p>
-            </CardContent>
-          </Card>
-        ))}
+        {quickLinks.map((link, index) => {
+          const IconComponent = link.icon;
+          return (
+            <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+              <CardHeader className="text-center">
+                <div className="mx-auto w-12 h-12 rounded-full bg-gradient-to-br from-teal-100 to-cyan-100 flex items-center justify-center mb-2">
+                  <IconComponent className="w-6 h-6 text-teal-600" />
+                </div>
+                <CardTitle className="text-lg">{link.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground text-center">{link.description}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Main Help Content */}
@@ -131,7 +134,7 @@ const Help = () => {
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Average Response Time</span>
-                <Badge variant="secondary">< 2 hours</Badge>
+                <Badge variant="secondary">{"< 2 hours"}</Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Customer Satisfaction</span>

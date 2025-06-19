@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -92,35 +91,35 @@ const AppointmentBlock: React.FC<{
       style={style}
       {...attributes}
       {...listeners}
-      className={`cursor-grab active:cursor-grabbing absolute inset-x-1 z-10 ${isDragging ? 'z-50' : ''}`}
+      className={`cursor-grab active:cursor-grabbing absolute inset-x-2 z-10 ${isDragging ? 'z-50' : ''}`}
     >
       <Card 
         className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 h-full"
         style={{ 
           backgroundColor: bgColor,
           borderLeft: `4px solid ${bgColor}`,
-          minHeight: `${Math.max(appointment.duration / 15 * 16, 48)}px`
+          minHeight: `${Math.max(appointment.duration / 15 * 20, 60)}px`
         }}
       >
-        <CardContent className="p-2 text-white h-full flex flex-col justify-between">
+        <CardContent className="p-3 text-white h-full flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-1 mb-1">
-              <Clock className="w-3 h-3" />
-              <span className="font-semibold text-xs">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="w-4 h-4" />
+              <span className="font-semibold text-sm">
                 {appointment.startTime} - {appointment.endTime}
               </span>
             </div>
-            <div className="flex items-center gap-1 mb-1">
-              <User className="w-3 h-3" />
-              <span className="font-medium text-xs">{appointment.clientName}</span>
+            <div className="flex items-center gap-2 mb-1">
+              <User className="w-4 h-4" />
+              <span className="font-medium text-sm">{appointment.clientName}</span>
             </div>
-            <div className="text-xs opacity-90">{appointment.service}</div>
+            <div className="text-sm opacity-90">{appointment.service}</div>
           </div>
-          <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center justify-between mt-2">
             <span className="text-xs opacity-75">{appointment.clientPhone}</span>
             <div className="flex items-center gap-1">
-              <DollarSign className="w-3 h-3" />
-              <span className="font-bold text-xs">{appointment.price}</span>
+              <DollarSign className="w-4 h-4" />
+              <span className="font-bold text-sm">{appointment.price}</span>
             </div>
           </div>
         </CardContent>
@@ -142,12 +141,12 @@ const EmptyTimeSlot: React.FC<{
 
   return (
     <div 
-      className="h-16 cursor-pointer hover:bg-teal-50 transition-colors duration-200 flex items-center justify-center group relative"
+      className="h-20 cursor-pointer hover:bg-teal-50 transition-colors duration-200 flex items-center justify-center group relative"
       onClick={handleClick}
     >
-      <Plus className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+      <Plus className="w-5 h-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-        <span className="text-xs text-gray-600 bg-white px-2 py-1 rounded shadow-sm">Click to book</span>
+        <span className="text-sm text-gray-600 bg-white px-3 py-1 rounded shadow-md border">Click to book</span>
       </div>
     </div>
   );
@@ -165,7 +164,7 @@ const GridCell: React.FC<{
   );
 
   return (
-    <div className="relative h-16 border-b border-gray-100">
+    <div className="relative h-20 border-b border-gray-100">
       <SortableContext items={cellAppointments.map(apt => apt.id)} strategy={verticalListSortingStrategy}>
         {cellAppointments.length > 0 ? (
           cellAppointments.map(appointment => (
@@ -243,50 +242,49 @@ const UnifiedScheduler: React.FC<UnifiedSchedulerProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        {/* Header with Staff Names */}
-        <div className="grid grid-cols-[120px_repeat(auto-fit,_minmax(200px,_1fr))] bg-gradient-to-r from-teal-50 to-emerald-50 border-b border-gray-200">
-          <div className="p-4 border-r border-gray-200">
-            <h3 className="font-semibold text-gray-800">Time</h3>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden w-full">
+        {/* Header with Staff Names - Updated for wider layout and removed borders */}
+        <div className="grid grid-cols-[150px_1fr_1fr] bg-gradient-to-r from-teal-50 to-emerald-50 border-b border-gray-200">
+          <div className="p-6 border-r border-gray-200">
+            <h3 className="font-semibold text-gray-800 text-lg">Time</h3>
           </div>
           {staff.map((staffMember, index) => (
             <div 
               key={staffMember.id} 
-              className={`p-4 ${index < staff.length - 1 ? 'border-r border-gray-100' : ''}`}
+              className="p-6"
               style={{ backgroundColor: index % 2 === 0 ? 'rgba(255,255,255,0.5)' : 'rgba(20,184,166,0.05)' }}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <img
                   src={staffMember.image}
                   alt={staffMember.name}
-                  className="w-8 h-8 rounded-full border-2 border-teal-200"
+                  className="w-12 h-12 rounded-full border-2 border-teal-200"
                 />
                 <div>
-                  <h3 className="font-semibold text-gray-800 text-sm">{staffMember.name}</h3>
-                  <p className="text-xs text-gray-600">{staffMember.rating}⭐ • {staffMember.efficiency}%</p>
+                  <h3 className="font-semibold text-gray-800 text-lg">{staffMember.name}</h3>
+                  <p className="text-sm text-gray-600">{staffMember.rating}⭐ • {staffMember.efficiency}% • {staffMember.specialties.join(", ")}</p>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Time Grid */}
-        <div className="max-h-[600px] overflow-y-auto">
+        {/* Time Grid - Updated for wider layout and removed borders */}
+        <div className="max-h-[700px] overflow-y-auto">
           {timeSlots.map(timeSlot => (
             <div 
               key={timeSlot.time} 
-              className="grid grid-cols-[120px_repeat(auto-fit,_minmax(200px,_1fr))] hover:bg-gray-50/50 transition-colors duration-150"
+              className="grid grid-cols-[150px_1fr_1fr] hover:bg-gray-50/50 transition-colors duration-150"
             >
               {/* Time Label */}
               <div className="p-4 border-r border-gray-200 bg-gray-50/50 flex items-center">
-                <span className="text-sm font-medium text-gray-700">{timeSlot.time}</span>
+                <span className="text-base font-medium text-gray-700">{timeSlot.time}</span>
               </div>
               
-              {/* Staff Columns */}
+              {/* Staff Columns - Removed visible borders between columns */}
               {staff.map((staffMember, index) => (
                 <div 
                   key={`${staffMember.id}-${timeSlot.time}`}
-                  className={index < staff.length - 1 ? 'border-r border-gray-100' : ''}
                   style={{ backgroundColor: index % 2 === 0 ? 'transparent' : 'rgba(20,184,166,0.02)' }}
                 >
                   <GridCell

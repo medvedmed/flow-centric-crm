@@ -65,15 +65,6 @@ const mockStaff: Staff[] = [
     workingHours: { start: "10:00", end: "18:00" },
     efficiency: 92,
     rating: 4.9
-  },
-  {
-    id: "3",
-    name: "Emma Wilson",
-    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face",
-    specialties: ["Manicure", "Pedicure"],
-    workingHours: { start: "09:00", end: "16:00" },
-    efficiency: 98,
-    rating: 4.7
   }
 ];
 
@@ -100,18 +91,6 @@ const mockAppointments: Appointment[] = [
     service: "Massage",
     price: 120,
     status: "in-progress",
-    duration: 60
-  },
-  {
-    id: "3",
-    staffId: "3",
-    startTime: "11:00",
-    endTime: "12:00",
-    clientName: "Carol Johnson",
-    clientPhone: "+1 555-0103",
-    service: "Manicure",
-    price: 45,
-    status: "upcoming",
     duration: 60
   }
 ];

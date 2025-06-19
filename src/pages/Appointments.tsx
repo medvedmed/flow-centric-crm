@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Plus, Filter, Clock, Users, DollarSign, Search, Zap, Brain, Calendar as CalendarIcon, Settings2, TrendingUp } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import DragDropScheduler from "@/components/DragDropScheduler";
 
 // Enhanced color palette for different services and statuses
 const serviceColors = {
@@ -112,9 +112,14 @@ const initialAppointments = [
 const generateTimeSlots = (startHour = 9, endHour = 20, interval = 30) => {
   const slots = [];
   for (let hour = startHour; hour <= endHour; hour++) {
-    slots.push(`${hour.toString().padStart(2, '0')}:00`);
-    if (hour < endHour) {
-      slots.push(`${hour.toString().padStart(2, '0')}:30`);
+    for (let minute = 0; minute < 60; minute += interval) {
+      if (hour === endHour && minute > 0) break;
+      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      slots.push({
+        time: timeString,
+        hour,
+        minute
+      });
     }
   }
   return slots;
@@ -122,7 +127,10 @@ const generateTimeSlots = (startHour = 9, endHour = 20, interval = 30) => {
 
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [appointments, setAppointments] = useState(initialAppointments);
+  const [appointments, setAppointments] = useState(initialAppointments.map(apt => ({
+    ...apt,
+    duration: 60 // Add duration in minutes
+  })));
   const [selectedStaff, setSelectedStaff] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [workingHours, setWorkingHours] = useState({ start: 9, end: 20 });
@@ -142,6 +150,32 @@ const Appointments = () => {
     confirmedCount: todayAppointments.filter(apt => apt.status === 'confirmed').length,
     inProgressCount: todayAppointments.filter(apt => apt.status === 'in-progress').length,
     efficiency: Math.round(filteredStaff.reduce((sum, staff) => sum + staff.efficiency, 0) / filteredStaff.length)
+  };
+
+  const handleAppointmentMove = (appointmentId: string, newStaffId: string, newTime: string) => {
+    setAppointments(prev => prev.map(apt => {
+      if (apt.id === appointmentId) {
+        // Calculate new end time based on duration
+        const [hours, minutes] = newTime.split(':').map(Number);
+        const startDate = new Date();
+        startDate.setHours(hours, minutes, 0, 0);
+        const endDate = new Date(startDate.getTime() + apt.duration * 60000);
+        const newEndTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+        
+        toast({
+          title: "Appointment Moved",
+          description: `${apt.clientName}'s appointment moved to ${newTime}`,
+        });
+        
+        return {
+          ...apt,
+          staffId: newStaffId,
+          startTime: newTime,
+          endTime: newEndTime
+        };
+      }
+      return apt;
+    }));
   };
 
   return (
@@ -343,6 +377,24 @@ const Appointments = () => {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Drag & Drop Scheduler */}
+          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-xl text-gray-800 flex items-center gap-2">
+                <Clock className="w-6 h-6 text-teal-600" />
+                Interactive Schedule - Drag & Drop to Adjust Times
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DragDropScheduler
+                staff={filteredStaff}
+                appointments={appointments}
+                timeSlots={timeSlots}
+                onAppointmentMove={handleAppointmentMove}
+              />
             </CardContent>
           </Card>
 

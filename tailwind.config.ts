@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,22 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Fresha Brand Colors
+				fresha: {
+					purple: 'hsl(var(--fresha-purple))',
+					'purple-light': 'hsl(var(--fresha-purple-light))',
+					'purple-dark': 'hsl(var(--fresha-purple-dark))',
+					gray: 'hsl(var(--fresha-gray))',
+					'gray-dark': 'hsl(var(--fresha-gray-dark))',
+					success: 'hsl(var(--fresha-success))',
+					warning: 'hsl(var(--fresha-warning))',
+					error: 'hsl(var(--fresha-error))',
 				}
+			},
+			fontFamily: {
+				sans: ['Inter', 'Noto Sans Arabic', 'sans-serif'],
+				arabic: ['Noto Sans Arabic', 'Inter', 'sans-serif'],
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -84,11 +100,33 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'fresha-slide-up': {
+					from: {
+						transform: 'translateY(10px)',
+						opacity: '0'
+					},
+					to: {
+						transform: 'translateY(0)',
+						opacity: '1'
+					}
+				},
+				'fresha-scale': {
+					from: {
+						transform: 'scale(0.95)',
+						opacity: '0'
+					},
+					to: {
+						transform: 'scale(1)',
+						opacity: '1'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fresha-slide-up': 'fresha-slide-up 0.3s ease-out',
+				'fresha-scale': 'fresha-scale 0.2s ease-out',
 			}
 		}
 	},

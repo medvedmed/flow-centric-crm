@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, User, DollarSign, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Appointment {
   id: string;
@@ -44,29 +45,30 @@ interface BookingSlot {
 }
 
 const serviceColors = {
-  "Haircut & Style": "#10b981",
-  "Hair Coloring": "#8b5cf6",
-  "Manicure": "#f59e0b",
-  "Pedicure": "#ef4444",
-  "Facial": "#06b6d4",
-  "Massage": "#ec4899",
-  "Beard Trim": "#059669",
-  "Eyebrow": "#7c3aed",
+  "Haircut & Style": "#8b5cf6",
+  "Hair Coloring": "#a855f7", 
+  "Manicure": "#c084fc",
+  "Pedicure": "#d8b4fe",
+  "Facial": "#7c3aed",
+  "Massage": "#9333ea",
+  "Beard Trim": "#8b5cf6",
+  "Eyebrow": "#a855f7",
 };
 
 const statusColors = {
   "confirmed": "#10b981",
-  "in-progress": "#3b82f6",
+  "in-progress": "#3b82f6", 
   "upcoming": "#f59e0b",
   "completed": "#6b7280",
   "cancelled": "#ef4444",
 };
 
-// Draggable Appointment Block Component
+// Fresha-style Appointment Block Component
 const AppointmentBlock: React.FC<{
   appointment: Appointment;
   isDragging?: boolean;
 }> = ({ appointment, isDragging = false }) => {
+  const { isRTL } = useLanguage();
   const {
     attributes,
     listeners,
@@ -79,11 +81,10 @@ const AppointmentBlock: React.FC<{
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging || isSortableDragging ? 0.5 : 1,
+    opacity: isDragging || isSortableDragging ? 0.6 : 1,
   };
 
-  const bgColor = serviceColors[appointment.service as keyof typeof serviceColors] || 
-                  statusColors[appointment.status as keyof typeof statusColors] || '#10b981';
+  const bgColor = serviceColors[appointment.service as keyof typeof serviceColors] || '#8b5cf6';
 
   return (
     <div
@@ -91,68 +92,69 @@ const AppointmentBlock: React.FC<{
       style={style}
       {...attributes}
       {...listeners}
-      className={`cursor-grab active:cursor-grabbing absolute inset-x-2 z-10 ${isDragging ? 'z-50' : ''}`}
+      className={`fresha-appointment cursor-grab active:cursor-grabbing absolute inset-x-1 z-10 ${isDragging ? 'z-50' : ''}`}
+      style={{
+        ...style,
+        borderLeftColor: bgColor,
+        minHeight: `${Math.max(appointment.duration / 15 * 16, 48)}px`
+      }}
     >
-      <Card 
-        className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 h-full"
-        style={{ 
-          backgroundColor: bgColor,
-          borderLeft: `4px solid ${bgColor}`,
-          minHeight: `${Math.max(appointment.duration / 15 * 20, 60)}px`
-        }}
-      >
-        <CardContent className="p-3 text-white h-full flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4" />
-              <span className="font-semibold text-sm">
-                {appointment.startTime} - {appointment.endTime}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 mb-1">
-              <User className="w-4 h-4" />
-              <span className="font-medium text-sm">{appointment.clientName}</span>
-            </div>
-            <div className="text-sm opacity-90">{appointment.service}</div>
+      <div className="fresha-appointment-content">
+        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <Clock className="w-3 h-3 text-gray-500" />
+          <span className="fresha-time">
+            {appointment.startTime} - {appointment.endTime}
+          </span>
+        </div>
+        
+        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <User className="w-3 h-3 text-gray-600" />
+          <span className="fresha-client">{appointment.clientName}</span>
+        </div>
+        
+        <div className="fresha-service">{appointment.service}</div>
+        
+        <div className={`flex items-center justify-between mt-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <span className="text-xs text-gray-400">{appointment.clientPhone}</span>
+          <div className={`flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <DollarSign className="w-3 h-3 text-purple-600" />
+            <span className="fresha-price">{appointment.price}</span>
           </div>
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-xs opacity-75">{appointment.clientPhone}</span>
-            <div className="flex items-center gap-1">
-              <DollarSign className="w-4 h-4" />
-              <span className="font-bold text-sm">{appointment.price}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
 
-// Empty Time Slot Component
+// Fresha-style Empty Time Slot Component
 const EmptyTimeSlot: React.FC<{
   staffId: string;
   staffName: string;
   time: string;
   onBookSlot: (slot: BookingSlot) => void;
 }> = ({ staffId, staffName, time, onBookSlot }) => {
+  const { t, isRTL } = useLanguage();
+  
   const handleClick = () => {
     onBookSlot({ staffId, time, staffName });
   };
 
   return (
     <div 
-      className="h-20 cursor-pointer hover:bg-teal-50 transition-colors duration-200 flex items-center justify-center group relative"
+      className="h-16 cursor-pointer hover:bg-purple-50/50 transition-all duration-200 flex items-center justify-center group relative border-b border-gray-100/50"
       onClick={handleClick}
     >
-      <Plus className="w-5 h-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+      <Plus className="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:text-purple-500" />
       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-        <span className="text-sm text-gray-600 bg-white px-3 py-1 rounded shadow-md border">Click to book</span>
+        <span className={`text-xs text-purple-600 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md shadow-sm border border-purple-200 ${isRTL ? 'font-arabic' : ''}`}>
+          {t('click_to_book_slot')}
+        </span>
       </div>
     </div>
   );
 };
 
-// Grid Cell Component
+// Fresha-style Grid Cell Component
 const GridCell: React.FC<{
   timeSlot: TimeSlot;
   staff: Staff;
@@ -164,7 +166,7 @@ const GridCell: React.FC<{
   );
 
   return (
-    <div className="relative h-20 border-b border-gray-100">
+    <div className="relative h-16 border-b border-gray-100/30">
       <SortableContext items={cellAppointments.map(apt => apt.id)} strategy={verticalListSortingStrategy}>
         {cellAppointments.length > 0 ? (
           cellAppointments.map(appointment => (
@@ -183,7 +185,7 @@ const GridCell: React.FC<{
   );
 };
 
-// Main Unified Scheduler Component
+// Main Unified Scheduler Component with Fresha styling
 interface UnifiedSchedulerProps {
   staff: Staff[];
   appointments: Appointment[];
@@ -199,6 +201,7 @@ const UnifiedScheduler: React.FC<UnifiedSchedulerProps> = ({
   onAppointmentMove,
   onBookSlot,
 }) => {
+  const { t, isRTL } = useLanguage();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null);
 
@@ -242,50 +245,57 @@ const UnifiedScheduler: React.FC<UnifiedSchedulerProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden w-full">
-        {/* Header with Staff Names - Updated for wider layout and removed borders */}
-        <div className="grid grid-cols-[150px_1fr_1fr] bg-gradient-to-r from-teal-50 to-emerald-50 border-b border-gray-200">
-          <div className="p-6 border-r border-gray-200">
-            <h3 className="font-semibold text-gray-800 text-lg">Time</h3>
+      <div className="fresha-grid fresha-fade-in">
+        {/* Fresha-style Header */}
+        <div className={`grid grid-cols-[180px_1fr_1fr] fresha-header ${isRTL ? 'text-right' : ''}`}>
+          <div className="fresha-time-column p-5">
+            <h3 className={`font-semibold text-gray-800 text-base ${isRTL ? 'font-arabic' : ''}`}>
+              {t('time')}
+            </h3>
           </div>
           {staff.map((staffMember, index) => (
             <div 
               key={staffMember.id} 
-              className="p-6"
-              style={{ backgroundColor: index % 2 === 0 ? 'rgba(255,255,255,0.5)' : 'rgba(20,184,166,0.05)' }}
+              className={`p-5 ${index % 2 === 0 ? 'bg-white/40' : 'bg-purple-50/30'}`}
             >
-              <div className="flex items-center gap-4">
+              <div className={`flex items-center gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <img
                   src={staffMember.image}
                   alt={staffMember.name}
-                  className="w-12 h-12 rounded-full border-2 border-teal-200"
+                  className="w-11 h-11 rounded-full border-2 border-purple-200/60 shadow-sm"
                 />
-                <div>
-                  <h3 className="font-semibold text-gray-800 text-lg">{staffMember.name}</h3>
-                  <p className="text-sm text-gray-600">{staffMember.rating}⭐ • {staffMember.efficiency}% • {staffMember.specialties.join(", ")}</p>
+                <div className={isRTL ? 'text-right' : ''}>
+                  <h3 className={`font-semibold text-gray-800 text-base ${isRTL ? 'font-arabic' : ''}`}>
+                    {staffMember.name}
+                  </h3>
+                  <p className={`text-sm text-gray-600 ${isRTL ? 'font-arabic' : ''}`}>
+                    {staffMember.rating}⭐ • {staffMember.efficiency}% • {staffMember.specialties.join(", ")}
+                  </p>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Time Grid - Updated for wider layout and removed borders */}
-        <div className="max-h-[700px] overflow-y-auto">
+        {/* Fresha-style Time Grid */}
+        <div className="max-h-[600px] overflow-y-auto">
           {timeSlots.map(timeSlot => (
             <div 
               key={timeSlot.time} 
-              className="grid grid-cols-[150px_1fr_1fr] hover:bg-gray-50/50 transition-colors duration-150"
+              className="grid grid-cols-[180px_1fr_1fr] hover:bg-purple-50/20 transition-colors duration-150"
             >
               {/* Time Label */}
-              <div className="p-4 border-r border-gray-200 bg-gray-50/50 flex items-center">
-                <span className="text-base font-medium text-gray-700">{timeSlot.time}</span>
+              <div className={`fresha-time-column p-3 flex items-center ${isRTL ? 'justify-end' : ''}`}>
+                <span className={`text-sm font-medium text-gray-700 ${isRTL ? 'font-arabic' : ''}`}>
+                  {timeSlot.time}
+                </span>
               </div>
               
-              {/* Staff Columns - Removed visible borders between columns */}
+              {/* Staff Columns */}
               {staff.map((staffMember, index) => (
                 <div 
                   key={`${staffMember.id}-${timeSlot.time}`}
-                  style={{ backgroundColor: index % 2 === 0 ? 'transparent' : 'rgba(20,184,166,0.02)' }}
+                  className={`fresha-staff-column ${index % 2 === 0 ? 'bg-white/20' : 'bg-purple-50/10'}`}
                 >
                   <GridCell
                     timeSlot={timeSlot}
@@ -302,7 +312,9 @@ const UnifiedScheduler: React.FC<UnifiedSchedulerProps> = ({
 
       <DragOverlay>
         {activeId && draggedAppointment ? (
-          <AppointmentBlock appointment={draggedAppointment} isDragging />
+          <div className="fresha-scale">
+            <AppointmentBlock appointment={draggedAppointment} isDragging />
+          </div>
         ) : null}
       </DragOverlay>
     </DndContext>

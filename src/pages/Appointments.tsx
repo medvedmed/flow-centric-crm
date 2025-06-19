@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { LanguageProvider, useLanguage } from "@/contexts/LanguageContext";
+import LanguageToggle from "@/components/LanguageToggle";
 
 // Interfaces
 interface Appointment {
@@ -110,7 +112,8 @@ const generateTimeSlots = (): TimeSlot[] => {
   return slots;
 };
 
-const Appointments = () => {
+const AppointmentsContent = () => {
+  const { t, isRTL } = useLanguage();
   const [appointments, setAppointments] = useState<Appointment[]>(mockAppointments);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<BookingSlot | null>(null);
@@ -211,71 +214,85 @@ const Appointments = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Appointments</h1>
-          <p className="text-gray-600">Manage your salon's booking schedule</p>
+    <div className={`space-y-6 ${isRTL ? 'font-arabic' : ''}`}>
+      {/* Fresha-style Header */}
+      <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : ''}>
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">{t('appointments')}</h1>
+          <p className="text-gray-600">{t('manage_schedule')}</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" size="sm">
+        <div className={`flex gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <LanguageToggle />
+          <Button variant="outline" size="sm" className="hover:bg-purple-50 hover:border-purple-200">
             <Filter className="w-4 h-4 mr-2" />
-            Filter
+            {t('filter')}
           </Button>
-          <Button>
+          <Button className="bg-fresha-purple hover:bg-fresha-purple-dark">
             <Plus className="w-4 h-4 mr-2" />
-            New Appointment
+            {t('new_appointment')}
           </Button>
         </div>
       </div>
 
-      {/* Quick Stats */}
+      {/* Fresha-style Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="border-purple-100 hover:border-purple-200 transition-colors duration-200">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Today's Appointments</CardTitle>
+            <CardTitle className={`text-sm font-medium text-gray-600 ${isRTL ? 'text-right font-arabic' : ''}`}>
+              {t('today_appointments')}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-teal-600">12</div>
-            <p className="text-xs text-gray-500">+2 from yesterday</p>
+            <div className="text-2xl font-bold text-fresha-purple">12</div>
+            <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>+2 {t('from_yesterday')}</p>
           </CardContent>
         </Card>
-        <Card>
+        
+        <Card className="border-purple-100 hover:border-purple-200 transition-colors duration-200">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Revenue Today</CardTitle>
+            <CardTitle className={`text-sm font-medium text-gray-600 ${isRTL ? 'text-right font-arabic' : ''}`}>
+              {t('revenue_today')}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">$1,245</div>
-            <p className="text-xs text-gray-500">+15% from yesterday</p>
+            <div className="text-2xl font-bold text-fresha-success">$1,245</div>
+            <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>+15% {t('from_yesterday')}</p>
           </CardContent>
         </Card>
-        <Card>
+        
+        <Card className="border-purple-100 hover:border-purple-200 transition-colors duration-200">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Cancellations</CardTitle>
+            <CardTitle className={`text-sm font-medium text-gray-600 ${isRTL ? 'text-right font-arabic' : ''}`}>
+              {t('cancellations')}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">2</div>
-            <p className="text-xs text-gray-500">-1 from yesterday</p>
+            <div className="text-2xl font-bold text-fresha-error">2</div>
+            <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>-1 {t('from_yesterday')}</p>
           </CardContent>
         </Card>
-        <Card>
+        
+        <Card className="border-purple-100 hover:border-purple-200 transition-colors duration-200">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Utilization</CardTitle>
+            <CardTitle className={`text-sm font-medium text-gray-600 ${isRTL ? 'text-right font-arabic' : ''}`}>
+              {t('utilization')}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">85%</div>
-            <p className="text-xs text-gray-500">+5% from yesterday</p>
+            <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>+5% {t('from_yesterday')}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Unified Scheduler */}
+      {/* Fresha-style Unified Scheduler */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">Schedule Overview</h2>
-          <div className="text-sm text-gray-600">
-            Click on empty time slots to book appointments
+        <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <h2 className={`text-xl font-semibold text-gray-900 ${isRTL ? 'font-arabic' : ''}`}>
+            {t('schedule_overview')}
+          </h2>
+          <div className={`text-sm text-gray-600 ${isRTL ? 'text-left font-arabic' : 'text-right'}`}>
+            {t('click_to_book')}
           </div>
         </div>
         <UnifiedScheduler
@@ -287,50 +304,64 @@ const Appointments = () => {
         />
       </div>
 
-      {/* Quick Booking Dialog */}
+      {/* Fresha-style Quick Booking Dialog */}
       <Dialog open={isBookingOpen} onOpenChange={setIsBookingOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Book Appointment</DialogTitle>
+            <DialogTitle className={isRTL ? 'text-right font-arabic' : ''}>
+              {t('book_appointment')}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {selectedSlot && (
-              <div className="p-3 bg-teal-50 rounded-lg">
-                <p className="text-sm font-medium">Staff: {selectedSlot.staffName}</p>
-                <p className="text-sm text-gray-600">Time: {selectedSlot.time}</p>
+              <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                <p className={`text-sm font-medium ${isRTL ? 'text-right font-arabic' : ''}`}>
+                  {t('staff')}: {selectedSlot.staffName}
+                </p>
+                <p className={`text-sm text-gray-600 ${isRTL ? 'text-right font-arabic' : ''}`}>
+                  {t('time')}: {selectedSlot.time}
+                </p>
               </div>
             )}
             
             <div className="space-y-2">
-              <Label htmlFor="clientName">Client Name *</Label>
+              <Label htmlFor="clientName" className={isRTL ? 'text-right font-arabic' : ''}>
+                {t('client_name')} *
+              </Label>
               <Input
                 id="clientName"
                 value={newBooking.clientName}
                 onChange={(e) => setNewBooking(prev => ({ ...prev, clientName: e.target.value }))}
-                placeholder="Enter client name"
+                placeholder={t('client_name')}
+                className={isRTL ? 'text-right font-arabic' : ''}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="clientPhone">Phone Number</Label>
+              <Label htmlFor="clientPhone" className={isRTL ? 'text-right font-arabic' : ''}>
+                {t('phone_number')}
+              </Label>
               <Input
                 id="clientPhone"
                 value={newBooking.clientPhone}
                 onChange={(e) => setNewBooking(prev => ({ ...prev, clientPhone: e.target.value }))}
-                placeholder="Enter phone number"
+                placeholder={t('phone_number')}
+                className={isRTL ? 'text-right font-arabic' : ''}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="service">Service *</Label>
+              <Label htmlFor="service" className={isRTL ? 'text-right font-arabic' : ''}>
+                {t('service')} *
+              </Label>
               <Select onValueChange={handleServiceChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a service" />
+                <SelectTrigger className={isRTL ? 'text-right font-arabic' : ''}>
+                  <SelectValue placeholder={t('service')} />
                 </SelectTrigger>
                 <SelectContent>
                   {serviceOptions.map(service => (
                     <SelectItem key={service.name} value={service.name}>
-                      {service.name} - {service.duration}min - ${service.price}
+                      {service.name} - {service.duration}{t('minutes')} - ${service.price}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -338,24 +369,43 @@ const Appointments = () => {
             </div>
 
             {newBooking.service && (
-              <div className="p-3 bg-gray-50 rounded-lg text-sm">
-                <p>Duration: {newBooking.duration} minutes</p>
-                <p>Price: ${newBooking.price}</p>
+              <div className="p-3 bg-gray-50 rounded-lg text-sm border">
+                <p className={isRTL ? 'text-right font-arabic' : ''}>
+                  {t('duration')}: {newBooking.duration} {t('minutes')}
+                </p>
+                <p className={isRTL ? 'text-right font-arabic' : ''}>
+                  {t('price')}: ${newBooking.price}
+                </p>
               </div>
             )}
 
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsBookingOpen(false)} className="flex-1">
-                Cancel
+            <div className={`flex gap-3 pt-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsBookingOpen(false)} 
+                className="flex-1 hover:bg-gray-50"
+              >
+                {t('cancel')}
               </Button>
-              <Button onClick={handleCreateBooking} className="flex-1">
-                Book Appointment
+              <Button 
+                onClick={handleCreateBooking} 
+                className="flex-1 bg-fresha-purple hover:bg-fresha-purple-dark"
+              >
+                {t('book')}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
     </div>
+  );
+};
+
+const Appointments = () => {
+  return (
+    <LanguageProvider>
+      <AppointmentsContent />
+    </LanguageProvider>
   );
 };
 

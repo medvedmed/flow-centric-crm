@@ -15,6 +15,26 @@ import { CSS } from '@dnd-kit/utilities';
 import { Plus, Filter, ChevronLeft, ChevronRight, Users, DollarSign } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
+// Enhanced color palette for different services and statuses
+const serviceColors = {
+  "Haircut & Style": { bg: "#10b981", text: "#ffffff" }, // Green
+  "Hair Coloring": { bg: "#8b5cf6", text: "#ffffff" }, // Purple
+  "Manicure": { bg: "#f59e0b", text: "#ffffff" }, // Amber
+  "Pedicure": { bg: "#ef4444", text: "#ffffff" }, // Red
+  "Facial": { bg: "#06b6d4", text: "#ffffff" }, // Cyan
+  "Massage": { bg: "#ec4899", text: "#ffffff" }, // Pink
+  "Beard Trim": { bg: "#059669", text: "#ffffff" }, // Emerald
+  "Eyebrow": { bg: "#7c3aed", text: "#ffffff" }, // Violet
+};
+
+const statusColors = {
+  "confirmed": { bg: "#10b981", text: "#ffffff" }, // Green
+  "in-progress": { bg: "#3b82f6", text: "#ffffff" }, // Blue
+  "upcoming": { bg: "#f59e0b", text: "#ffffff" }, // Amber
+  "completed": { bg: "#6b7280", text: "#ffffff" }, // Gray
+  "cancelled": { bg: "#ef4444", text: "#ffffff" }, // Red
+};
+
 // Mock data for staff
 const staffData = [
   {
@@ -47,7 +67,7 @@ const staffData = [
   }
 ];
 
-// Mock appointments data
+// Mock appointments data with enhanced color system
 const initialAppointments = [
   {
     id: "apt-1",
@@ -58,8 +78,7 @@ const initialAppointments = [
     clientPhone: "+1 234 567 8901",
     service: "Haircut & Style",
     price: 85,
-    status: "confirmed",
-    color: "#14b8a6"
+    status: "confirmed"
   },
   {
     id: "apt-2", 
@@ -70,8 +89,7 @@ const initialAppointments = [
     clientPhone: "+1 234 567 8902",
     service: "Hair Coloring",
     price: 150,
-    status: "in-progress",
-    color: "#06b6d4"
+    status: "in-progress"
   },
   {
     id: "apt-3",
@@ -82,8 +100,7 @@ const initialAppointments = [
     clientPhone: "+1 234 567 8903",
     service: "Manicure",
     price: 40,
-    status: "upcoming",
-    color: "#8b5cf6"
+    status: "upcoming"
   },
   {
     id: "apt-4",
@@ -94,8 +111,29 @@ const initialAppointments = [
     clientPhone: "+1 234 567 8904", 
     service: "Beard Trim",
     price: 35,
-    status: "confirmed",
-    color: "#14b8a6"
+    status: "confirmed"
+  },
+  {
+    id: "apt-5",
+    staffId: "staff-4",
+    startTime: "16:00", 
+    endTime: "17:00",
+    clientName: "Lisa Parker",
+    clientPhone: "+1 234 567 8905", 
+    service: "Facial",
+    price: 75,
+    status: "upcoming"
+  },
+  {
+    id: "apt-6",
+    staffId: "staff-3",
+    startTime: "10:30", 
+    endTime: "11:15",
+    clientName: "Anna Smith",
+    clientPhone: "+1 234 567 8906", 
+    service: "Pedicure",
+    price: 50,
+    status: "confirmed"
   }
 ];
 
@@ -136,7 +174,16 @@ const parseTimeToMinutes = (time: string) => {
   return hours * 60 + minutes;
 };
 
-// Draggable Appointment Component
+// Get appointment colors based on service and status
+const getAppointmentColors = (service: string, status: string) => {
+  const serviceColor = serviceColors[service as keyof typeof serviceColors];
+  const statusColor = statusColors[status as keyof typeof statusColors];
+  
+  // Prioritize service color, fallback to status color
+  return serviceColor || statusColor || { bg: "#6b7280", text: "#ffffff" };
+};
+
+// Enhanced Draggable Appointment Component with DIKIDI-style colors
 const DraggableAppointment = ({ appointment }: { appointment: any }) => {
   const {
     attributes,
@@ -148,13 +195,15 @@ const DraggableAppointment = ({ appointment }: { appointment: any }) => {
   } = useSortable({ id: appointment.id });
 
   const baseStyle = calculateAppointmentStyle(appointment.startTime, appointment.endTime);
+  const colors = getAppointmentColors(appointment.service, appointment.status);
   
   const style = {
     ...baseStyle,
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
-    borderLeftColor: appointment.color,
+    opacity: isDragging ? 0.7 : 1,
+    backgroundColor: colors.bg,
+    color: colors.text,
   };
 
   return (
@@ -163,19 +212,27 @@ const DraggableAppointment = ({ appointment }: { appointment: any }) => {
       style={style}
       {...attributes}
       {...listeners}
-      className="bg-white rounded-lg shadow-md border-l-4 p-2 cursor-move hover:shadow-lg transition-shadow"
+      className="rounded-lg shadow-lg border-0 p-3 cursor-move hover:shadow-xl transition-all duration-200 hover:scale-105"
     >
-      <div className="text-xs font-semibold text-gray-800 truncate">
+      <div className="text-xs font-bold truncate mb-1">
+        {appointment.startTime} - {appointment.endTime}
+      </div>
+      <div className="text-sm font-semibold truncate mb-1">
         {appointment.clientName}
       </div>
-      <div className="text-xs text-gray-600 truncate">
-        {appointment.clientPhone}
-      </div>
-      <div className="text-xs text-gray-500 truncate mt-1">
+      <div className="text-xs opacity-90 truncate mb-1">
         {appointment.service}
       </div>
-      <div className="text-xs font-medium text-green-600 mt-1">
+      <div className="text-xs font-bold">
         ${appointment.price}
+      </div>
+      <div className="absolute top-1 right-2">
+        <div className={`w-2 h-2 rounded-full ${
+          appointment.status === 'confirmed' ? 'bg-white' :
+          appointment.status === 'in-progress' ? 'bg-yellow-300' :
+          appointment.status === 'upcoming' ? 'bg-orange-300' :
+          'bg-gray-300'
+        }`} />
       </div>
     </div>
   );
@@ -400,11 +457,29 @@ const Appointments = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Color Legend */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-lg">Service Types</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {Object.entries(serviceColors).slice(0, 6).map(([service, colors]) => (
+                <div key={service} className="flex items-center gap-2">
+                  <div 
+                    className="w-4 h-4 rounded"
+                    style={{ backgroundColor: colors.bg }}
+                  />
+                  <span className="text-xs">{service}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </div>
 
         {/* MAIN DRAG & DROP BOOKING CALENDAR - The Centerpiece */}
         <div className="lg:col-span-4 overflow-hidden">
-          <Card className="border-0 shadow-lg h-full">
+          <Card className="border-0 shadow-xl h-full">
             <CardContent className="p-0 h-full">
               <DndContext
                 sensors={sensors}
@@ -416,7 +491,7 @@ const Appointments = () => {
                   {filteredStaff.map((staff) => (
                     <div key={staff.id} className="border-r border-gray-200 last:border-r-0">
                       {/* Staff Header */}
-                      <div className="p-4 border-b bg-gradient-to-r from-teal-50 to-cyan-50">
+                      <div className="p-4 border-b bg-gradient-to-r from-teal-50 to-cyan-50 sticky top-0 z-20">
                         <div className="flex items-center gap-3">
                           <img
                             src={staff.image}
@@ -433,19 +508,21 @@ const Appointments = () => {
                       </div>
 
                       {/* Time Grid */}
-                      <div className="relative" style={{ height: '600px' }}>
-                        {/* Time slots background */}
+                      <div className="relative bg-gray-50" style={{ height: '660px' }}>
+                        {/* Time slots background with enhanced grid */}
                         {timeSlots.map((time, index) => (
                           <div
                             key={time}
-                            className="absolute w-full border-b border-gray-100"
+                            className={`absolute w-full border-b ${
+                              index % 2 === 0 ? 'border-gray-300' : 'border-gray-200'
+                            } hover:bg-gray-100 transition-colors`}
                             style={{
                               top: `${index * 30}px`,
                               height: '30px'
                             }}
                           >
                             {index % 2 === 0 && (
-                              <span className="absolute left-2 top-1 text-xs text-gray-400">
+                              <span className="absolute left-2 top-1 text-xs text-gray-500 font-medium">
                                 {time}
                               </span>
                             )}
@@ -456,7 +533,7 @@ const Appointments = () => {
                         <div
                           id={staff.id}
                           className="absolute inset-0 z-0"
-                          style={{ minHeight: '600px' }}
+                          style={{ minHeight: '660px' }}
                         />
 
                         {/* Appointments */}
@@ -480,8 +557,8 @@ const Appointments = () => {
 
                 <DragOverlay>
                   {activeId ? (
-                    <div className="bg-white rounded-lg shadow-lg border-l-4 border-teal-500 p-2">
-                      <div className="text-xs font-semibold">Dragging...</div>
+                    <div className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-lg shadow-2xl border-0 p-3 transform rotate-3">
+                      <div className="text-xs font-bold">Moving appointment...</div>
                     </div>
                   ) : null}
                 </DragOverlay>

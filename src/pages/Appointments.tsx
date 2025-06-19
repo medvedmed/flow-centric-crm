@@ -147,11 +147,14 @@ const DraggableAppointment = ({ appointment }: { appointment: any }) => {
     isDragging,
   } = useSortable({ id: appointment.id });
 
+  const baseStyle = calculateAppointmentStyle(appointment.startTime, appointment.endTime);
+  
   const style = {
-    ...calculateAppointmentStyle(appointment.startTime, appointment.endTime),
+    ...baseStyle,
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    borderLeftColor: appointment.color,
   };
 
   return (
@@ -161,10 +164,6 @@ const DraggableAppointment = ({ appointment }: { appointment: any }) => {
       {...attributes}
       {...listeners}
       className="bg-white rounded-lg shadow-md border-l-4 p-2 cursor-move hover:shadow-lg transition-shadow"
-      style={{
-        ...style,
-        borderLeftColor: appointment.color,
-      }}
     >
       <div className="text-xs font-semibold text-gray-800 truncate">
         {appointment.clientName}
@@ -338,7 +337,7 @@ const Appointments = () => {
         </div>
       </div>
 
-      {/* Main Calendar Layout */}
+      {/* Main Calendar Layout - Centerpiece as requested */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 h-full">
         {/* Calendar and Stats Sidebar */}
         <div className="lg:col-span-1 space-y-4">
@@ -403,7 +402,7 @@ const Appointments = () => {
           </Card>
         </div>
 
-        {/* Calendar Grid */}
+        {/* MAIN DRAG & DROP BOOKING CALENDAR - The Centerpiece */}
         <div className="lg:col-span-4 overflow-hidden">
           <Card className="border-0 shadow-lg h-full">
             <CardContent className="p-0 h-full">

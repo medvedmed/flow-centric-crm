@@ -1,5 +1,6 @@
+
 import React, { useState } from "react";
-import { Calendar, Clock, Plus, Search, Filter, Users, Bell } from "lucide-react";
+import { Calendar, Clock, Plus, Search, Filter, Users, Bell, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,24 +9,12 @@ import UnifiedScheduler from "@/components/UnifiedScheduler";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
 import { LanguageProvider, useLanguage } from "@/contexts/LanguageContext";
 import LanguageToggle from "@/components/LanguageToggle";
+import { useAppointments, useCreateAppointment, useUpdateAppointment, useClients } from "@/hooks/useCrmData";
+import { Appointment } from "@/services/crmApi";
 
 // Interfaces
-interface Appointment {
-  id: string;
-  staffId: string;
-  startTime: string;
-  endTime: string;
-  clientName: string;
-  clientPhone: string;
-  service: string;
-  price: number;
-  status: string;
-  duration: number;
-}
-
 interface Staff {
   id: string;
   name: string;
@@ -48,7 +37,7 @@ interface BookingSlot {
   staffName: string;
 }
 
-// Mock data
+// Mock staff data - in a real app, this would come from the API too
 const mockStaff: Staff[] = [
   {
     id: "1",
@@ -70,33 +59,6 @@ const mockStaff: Staff[] = [
   }
 ];
 
-const mockAppointments: Appointment[] = [
-  {
-    id: "1",
-    staffId: "1",
-    startTime: "09:00",
-    endTime: "10:30",
-    clientName: "Alice Cooper",
-    clientPhone: "+1 555-0101",
-    service: "Haircut & Style",
-    price: 85,
-    status: "confirmed",
-    duration: 90
-  },
-  {
-    id: "2",
-    staffId: "2",
-    startTime: "10:00",
-    endTime: "11:00",
-    clientName: "Bob Smith",
-    clientPhone: "+1 555-0102",
-    service: "Massage",
-    price: 120,
-    status: "in-progress",
-    duration: 60
-  }
-];
-
 const generateTimeSlots = (): TimeSlot[] => {
   const slots: TimeSlot[] = [];
   for (let hour = 9; hour < 18; hour++) {
@@ -114,7 +76,6 @@ const generateTimeSlots = (): TimeSlot[] => {
 
 const AppointmentsContent = () => {
   const { t, isRTL } = useLanguage();
-  const [appointments, setAppointments] = useState<Appointment[]>(mockAppointments);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<BookingSlot | null>(null);
   const [newBooking, setNewBooking] = useState({
@@ -124,21 +85,52 @@ const AppointmentsContent = () => {
     duration: 60,
     price: 0
   });
-  const { toast } = useToast();
+
+  // Use React Query hooks
+  const { data: appointments = [], isLoading: appointmentsLoading, refetch: refetchAppointments } = useAppointments();
+  const { data: clients = [] } = useClients();
+  const createAppointmentMutation = useCreateAppointment();
+  const updateAppointmentMutation = useUpdateAppointment();
 
   const timeSlots = generateTimeSlots();
 
-  const handleAppointmentMove = (appointmentId: string, newStaffId: string, newTime: string) => {
-    setAppointments(prev => prev.map(apt => 
-      apt.id === appointmentId 
-        ? { ...apt, staffId: newStaffId, startTime: newTime }
-        : apt
-    ));
-    
-    toast({
-      title: "Appointment moved",
-      description: "The appointment has been successfully rescheduled.",
-    });
+  // Transform API appointments to match the scheduler format
+  const transformedAppointments = appointments.map(apt => ({
+    id: apt.id || '',
+    staffId: apt.staffId,
+    startTime: apt.startTime,
+    endTime: apt.endTime,
+    clientName: apt.clientName || clients.find(c => c.id === apt.clientId)?.name || 'Unknown Client',
+    clientPhone: apt.clientPhone || clients.find(c => c.id === apt.clientId)?.phone || '',
+    service: apt.service,
+    price: apt.price || 0,
+    status: apt.status || 'Scheduled',
+    duration: apt.duration || 60
+  }));
+
+  const handleAppointmentMove = async (appointmentId: string, newStaffId: string, newTime: string) => {
+    try {
+      const appointment = appointments.find(apt => apt.id === appointmentId);
+      if (!appointment) return;
+
+      // Calculate new end time
+      const startTime = new Date(`2000-01-01 ${newTime}`);
+      const endTime = new Date(startTime.getTime() + (appointment.duration || 60) * 60000);
+      const endTimeString = endTime.toTimeString().slice(0, 5);
+
+      await updateAppointmentMutation.mutateAsync({
+        id: appointmentId,
+        appointment: {
+          staffId: newStaffId,
+          startTime: newTime,
+          endTime: endTimeString
+        }
+      });
+
+      refetchAppointments();
+    } catch (error) {
+      console.error('Error moving appointment:', error);
+    }
   };
 
   const handleBookSlot = (slot: BookingSlot) => {
@@ -146,48 +138,60 @@ const AppointmentsContent = () => {
     setIsBookingOpen(true);
   };
 
-  const handleCreateBooking = () => {
+  const handleCreateBooking = async () => {
     if (!selectedSlot || !newBooking.clientName || !newBooking.service) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all required fields.",
-        variant: "destructive"
-      });
       return;
     }
 
-    const endTime = new Date(`2000-01-01 ${selectedSlot.time}`);
-    endTime.setMinutes(endTime.getMinutes() + newBooking.duration);
-    const endTimeString = endTime.toTimeString().slice(0, 5);
+    try {
+      const endTime = new Date(`2000-01-01 ${selectedSlot.time}`);
+      endTime.setMinutes(endTime.getMinutes() + newBooking.duration);
+      const endTimeString = endTime.toTimeString().slice(0, 5);
 
-    const newAppointment: Appointment = {
-      id: Date.now().toString(),
-      staffId: selectedSlot.staffId,
-      startTime: selectedSlot.time,
-      endTime: endTimeString,
-      clientName: newBooking.clientName,
-      clientPhone: newBooking.clientPhone,
-      service: newBooking.service,
-      price: newBooking.price,
-      status: "confirmed",
-      duration: newBooking.duration
-    };
+      // Find or create client
+      let clientId = '';
+      const existingClient = clients.find(c => 
+        c.name.toLowerCase() === newBooking.clientName.toLowerCase() ||
+        c.phone === newBooking.clientPhone
+      );
 
-    setAppointments(prev => [...prev, newAppointment]);
-    setIsBookingOpen(false);
-    setSelectedSlot(null);
-    setNewBooking({
-      clientName: "",
-      clientPhone: "",
-      service: "",
-      duration: 60,
-      price: 0
-    });
+      if (existingClient) {
+        clientId = existingClient.id || '';
+      } else {
+        // In a real app, you might want to create the client first
+        clientId = 'temp-' + Date.now();
+      }
 
-    toast({
-      title: "Booking created",
-      description: `Appointment booked for ${newBooking.clientName} with ${selectedSlot.staffName}`,
-    });
+      const newAppointment: Appointment = {
+        clientId,
+        staffId: selectedSlot.staffId,
+        service: newBooking.service,
+        startTime: selectedSlot.time,
+        endTime: endTimeString,
+        status: 'Scheduled',
+        notes: '',
+        price: newBooking.price,
+        duration: newBooking.duration,
+        clientName: newBooking.clientName,
+        clientPhone: newBooking.clientPhone
+      };
+
+      await createAppointmentMutation.mutateAsync(newAppointment);
+
+      setIsBookingOpen(false);
+      setSelectedSlot(null);
+      setNewBooking({
+        clientName: "",
+        clientPhone: "",
+        service: "",
+        duration: 60,
+        price: 0
+      });
+      
+      refetchAppointments();
+    } catch (error) {
+      console.error('Error creating booking:', error);
+    }
   };
 
   const serviceOptions = [
@@ -212,6 +216,21 @@ const AppointmentsContent = () => {
       }));
     }
   };
+
+  const getTodayStats = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayAppointments = appointments.filter(apt => 
+      apt.startTime && apt.startTime.includes(today)
+    );
+    
+    return {
+      appointments: todayAppointments.length,
+      revenue: todayAppointments.reduce((sum, apt) => sum + (apt.price || 0), 0),
+      cancellations: todayAppointments.filter(apt => apt.status === 'Cancelled').length
+    };
+  };
+
+  const stats = getTodayStats();
 
   return (
     <div className={`space-y-6 ${isRTL ? 'font-arabic' : ''}`}>
@@ -243,8 +262,12 @@ const AppointmentsContent = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-fresha-purple">12</div>
-            <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>+2 {t('from_yesterday')}</p>
+            <div className="text-2xl font-bold text-fresha-purple">
+              {appointmentsLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : stats.appointments}
+            </div>
+            <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>
+              {appointmentsLoading ? 'Loading...' : `${stats.appointments} ${t('from_yesterday')}`}
+            </p>
           </CardContent>
         </Card>
         
@@ -255,8 +278,12 @@ const AppointmentsContent = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-fresha-success">$1,245</div>
-            <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>+15% {t('from_yesterday')}</p>
+            <div className="text-2xl font-bold text-fresha-success">
+              {appointmentsLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : `$${stats.revenue}`}
+            </div>
+            <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>
+              {appointmentsLoading ? 'Loading...' : `+15% ${t('from_yesterday')}`}
+            </p>
           </CardContent>
         </Card>
         
@@ -267,8 +294,12 @@ const AppointmentsContent = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-fresha-error">2</div>
-            <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>-1 {t('from_yesterday')}</p>
+            <div className="text-2xl font-bold text-fresha-error">
+              {appointmentsLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : stats.cancellations}
+            </div>
+            <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>
+              {appointmentsLoading ? 'Loading...' : `-1 ${t('from_yesterday')}`}
+            </p>
           </CardContent>
         </Card>
         
@@ -295,13 +326,20 @@ const AppointmentsContent = () => {
             {t('click_to_book')}
           </div>
         </div>
-        <UnifiedScheduler
-          staff={mockStaff}
-          appointments={appointments}
-          timeSlots={timeSlots}
-          onAppointmentMove={handleAppointmentMove}
-          onBookSlot={handleBookSlot}
-        />
+        
+        {appointmentsLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin" />
+          </div>
+        ) : (
+          <UnifiedScheduler
+            staff={mockStaff}
+            appointments={transformedAppointments}
+            timeSlots={timeSlots}
+            onAppointmentMove={handleAppointmentMove}
+            onBookSlot={handleBookSlot}
+          />
+        )}
       </div>
 
       {/* Fresha-style Quick Booking Dialog */}
@@ -384,13 +422,16 @@ const AppointmentsContent = () => {
                 variant="outline" 
                 onClick={() => setIsBookingOpen(false)} 
                 className="flex-1 hover:bg-gray-50"
+                disabled={createAppointmentMutation.isPending}
               >
                 {t('cancel')}
               </Button>
               <Button 
                 onClick={handleCreateBooking} 
                 className="flex-1 bg-fresha-purple hover:bg-fresha-purple-dark"
+                disabled={createAppointmentMutation.isPending}
               >
+                {createAppointmentMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {t('book')}
               </Button>
             </div>

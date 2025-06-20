@@ -9,106 +9,79 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Filter, Users, Mail, Phone, Edit, Trash } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-
-const clientsData = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    email: "sarah.johnson@email.com",
-    phone: "+1 (555) 123-4567",
-    lastVisit: "2 days ago",
-    totalSpent: 450,
-    visits: 12,
-    preferredStylist: "Emma Wilson",
-    status: "VIP"
-  },
-  {
-    id: 2,
-    name: "Michael Chen",
-    email: "m.chen@email.com",
-    phone: "+1 (555) 987-6543",
-    lastVisit: "1 week ago",
-    totalSpent: 280,
-    visits: 8,
-    preferredStylist: "Sophia Davis",
-    status: "Regular"
-  },
-  {
-    id: 3,
-    name: "Emily Rodriguez",
-    email: "emily@email.com",
-    phone: "+1 (555) 456-7890",
-    lastVisit: "Today",
-    totalSpent: 120,
-    visits: 3,
-    preferredStylist: "Olivia Brown",
-    status: "New"
-  },
-];
+import { Plus, Search, Filter, Users, Mail, Phone, Edit, Trash, Loader2 } from "lucide-react";
+import { useClients, useCreateClient, useDeleteClient } from "@/hooks/useCrmData";
+import { Client } from "@/services/crmApi";
 
 const Clients = () => {
-  const [clients, setClients] = useState(clientsData);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-
-  const [newClient, setNewClient] = useState({
+  const [newClient, setNewClient] = useState<Omit<Client, 'id'>>({
     name: "",
     email: "",
     phone: "",
-    preferredStylist: "",
+    status: "New",
+    assignedStaff: "",
     notes: ""
   });
 
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.phone.includes(searchTerm)
-  );
+  // Use React Query hooks
+  const { data: clients = [], isLoading, error } = useClients(searchTerm);
+  const createClientMutation = useCreateClient();
+  const deleteClientMutation = useDeleteClient();
 
-  const handleAddClient = () => {
+  const handleAddClient = async () => {
     if (!newClient.name || !newClient.email) {
-      toast({
-        title: "Error",
-        description: "Name and email are required fields.",
-        variant: "destructive",
-      });
       return;
     }
 
-    const client = {
-      id: clients.length + 1,
-      ...newClient,
-      lastVisit: "Never",
-      totalSpent: 0,
-      visits: 0,
-      status: "New"
-    };
+    try {
+      await createClientMutation.mutateAsync(newClient);
+      setNewClient({
+        name: "",
+        email: "",
+        phone: "",
+        status: "New",
+        assignedStaff: "",
+        notes: ""
+      });
+      setIsAddDialogOpen(false);
+    } catch (error) {
+      console.error('Error creating client:', error);
+    }
+  };
 
-    setClients([...clients, client]);
-    setNewClient({
-      name: "",
-      email: "",
-      phone: "",
-      preferredStylist: "",
-      notes: ""
-    });
-    setIsAddDialogOpen(false);
+  const handleDeleteClient = async (id: string) => {
+    if (!id) return;
     
-    toast({
-      title: "Success",
-      description: "Client added successfully!",
-    });
+    try {
+      await deleteClientMutation.mutateAsync(id);
+    } catch (error) {
+      console.error('Error deleting client:', error);
+    }
   };
 
-  const handleDeleteClient = (id) => {
-    setClients(clients.filter(client => client.id !== id));
-    toast({
-      title: "Success",
-      description: "Client removed successfully!",
-    });
+  const getStatusCounts = () => {
+    return {
+      total: clients.length,
+      vip: clients.filter(c => c.status === 'VIP').length,
+      regular: clients.filter(c => c.status === 'Regular').length,
+      new: clients.filter(c => c.status === 'New').length,
+    };
   };
+
+  const statusCounts = getStatusCounts();
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-600 mb-2">Error loading clients</p>
+          <p className="text-sm text-gray-500">Please check your API configuration</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -166,10 +139,25 @@ const Clients = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="stylist">Preferred Stylist</Label>
-                  <Select value={newClient.preferredStylist} onValueChange={(value) => setNewClient({...newClient, preferredStylist: value})}>
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={newClient.status} onValueChange={(value) => setNewClient({...newClient, status: value as Client['status']})}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select stylist" />
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="New">New</SelectItem>
+                      <SelectItem value="Regular">Regular</SelectItem>
+                      <SelectItem value="VIP">VIP</SelectItem>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="assignedStaff">Assigned Staff</Label>
+                  <Select value={newClient.assignedStaff} onValueChange={(value) => setNewClient({...newClient, assignedStaff: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select staff member" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Emma Wilson">Emma Wilson</SelectItem>
@@ -190,7 +178,12 @@ const Clients = () => {
                   />
                 </div>
                 <div className="flex gap-2 pt-4">
-                  <Button onClick={handleAddClient} className="flex-1">
+                  <Button 
+                    onClick={handleAddClient} 
+                    className="flex-1"
+                    disabled={createClientMutation.isPending}
+                  >
+                    {createClientMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     Add Client
                   </Button>
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
@@ -211,7 +204,9 @@ const Clients = () => {
             <Users className="h-4 w-4 text-teal-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-teal-900">{clients.length}</div>
+            <div className="text-2xl font-bold text-teal-900">
+              {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : statusCounts.total}
+            </div>
           </CardContent>
         </Card>
 
@@ -222,7 +217,7 @@ const Clients = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-900">
-              {clients.filter(c => c.status === 'VIP').length}
+              {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : statusCounts.vip}
             </div>
           </CardContent>
         </Card>
@@ -234,7 +229,7 @@ const Clients = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-900">
-              {clients.filter(c => c.status === 'Regular').length}
+              {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : statusCounts.regular}
             </div>
           </CardContent>
         </Card>
@@ -246,7 +241,7 @@ const Clients = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-900">
-              {clients.filter(c => c.status === 'New').length}
+              {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : statusCounts.new}
             </div>
           </CardContent>
         </Card>
@@ -273,67 +268,87 @@ const Clients = () => {
           <CardTitle>Client List</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Last Visit</TableHead>
-                <TableHead>Total Spent</TableHead>
-                <TableHead>Visits</TableHead>
-                <TableHead>Preferred Stylist</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredClients.map((client) => (
-                <TableRow key={client.id}>
-                  <TableCell className="font-medium">{client.name}</TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1 text-sm">
-                        <Mail className="w-3 h-3" />
-                        {client.email}
-                      </div>
-                      <div className="flex items-center gap-1 text-sm">
-                        <Phone className="w-3 h-3" />
-                        {client.phone}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{client.lastVisit}</TableCell>
-                  <TableCell>${client.totalSpent}</TableCell>
-                  <TableCell>{client.visits}</TableCell>
-                  <TableCell>{client.preferredStylist}</TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={client.status === 'VIP' ? 'default' : 
-                              client.status === 'Regular' ? 'secondary' : 'outline'}
-                      className={client.status === 'VIP' ? 'bg-amber-100 text-amber-800' : ''}
-                    >
-                      {client.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleDeleteClient(client.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader2 className="w-8 h-8 animate-spin" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Assigned Staff</TableHead>
+                  <TableHead>Notes</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {clients.map((client) => (
+                  <TableRow key={client.id}>
+                    <TableCell className="font-medium">{client.name}</TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-sm">
+                          <Mail className="w-3 h-3" />
+                          {client.email}
+                        </div>
+                        {client.phone && (
+                          <div className="flex items-center gap-1 text-sm">
+                            <Phone className="w-3 h-3" />
+                            {client.phone}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={client.status === 'VIP' ? 'default' : 
+                                client.status === 'Regular' ? 'secondary' : 'outline'}
+                        className={client.status === 'VIP' ? 'bg-amber-100 text-amber-800' : ''}
+                      >
+                        {client.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{client.assignedStaff || '-'}</TableCell>
+                    <TableCell>
+                      <span className="text-sm text-gray-600">
+                        {client.notes ? (client.notes.length > 50 ? client.notes.substring(0, 50) + '...' : client.notes) : '-'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => client.id && handleDeleteClient(client.id)}
+                          className="text-red-600 hover:text-red-700"
+                          disabled={deleteClientMutation.isPending}
+                        >
+                          {deleteClientMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {clients.length === 0 && !isLoading && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                      No clients found. Add your first client to get started.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

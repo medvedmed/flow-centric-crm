@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Calendar, Clock, Plus, Search, Filter, Users, Bell, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,8 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LanguageProvider, useLanguage } from "@/contexts/LanguageContext";
 import LanguageToggle from "@/components/LanguageToggle";
-import { useAppointments, useCreateAppointment, useUpdateAppointment, useClients } from "@/hooks/useCrmData";
-import { Appointment } from "@/services/crmApi";
+import { useAppointments, useCreateAppointment, useUpdateAppointment, useClients, useCreateClient } from "@/hooks/useCrmData";
+import { Appointment, Client } from "@/services/crmApi";
 
 // Interfaces
 interface Staff {
@@ -90,6 +89,7 @@ const AppointmentsContent = () => {
   const { data: appointments = [], isLoading: appointmentsLoading, refetch: refetchAppointments } = useAppointments();
   const { data: clients = [] } = useClients();
   const createAppointmentMutation = useCreateAppointment();
+  const createClientMutation = useCreateClient();
   const updateAppointmentMutation = useUpdateAppointment();
 
   const timeSlots = generateTimeSlots();
@@ -152,19 +152,40 @@ const AppointmentsContent = () => {
       let clientId = '';
       const existingClient = clients.find(c => 
         c.name.toLowerCase() === newBooking.clientName.toLowerCase() ||
-        c.phone === newBooking.clientPhone
+        (newBooking.clientPhone && c.phone === newBooking.clientPhone)
       );
 
       if (existingClient) {
         clientId = existingClient.id || '';
-      } else {
-        // In a real app, you might want to create the client first
-        clientId = 'temp-' + Date.now();
+      } else if (newBooking.clientName) {
+        // Create new client first
+        const newClient: Client = {
+          name: newBooking.clientName,
+          email: newBooking.clientPhone ? `${newBooking.clientPhone.replace(/\D/g, '')}@temp.com` : `${newBooking.clientName.toLowerCase().replace(/\s+/g, '.')}@temp.com`,
+          phone: newBooking.clientPhone || '',
+          status: 'New',
+          assignedStaff: '',
+          notes: '',
+          tags: ''
+        };
+
+        console.log('Creating new client:', newClient);
+        const createdClient = await createClientMutation.mutateAsync(newClient);
+        clientId = createdClient.id || '';
+        console.log('Client created with ID:', clientId);
       }
 
+      if (!clientId) {
+        throw new Error('Failed to create or find client');
+      }
+
+      // Convert staffId to number
+      const numericStaffId = parseInt(selectedSlot.staffId, 10);
+      const numericClientId = parseInt(clientId, 10);
+
       const newAppointment: Appointment = {
-        clientId,
-        staffId: selectedSlot.staffId,
+        clientId: numericClientId.toString(),
+        staffId: numericStaffId.toString(),
         service: newBooking.service,
         startTime: selectedSlot.time,
         endTime: endTimeString,
@@ -176,6 +197,7 @@ const AppointmentsContent = () => {
         clientPhone: newBooking.clientPhone
       };
 
+      console.log('Creating appointment:', newAppointment);
       await createAppointmentMutation.mutateAsync(newAppointment);
 
       setIsBookingOpen(false);
@@ -422,16 +444,16 @@ const AppointmentsContent = () => {
                 variant="outline" 
                 onClick={() => setIsBookingOpen(false)} 
                 className="flex-1 hover:bg-gray-50"
-                disabled={createAppointmentMutation.isPending}
+                disabled={createAppointmentMutation.isPending || createClientMutation.isPending}
               >
                 {t('cancel')}
               </Button>
               <Button 
                 onClick={handleCreateBooking} 
                 className="flex-1 bg-fresha-purple hover:bg-fresha-purple-dark"
-                disabled={createAppointmentMutation.isPending}
+                disabled={createAppointmentMutation.isPending || createClientMutation.isPending}
               >
-                {createAppointmentMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {(createAppointmentMutation.isPending || createClientMutation.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {t('book')}
               </Button>
             </div>

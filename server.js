@@ -9,11 +9,46 @@ app.use(cors()); // Allow cross-origin from frontend
 
 const PORT = process.env.PORT || 3000;
 
-// In-memory data stores
-let clients    = [];
+// In-memory data stores with sample data
+let clients = [
+  {
+    id: 1,
+    name: "Sarah Johnson",
+    email: "sarah.johnson@email.com",
+    phone: "+1 (555) 123-4567",
+    status: "VIP",
+    assignedStaff: "Emma Wilson",
+    notes: "Prefers morning appointments",
+    tags: "VIP, Regular",
+    preferredStylist: "Emma Wilson",
+    createdAt: new Date().toISOString(),
+    lastVisit: "2024-01-15",
+    totalSpent: 450,
+    visits: 12
+  },
+  {
+    id: 2,
+    name: "Michael Chen",
+    email: "michael.chen@email.com",
+    phone: "+1 (555) 234-5678",
+    status: "Regular",
+    assignedStaff: "Sophia Davis",
+    notes: "Allergic to certain hair products",
+    tags: "Regular",
+    preferredStylist: "Sophia Davis",
+    createdAt: new Date().toISOString(),
+    lastVisit: "2024-01-10",
+    totalSpent: 320,
+    visits: 8
+  }
+];
+
 let appointments = [];
-let staff      = [];
-let inventory  = [];
+let staff = [
+  { id: 1, name: "Emma Wilson", role: "Senior Stylist", email: "emma@salon.com", phone: "+1 (555) 111-1111", createdAt: new Date().toISOString() },
+  { id: 2, name: "Sophia Davis", role: "Hair Colorist", email: "sophia@salon.com", phone: "+1 (555) 222-2222", createdAt: new Date().toISOString() }
+];
+let inventory = [];
 
 // Root
 app.get('/', (req, res) => {
@@ -52,7 +87,7 @@ app.post('/clients', (req, res) => {
     return res.status(400).json({ error: 'Invalid email format.' });
 
   const newClient = {
-    id: clients.length + 1,
+    id: Math.max(...clients.map(c => c.id), 0) + 1,
     name, email, phone,
     status: status || 'New',
     assignedStaff: assignedStaff || '',
@@ -106,40 +141,101 @@ app.get('/appointments', (req, res) => {
 
 // Create
 app.post('/appointments', (req, res) => {
-  const { clientId, staffId, service, startTime, endTime, status, notes, price, duration } = req.body;
+  const { clientId, staffId, service, startTime, endTime, status, notes, price, duration, clientName, clientPhone } = req.body;
+  
+  console.log('Received appointment data:', req.body);
+  
   if (!clientId || !staffId || !service || !startTime || !endTime)
     return res.status(400).json({ error: 'clientId, staffId, service, startTime, endTime are required.' });
 
-  if (!clients.some(c => c.id === +clientId))
-    return res.status(400).json({ error: 'Client not found.' });
+  // Convert IDs to numbers
+  const numericClientId = +clientId;
+  const numericStaffId = +staffId;
+
+  // Check if client exists, if not and we have client info, create them
+  if (!clients.some(c => c.id === numericClientId)) {
+    if (clientName && clientPhone) {
+      // Create new client
+      const newClient = {
+        id: numericClientId > 0 ? numericClientId : Math.max(...clients.map(c => c.id), 0) + 1,
+        name: clientName,
+        email: clientPhone + '@temp.com', // temporary email
+        phone: clientPhone,
+        status: 'New',
+        assignedStaff: '',
+        notes: '',
+        tags: '',
+        preferredStylist: '',
+        createdAt: new Date().toISOString(),
+        lastVisit: null,
+        totalSpent: 0,
+        visits: 0
+      };
+      clients.push(newClient);
+      console.log('Created new client:', newClient);
+    } else {
+      return res.status(400).json({ error: 'Client not found and insufficient client info provided.' });
+    }
+  }
+
+  // Validate staff exists
+  if (!staff.some(s => s.id === numericStaffId)) {
+    return res.status(400).json({ error: 'Staff member not found.' });
+  }
 
   const timeRx = /^\d{2}:\d{2}$/;
   if (!timeRx.test(startTime) || !timeRx.test(endTime))
     return res.status(400).json({ error: 'Time must be HH:MM format.' });
 
   const newApt = {
-    id: appointments.length + 1,
-    clientId: +clientId,
-    staffId:   +staffId,
+    id: Math.max(...appointments.map(a => a.id), 0) + 1,
+    clientId: numericClientId,
+    staffId: numericStaffId,
     service,
     startTime,
     endTime,
-    status:   status || 'Scheduled',
-    notes:    notes || '',
-    price:    price  || 0,
+    status: status || 'Scheduled',
+    notes: notes || '',
+    price: price || 0,
     duration: duration || 60,
     createdAt: new Date().toISOString()
   };
+  
   appointments.push(newApt);
-  res.status(201).json(newApt);
+  console.log('Created appointment:', newApt);
+  
+  // Return enriched appointment
+  const client = clients.find(c => c.id === numericClientId);
+  const enrichedApt = {
+    ...newApt,
+    clientName: client?.name || 'Unknown',
+    clientPhone: client?.phone || ''
+  };
+  
+  res.status(201).json(enrichedApt);
 });
 
 // Update
 app.put('/appointments/:id', (req, res) => {
   const idx = appointments.findIndex(a => a.id === +req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Appointment not found' });
-  appointments[idx] = { ...appointments[idx], ...req.body };
-  res.json(appointments[idx]);
+  
+  // Convert staffId to number if provided
+  const updates = { ...req.body };
+  if (updates.staffId) updates.staffId = +updates.staffId;
+  if (updates.clientId) updates.clientId = +updates.clientId;
+  
+  appointments[idx] = { ...appointments[idx], ...updates };
+  
+  // Return enriched appointment
+  const client = clients.find(c => c.id === appointments[idx].clientId);
+  const enrichedApt = {
+    ...appointments[idx],
+    clientName: client?.name || 'Unknown',
+    clientPhone: client?.phone || ''
+  };
+  
+  res.json(enrichedApt);
 });
 
 // Delete
@@ -159,7 +255,7 @@ app.get('/staff', (req, res) => res.json(staff));
 app.post('/staff', (req, res) => {
   const { name, role, email, phone } = req.body;
   if (!name || !role) return res.status(400).json({ error: 'Name and role required.' });
-  const newS = { id: staff.length + 1, name, role, email: email||'', phone: phone||'', createdAt: new Date().toISOString() };
+  const newS = { id: Math.max(...staff.map(s => s.id), 0) + 1, name, role, email: email||'', phone: phone||'', createdAt: new Date().toISOString() };
   staff.push(newS);
   res.status(201).json(newS);
 });
@@ -192,7 +288,7 @@ app.post('/inventory', (req, res) => {
     return res.status(400).json({ error: 'Name, SKU, quantity, price, supplier required.' });
   if (quantity<0||price<0)
     return res.status(400).json({ error: 'Quantity/price must be ≥ 0.' });
-  const newItem = { id: inventory.length+1, name, sku, quantity, price, supplier };
+  const newItem = { id: Math.max(...inventory.map(i => i.id), 0) + 1, name, sku, quantity, price, supplier };
   inventory.push(newItem);
   res.status(201).json(newItem);
 });

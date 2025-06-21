@@ -1,4 +1,5 @@
 
+
 const API_BASE_URL = process.env.REACT_APP_CRM_API_URL || 'http://localhost:3000';
 const API_KEY = process.env.REACT_APP_CRM_API_KEY || 'your-api-key';
 
@@ -63,39 +64,39 @@ class CRMApi {
     }
   }
 
-  // Client methods
+  // Client methods - Updated to match your backend structure
   async createClient(client: Client): Promise<Client> {
-    return this.makeRequest('clients/create', {
+    return this.makeRequest('clients', {
       method: 'POST',
       body: JSON.stringify(client),
     });
   }
 
   async getClients(searchTerm?: string): Promise<Client[]> {
-    const params = searchTerm ? `?term=${encodeURIComponent(searchTerm)}` : '';
-    return this.makeRequest(`clients/list${params}`);
+    const params = searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : '';
+    return this.makeRequest(`clients${params}`);
   }
 
   async getClient(id: string): Promise<Client> {
-    return this.makeRequest(`clients/get?id=${id}`);
+    return this.makeRequest(`clients/${id}`);
   }
 
   async updateClient(id: string, client: Partial<Client>): Promise<Client> {
-    return this.makeRequest('clients/update', {
+    return this.makeRequest(`clients/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ id, ...client }),
+      body: JSON.stringify(client),
     });
   }
 
   async deleteClient(id: string): Promise<void> {
-    return this.makeRequest(`clients/delete?id=${id}`, {
+    return this.makeRequest(`clients/${id}`, {
       method: 'DELETE',
     });
   }
 
-  // Appointment methods
+  // Appointment methods - Updated to match your backend structure
   async createAppointment(appointment: Appointment): Promise<Appointment> {
-    return this.makeRequest('appointments/create', {
+    return this.makeRequest('appointments', {
       method: 'POST',
       body: JSON.stringify(appointment),
     });
@@ -107,21 +108,22 @@ class CRMApi {
     if (staffId) params.append('staffId', staffId);
     const queryString = params.toString() ? `?${params.toString()}` : '';
     
-    return this.makeRequest(`appointments/list${queryString}`);
+    return this.makeRequest(`appointments${queryString}`);
   }
 
   async updateAppointment(id: string, appointment: Partial<Appointment>): Promise<Appointment> {
-    return this.makeRequest('appointments/update', {
+    return this.makeRequest(`appointments/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ id, ...appointment }),
+      body: JSON.stringify(appointment),
     });
   }
 
   async deleteAppointment(id: string): Promise<void> {
-    return this.makeRequest(`appointments/delete?id=${id}`, {
+    return this.makeRequest(`appointments/${id}`, {
       method: 'DELETE',
     });
   }
 }
 
 export const crmApi = new CRMApi();
+

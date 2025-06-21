@@ -1,5 +1,5 @@
 
-const API_BASE_URL = process.env.REACT_APP_N8N_WEBHOOK_URL || 'http://localhost:5678/webhook';
+const API_BASE_URL = process.env.REACT_APP_CRM_API_URL || 'http://localhost:3000';
 const API_KEY = process.env.REACT_APP_CRM_API_KEY || 'your-api-key';
 
 export interface Client {

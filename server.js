@@ -5,66 +5,55 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(cors()); // Enable CORS for frontend communication
+app.use(cors()); // Allow cross-origin from frontend
 
 const PORT = process.env.PORT || 3000;
 
 // In-memory data stores
-let clients = [];
+let clients    = [];
 let appointments = [];
-let staff = [];
-let inventory = [];
+let staff      = [];
+let inventory  = [];
 
-// Root route
+// Root
 app.get('/', (req, res) => {
   res.send('Welcome to Aura Salon CRM backend!');
 });
 
-// CLIENT ENDPOINTS
+// ── CLIENTS ────────────────────────────────────────────────────────────
 
-// Get all clients with optional search
+// List + search
 app.get('/clients', (req, res) => {
   const { search } = req.query;
-  
   if (search) {
-    const filteredClients = clients.filter(client => 
-      client.name.toLowerCase().includes(search.toLowerCase()) ||
-      client.email.toLowerCase().includes(search.toLowerCase()) ||
-      (client.phone && client.phone.includes(search))
-    );
-    return res.json(filteredClients);
+    const q = search.toLowerCase();
+    return res.json(clients.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q) ||
+      c.phone.includes(q)
+    ));
   }
-  
   res.json(clients);
 });
 
-// Get single client
+// Get one
 app.get('/clients/:id', (req, res) => {
-  const client = clients.find(c => c.id === parseInt(req.params.id));
-  if (!client) {
-    return res.status(404).json({ error: 'Client not found' });
-  }
-  res.json(client);
+  const c = clients.find(c => c.id === +req.params.id);
+  if (!c) return res.status(404).json({ error: 'Client not found' });
+  res.json(c);
 });
 
-// Add a new client with validation
+// Create
 app.post('/clients', (req, res) => {
   const { name, email, phone, status, assignedStaff, notes, tags, preferredStylist } = req.body;
-
-  if (!name || !email || !phone) {
+  if (!name || !email || !phone)
     return res.status(400).json({ error: 'Name, email, and phone are required.' });
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return res.status(400).json({ error: 'Invalid email format.' });
-  }
 
-  const client = {
+  const newClient = {
     id: clients.length + 1,
-    name,
-    email,
-    phone,
+    name, email, phone,
     status: status || 'New',
     assignedStaff: assignedStaff || '',
     notes: notes || '',
@@ -75,180 +64,162 @@ app.post('/clients', (req, res) => {
     totalSpent: 0,
     visits: 0
   };
-
-  clients.push(client);
-  res.status(201).json(client);
+  clients.push(newClient);
+  res.status(201).json(newClient);
 });
 
-// Update client
+// Update
 app.put('/clients/:id', (req, res) => {
-  const clientIndex = clients.findIndex(c => c.id === parseInt(req.params.id));
-  if (clientIndex === -1) {
-    return res.status(404).json({ error: 'Client not found' });
-  }
-
-  const updatedClient = { ...clients[clientIndex], ...req.body };
-  clients[clientIndex] = updatedClient;
-  res.json(updatedClient);
+  const idx = clients.findIndex(c => c.id === +req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Client not found' });
+  clients[idx] = { ...clients[idx], ...req.body };
+  res.json(clients[idx]);
 });
 
-// Delete client
+// Delete
 app.delete('/clients/:id', (req, res) => {
-  const clientIndex = clients.findIndex(c => c.id === parseInt(req.params.id));
-  if (clientIndex === -1) {
-    return res.status(404).json({ error: 'Client not found' });
-  }
-
-  clients.splice(clientIndex, 1);
-  res.status(204).send();
+  const idx = clients.findIndex(c => c.id === +req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Client not found' });
+  clients.splice(idx, 1);
+  res.sendStatus(204);
 });
 
-// APPOINTMENT ENDPOINTS
+// ── APPOINTMENTS ────────────────────────────────────────────────────────
 
-// Get all appointments with optional filters
+// List with optional filters
 app.get('/appointments', (req, res) => {
-  const { clientId, staffId } = req.query;
-  let filteredAppointments = appointments;
+  let list = [...appointments];
+  if (req.query.clientId) list = list.filter(a => a.clientId === +req.query.clientId);
+  if (req.query.staffId)  list = list.filter(a => a.staffId === +req.query.staffId);
 
-  if (clientId) {
-    filteredAppointments = filteredAppointments.filter(apt => apt.clientId === clientId);
-  }
-
-  if (staffId) {
-    filteredAppointments = filteredAppointments.filter(apt => apt.staffId === staffId);
-  }
-
-  // Add client name and phone to appointments for display
-  const enrichedAppointments = filteredAppointments.map(apt => {
-    const client = clients.find(c => c.id === parseInt(apt.clientId));
+  // enrich with client data
+  list = list.map(a => {
+    const c = clients.find(x => x.id === a.clientId);
     return {
-      ...apt,
-      clientName: client ? client.name : 'Unknown Client',
-      clientPhone: client ? client.phone : ''
+      ...a,
+      clientName: c?.name || 'Unknown',
+      clientPhone: c?.phone || ''
     };
   });
-
-  res.json(enrichedAppointments);
+  res.json(list);
 });
 
-// Add a new appointment with validation - FIXED TO MATCH FRONTEND
+// Create
 app.post('/appointments', (req, res) => {
   const { clientId, staffId, service, startTime, endTime, status, notes, price, duration } = req.body;
+  if (!clientId || !staffId || !service || !startTime || !endTime)
+    return res.status(400).json({ error: 'clientId, staffId, service, startTime, endTime are required.' });
 
-  // Updated validation to match frontend data structure
-  if (!clientId || !staffId || !service || !startTime || !endTime) {
-    return res.status(400).json({ error: 'clientId, staffId, service, startTime, and endTime are required.' });
-  }
-
-  // Check if client exists (convert clientId to number for comparison)
-  const clientExists = clients.some(client => client.id === parseInt(clientId));
-  if (!clientExists) {
+  if (!clients.some(c => c.id === +clientId))
     return res.status(400).json({ error: 'Client not found.' });
-  }
 
-  // Validate time format (basic check)
-  if (!startTime.match(/^\d{2}:\d{2}$/) || !endTime.match(/^\d{2}:\d{2}$/)) {
-    return res.status(400).json({ error: 'Invalid time format. Use HH:MM format.' });
-  }
+  const timeRx = /^\d{2}:\d{2}$/;
+  if (!timeRx.test(startTime) || !timeRx.test(endTime))
+    return res.status(400).json({ error: 'Time must be HH:MM format.' });
 
-  const appointment = {
+  const newApt = {
     id: appointments.length + 1,
-    clientId: parseInt(clientId), // Ensure it's stored as number
-    staffId,
+    clientId: +clientId,
+    staffId:   +staffId,
     service,
     startTime,
     endTime,
-    status: status || 'Scheduled',
-    notes: notes || '',
-    price: price || 0,
+    status:   status || 'Scheduled',
+    notes:    notes || '',
+    price:    price  || 0,
     duration: duration || 60,
     createdAt: new Date().toISOString()
   };
-
-  appointments.push(appointment);
-  res.status(201).json(appointment);
+  appointments.push(newApt);
+  res.status(201).json(newApt);
 });
 
-// Update appointment
+// Update
 app.put('/appointments/:id', (req, res) => {
-  const appointmentIndex = appointments.findIndex(a => a.id === parseInt(req.params.id));
-  if (appointmentIndex === -1) {
-    return res.status(404).json({ error: 'Appointment not found' });
-  }
-
-  const updatedAppointment = { ...appointments[appointmentIndex], ...req.body };
-  appointments[appointmentIndex] = updatedAppointment;
-  res.json(updatedAppointment);
+  const idx = appointments.findIndex(a => a.id === +req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Appointment not found' });
+  appointments[idx] = { ...appointments[idx], ...req.body };
+  res.json(appointments[idx]);
 });
 
-// Delete appointment
+// Delete
 app.delete('/appointments/:id', (req, res) => {
-  const appointmentIndex = appointments.findIndex(a => a.id === parseInt(req.params.id));
-  if (appointmentIndex === -1) {
-    return res.status(404).json({ error: 'Appointment not found' });
-  }
-
-  appointments.splice(appointmentIndex, 1);
-  res.status(204).send();
+  const idx = appointments.findIndex(a => a.id === +req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Appointment not found' });
+  appointments.splice(idx, 1);
+  res.sendStatus(204);
 });
 
-// STAFF ENDPOINTS
+// ── STAFF ───────────────────────────────────────────────────────────────
 
-// Get all staff
-app.get('/staff', (req, res) => {
-  res.json(staff);
-});
+// List
+app.get('/staff', (req, res) => res.json(staff));
 
-// Add new staff
+// Create
 app.post('/staff', (req, res) => {
   const { name, role, email, phone } = req.body;
-
-  if (!name || !role) {
-    return res.status(400).json({ error: 'Name and role are required.' });
-  }
-
-  const staffMember = {
-    id: staff.length + 1,
-    name,
-    role,
-    email: email || '',
-    phone: phone || '',
-    createdAt: new Date().toISOString()
-  };
-
-  staff.push(staffMember);
-  res.status(201).json(staffMember);
+  if (!name || !role) return res.status(400).json({ error: 'Name and role required.' });
+  const newS = { id: staff.length + 1, name, role, email: email||'', phone: phone||'', createdAt: new Date().toISOString() };
+  staff.push(newS);
+  res.status(201).json(newS);
 });
 
-// Update staff
+// Update
 app.put('/staff/:id', (req, res) => {
-  const staffIndex = staff.findIndex(s => s.id === parseInt(req.params.id));
-  if (staffIndex === -1) {
-    return res.status(404).json({ error: 'Staff member not found' });
-  }
-
-  const updatedStaff = { ...staff[staffIndex], ...req.body };
-  staff[staffIndex] = updatedStaff;
-  res.json(updatedStaff);
+  const idx = staff.findIndex(s => s.id === +req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Staff not found' });
+  staff[idx] = { ...staff[idx], ...req.body };
+  res.json(staff[idx]);
 });
 
-// Delete staff
+// Delete
 app.delete('/staff/:id', (req, res) => {
-  const staffIndex = staff.findIndex(s => s.id === parseInt(req.params.id));
-  if (staffIndex === -1) {
-    return res.status(404).json({ error: 'Staff member not found' });
-  }
-
-  staff.splice(staffIndex, 1);
-  res.status(204).send();
+  const idx = staff.findIndex(s => s.id === +req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Staff not found' });
+  staff.splice(idx, 1);
+  res.sendStatus(204);
 });
 
-// Error handling middleware
+// ── INVENTORY ──────────────────────────────────────────────────────────
+
+// List
+app.get('/inventory', (req, res) => res.json(inventory));
+
+// Create
+app.post('/inventory', (req, res) => {
+  const { name, sku, quantity, price, supplier } = req.body;
+  if (!name||!sku||quantity==null||price==null||!supplier)
+    return res.status(400).json({ error: 'Name, SKU, quantity, price, supplier required.' });
+  if (quantity<0||price<0)
+    return res.status(400).json({ error: 'Quantity/price must be ≥ 0.' });
+  const newItem = { id: inventory.length+1, name, sku, quantity, price, supplier };
+  inventory.push(newItem);
+  res.status(201).json(newItem);
+});
+
+// Update
+app.put('/inventory/:id', (req, res) => {
+  const idx = inventory.findIndex(i => i.id === +req.params.id);
+  if (idx===-1) return res.status(404).json({ error: 'Item not found' });
+  inventory[idx] = { ...inventory[idx], ...req.body };
+  res.json(inventory[idx]);
+});
+
+// Delete
+app.delete('/inventory/:id', (req, res) => {
+  const idx = inventory.findIndex(i => i.id === +req.params.id);
+  if (idx===-1) return res.status(404).json({ error: 'Item not found' });
+  inventory.splice(idx,1);
+  res.sendStatus(204);
+});
+
+// Error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+  console.error(err);
+  res.status(500).json({ error: 'Something went wrong' });
 });
 
+// Start
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server running: http://localhost:${PORT}`);
 });

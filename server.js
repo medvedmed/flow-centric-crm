@@ -240,58 +240,6 @@ app.delete('/staff/:id', (req, res) => {
   res.status(204).send();
 });
 
-// INVENTORY ENDPOINTS
-
-// Get all inventory
-app.get('/inventory', (req, res) => {
-  res.json(inventory);
-});
-
-// Add new inventory item
-app.post('/inventory', (req, res) => {
-  const { name, sku, quantity, price, supplier } = req.body;
-
-  if (!name || !sku || quantity === undefined || price === undefined) {
-    return res.status(400).json({ error: 'Name, SKU, quantity, and price are required.' });
-  }
-
-  const item = {
-    id: inventory.length + 1,
-    name,
-    sku,
-    quantity,
-    price,
-    supplier: supplier || '',
-    createdAt: new Date().toISOString()
-  };
-
-  inventory.push(item);
-  res.status(201).json(item);
-});
-
-// Update inventory item
-app.put('/inventory/:id', (req, res) => {
-  const itemIndex = inventory.findIndex(i => i.id === parseInt(req.params.id));
-  if (itemIndex === -1) {
-    return res.status(404).json({ error: 'Inventory item not found' });
-  }
-
-  const updatedItem = { ...inventory[itemIndex], ...req.body };
-  inventory[itemIndex] = updatedItem;
-  res.json(updatedItem);
-});
-
-// Delete inventory item
-app.delete('/inventory/:id', (req, res) => {
-  const itemIndex = inventory.findIndex(i => i.id === parseInt(req.params.id));
-  if (itemIndex === -1) {
-    return res.status(404).json({ error: 'Inventory item not found' });
-  }
-
-  inventory.splice(itemIndex, 1);
-  res.status(204).send();
-});
-
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);

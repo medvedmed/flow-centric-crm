@@ -131,26 +131,29 @@ app.get('/appointments', (req, res) => {
   res.json(enrichedAppointments);
 });
 
-// Add a new appointment with validation
+// Add a new appointment with validation - FIXED TO MATCH FRONTEND
 app.post('/appointments', (req, res) => {
   const { clientId, staffId, service, startTime, endTime, status, notes, price, duration } = req.body;
 
+  // Updated validation to match frontend data structure
   if (!clientId || !staffId || !service || !startTime || !endTime) {
     return res.status(400).json({ error: 'clientId, staffId, service, startTime, and endTime are required.' });
   }
 
+  // Check if client exists (convert clientId to number for comparison)
   const clientExists = clients.some(client => client.id === parseInt(clientId));
   if (!clientExists) {
     return res.status(400).json({ error: 'Client not found.' });
   }
 
-  if (isNaN(Date.parse(startTime)) || isNaN(Date.parse(endTime))) {
-    return res.status(400).json({ error: 'Invalid date format.' });
+  // Validate time format (basic check)
+  if (!startTime.match(/^\d{2}:\d{2}$/) || !endTime.match(/^\d{2}:\d{2}$/)) {
+    return res.status(400).json({ error: 'Invalid time format. Use HH:MM format.' });
   }
 
   const appointment = {
     id: appointments.length + 1,
-    clientId,
+    clientId: parseInt(clientId), // Ensure it's stored as number
     staffId,
     service,
     startTime,

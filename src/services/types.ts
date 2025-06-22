@@ -15,18 +15,21 @@ export interface Client {
   id: string;
   name: string;
   email: string;
-  phone?: string;
+  phone?: string | null;
   status: 'New' | 'Regular' | 'VIP' | 'Inactive';
-  assignedStaff?: string;
-  notes?: string;
-  tags?: string;
-  preferredStylist?: string;
-  lastVisit?: string;
-  visits: number;
-  totalSpent: number;
-  salonId: string;
-  createdAt: string;
-  updatedAt: string;
+  assignedStaff?: string | null;
+  notes?: string | null;
+  tags?: string | null;
+  totalSpent?: number | null;
+  visits?: number | null;
+  preferredStylist?: string | null;
+  lastVisit?: string | null;
+  salonId?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  clientId?: string | null;
+  clientPassword?: string | null;
+  isPortalEnabled?: boolean | null;
 }
 
 export interface Staff {

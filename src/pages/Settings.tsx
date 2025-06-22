@@ -1,8 +1,7 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings as SettingsIcon, Building, Shield, MessageSquare, Bell, Users, Calendar } from "lucide-react";
+import { Settings as SettingsIcon, Building, Shield, MessageSquare, Bell, Users, Calendar, UserCog } from "lucide-react";
 import { useAdminSetup } from "@/hooks/useAdminSetup";
 import { AdminSetupDialog } from "@/components/AdminSetupDialog";
 import { SalonProfileSection } from "@/components/SalonProfileSection";
@@ -10,6 +9,7 @@ import { RoleManagementSection } from "@/components/RoleManagementSection";
 import { RoleManagement } from "@/components/RoleManagement";
 import { WhatsAppSection } from "@/components/WhatsAppSection";
 import { StaffScheduleSection } from "@/components/StaffScheduleSection";
+import ManagerSection from "@/components/ManagerSection";
 import { usePermissions } from "@/hooks/usePermissions";
 
 const Settings = () => {
@@ -53,10 +53,14 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="salon" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-7">
           <TabsTrigger value="salon" className="flex items-center gap-2">
             <Building className="w-4 h-4" />
             Salon
+          </TabsTrigger>
+          <TabsTrigger value="manager" className="flex items-center gap-2">
+            <UserCog className="w-4 h-4" />
+            Manager
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="w-4 h-4" />
@@ -82,6 +86,19 @@ const Settings = () => {
 
         <TabsContent value="salon" className="space-y-6">
           <SalonProfileSection />
+        </TabsContent>
+
+        <TabsContent value="manager" className="space-y-6">
+          {canEditSettings ? (
+            <ManagerSection />
+          ) : (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <Shield className="h-8 w-8 mx-auto mb-4 text-gray-400" />
+                <p className="text-gray-600">You need edit permissions to access the Manager section.</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="users" className="space-y-6">

@@ -44,7 +44,10 @@ export const clientApi = {
         lastVisit: client.last_visit,
         salonId: client.salon_id,
         createdAt: client.created_at,
-        updatedAt: client.updated_at
+        updatedAt: client.updated_at,
+        clientId: client.client_id,
+        clientPassword: client.client_password,
+        isPortalEnabled: client.is_portal_enabled
       })) || [],
       count: count || 0,
       hasMore: (count || 0) > offset + pageSize,
@@ -80,13 +83,27 @@ export const clientApi = {
       lastVisit: data.last_visit,
       salonId: data.salon_id,
       createdAt: data.created_at,
-      updatedAt: data.updated_at
+      updatedAt: data.updated_at,
+      clientId: data.client_id,
+      clientPassword: data.client_password,
+      isPortalEnabled: data.is_portal_enabled
     };
   },
 
   async createClient(client: Client): Promise<Client> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
+
+    // Generate client credentials using database functions
+    const { data: clientIdData, error: clientIdError } = await supabase
+      .rpc('generate_client_id');
+    
+    if (clientIdError) throw clientIdError;
+
+    const { data: passwordData, error: passwordError } = await supabase
+      .rpc('generate_client_password');
+    
+    if (passwordError) throw passwordError;
 
     const { data, error } = await supabase
       .from('clients')
@@ -101,7 +118,10 @@ export const clientApi = {
         total_spent: client.totalSpent || 0,
         visits: client.visits || 0,
         preferred_stylist: client.preferredStylist,
-        salon_id: user.id
+        salon_id: user.id,
+        client_id: clientIdData,
+        client_password: passwordData,
+        is_portal_enabled: false
       })
       .select()
       .single();
@@ -123,26 +143,34 @@ export const clientApi = {
       lastVisit: data.last_visit,
       salonId: data.salon_id,
       createdAt: data.created_at,
-      updatedAt: data.updated_at
+      updatedAt: data.updated_at,
+      clientId: data.client_id,
+      clientPassword: data.client_password,
+      isPortalEnabled: data.is_portal_enabled
     };
   },
 
   async updateClient(id: string, client: Partial<Client>): Promise<Client> {
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+
+    // Map client properties to database columns
+    if (client.name !== undefined) updateData.name = client.name;
+    if (client.email !== undefined) updateData.email = client.email;
+    if (client.phone !== undefined) updateData.phone = client.phone;
+    if (client.status !== undefined) updateData.status = client.status;
+    if (client.assignedStaff !== undefined) updateData.assigned_staff = client.assignedStaff;
+    if (client.notes !== undefined) updateData.notes = client.notes;
+    if (client.tags !== undefined) updateData.tags = client.tags;
+    if (client.totalSpent !== undefined) updateData.total_spent = client.totalSpent;
+    if (client.visits !== undefined) updateData.visits = client.visits;
+    if (client.preferredStylist !== undefined) updateData.preferred_stylist = client.preferredStylist;
+    if (client.isPortalEnabled !== undefined) updateData.is_portal_enabled = client.isPortalEnabled;
+
     const { data, error } = await supabase
       .from('clients')
-      .update({
-        name: client.name,
-        email: client.email,
-        phone: client.phone,
-        status: client.status,
-        assigned_staff: client.assignedStaff,
-        notes: client.notes,
-        tags: client.tags,
-        total_spent: client.totalSpent,
-        visits: client.visits,
-        preferred_stylist: client.preferredStylist,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -164,7 +192,10 @@ export const clientApi = {
       lastVisit: data.last_visit,
       salonId: data.salon_id,
       createdAt: data.created_at,
-      updatedAt: data.updated_at
+      updatedAt: data.updated_at,
+      clientId: data.client_id,
+      clientPassword: data.client_password,
+      isPortalEnabled: data.is_portal_enabled
     };
   },
 

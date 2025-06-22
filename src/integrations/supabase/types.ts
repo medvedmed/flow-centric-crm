@@ -146,12 +146,50 @@ export type Database = {
           },
         ]
       }
+      client_sessions: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          last_accessed: string | null
+          session_token: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          last_accessed?: string | null
+          session_token: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          last_accessed?: string | null
+          session_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           assigned_staff: string | null
+          client_id: string | null
+          client_password: string | null
           created_at: string | null
           email: string
           id: string
+          is_portal_enabled: boolean | null
           last_visit: string | null
           name: string
           notes: string | null
@@ -166,9 +204,12 @@ export type Database = {
         }
         Insert: {
           assigned_staff?: string | null
+          client_id?: string | null
+          client_password?: string | null
           created_at?: string | null
           email: string
           id?: string
+          is_portal_enabled?: boolean | null
           last_visit?: string | null
           name: string
           notes?: string | null
@@ -183,9 +224,12 @@ export type Database = {
         }
         Update: {
           assigned_staff?: string | null
+          client_id?: string | null
+          client_password?: string | null
           created_at?: string | null
           email?: string
           id?: string
+          is_portal_enabled?: boolean | null
           last_visit?: string | null
           name?: string
           notes?: string | null
@@ -612,6 +656,14 @@ export type Database = {
           created_at: string
           updated_at: string
         }[]
+      }
+      generate_client_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_client_password: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       generate_staff_code: {
         Args: Record<PropertyKey, never>

@@ -10,6 +10,7 @@ export { appointmentApi } from './api/appointmentApi';
 export { timeOffApi } from './api/timeOffApi';
 export { availabilityApi } from './api/availabilityApi';
 export { analyticsApi } from './api/analyticsApi';
+export { reportsApi } from './api/reportsApi';
 
 // Create the main supabaseApi object that maintains the existing interface
 export const supabaseApi = {
@@ -56,5 +57,12 @@ export const supabaseApi = {
 
   // Analytics functions
   getClientStats: () => import('./api/analyticsApi').then(m => m.analyticsApi.getClientStats()),
-  getCurrentUserPermissions: () => import('./api/analyticsApi').then(m => m.analyticsApi.getCurrentUserPermissions())
+  getCurrentUserPermissions: () => import('./api/analyticsApi').then(m => m.analyticsApi.getCurrentUserPermissions()),
+
+  // Reports functions
+  getRevenueData: (months?: number) => import('./api/reportsApi').then(m => m.reportsApi.getRevenueData(months)),
+  getServicePopularity: () => import('./api/reportsApi').then(m => m.reportsApi.getServicePopularity()),
+  getStaffPerformance: () => import('./api/reportsApi').then(m => m.reportsApi.getStaffPerformance()),
+  getClientMetrics: () => import('./api/reportsApi').then(m => m.reportsApi.getClientMetrics()),
+  exportReport: (type: 'revenue' | 'services' | 'staff' | 'clients') => import('./api/reportsApi').then(m => m.reportsApi.exportReport(type))
 };

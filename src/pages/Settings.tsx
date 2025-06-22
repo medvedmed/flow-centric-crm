@@ -2,12 +2,14 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings as SettingsIcon, Building, Shield, MessageSquare, Bell, Users } from "lucide-react";
+import { Settings as SettingsIcon, Building, Shield, MessageSquare, Bell, Users, Calendar } from "lucide-react";
 import { useAdminSetup } from "@/hooks/useAdminSetup";
 import { AdminSetupDialog } from "@/components/AdminSetupDialog";
 import { SalonProfileSection } from "@/components/SalonProfileSection";
 import { RoleManagementSection } from "@/components/RoleManagementSection";
 import { RoleManagement } from "@/components/RoleManagement";
+import { WhatsAppSection } from "@/components/WhatsAppSection";
+import { StaffScheduleSection } from "@/components/StaffScheduleSection";
 import { usePermissions } from "@/hooks/usePermissions";
 
 const Settings = () => {
@@ -51,7 +53,7 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="salon" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6">
           <TabsTrigger value="salon" className="flex items-center gap-2">
             <Building className="w-4 h-4" />
             Salon
@@ -63,6 +65,10 @@ const Settings = () => {
           <TabsTrigger value="permissions" className="flex items-center gap-2">
             <Shield className="w-4 h-4" />
             Permissions
+          </TabsTrigger>
+          <TabsTrigger value="schedule" className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            Schedule
           </TabsTrigger>
           <TabsTrigger value="whatsapp" className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4" />
@@ -104,25 +110,21 @@ const Settings = () => {
           )}
         </TabsContent>
 
+        <TabsContent value="schedule" className="space-y-6">
+          {canEditSettings ? (
+            <StaffScheduleSection />
+          ) : (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <Shield className="h-8 w-8 mx-auto mb-4 text-gray-400" />
+                <p className="text-gray-600">You need edit permissions to manage staff schedules.</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
         <TabsContent value="whatsapp" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                WhatsApp Integration
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                <MessageSquare className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium mb-2">WhatsApp Integration</p>
-                <p className="text-sm mb-4">
-                  Connect your WhatsApp to send appointment reminders automatically.
-                </p>
-                <p className="text-xs text-blue-600">Coming Soon - DIKIDI-style integration</p>
-              </div>
-            </CardContent>
-          </Card>
+          <WhatsAppSection />
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6">

@@ -6,7 +6,19 @@ import { analyticsApi } from '@/services/api/analyticsApi';
 export const usePermissions = () => {
   const { data: permissionsData, isLoading: roleLoading, error } = useQuery({
     queryKey: ['user-permissions'],
-    queryFn: () => analyticsApi.getCurrentUserPermissions(),
+    queryFn: async () => {
+      try {
+        return await analyticsApi.getCurrentUserPermissions();
+      } catch (error) {
+        console.error('Error fetching permissions:', error);
+        // Return default structure if error occurs
+        return {
+          role: 'salon_owner' as const,
+          salonId: null,
+          permissions: {}
+        };
+      }
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 

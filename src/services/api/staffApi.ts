@@ -5,30 +5,20 @@ import { Staff } from '../types';
 export const staffApi = {
   async getStaff(status?: string): Promise<Staff[]> {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('getStaff: No authenticated user found');
-      throw new Error('Not authenticated');
-    }
-
-    console.log('getStaff: Authenticated user ID:', user.id);
+    if (!user) throw new Error('Not authenticated');
 
     let query = supabase
       .from('staff')
       .select('*')
       .eq('salon_id', user.id);
 
-    if (status) {
+    if (status && status !== 'all') {
       query = query.eq('status', status);
     }
 
-    const { data, error } = await query.order('name', { ascending: true });
+    const { data, error } = await query.order('name');
     
-    if (error) {
-      console.error('getStaff: Database error:', error);
-      throw error;
-    }
-    
-    console.log('getStaff: Retrieved staff count:', data?.length || 0);
+    if (error) throw error;
     
     return data?.map(staff => ({
       id: staff.id,
@@ -56,63 +46,35 @@ export const staffApi = {
   },
 
   async createStaff(staff: Staff): Promise<Staff> {
-    console.log('=== createStaff Debug Info ===');
-    
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('createStaff: No authenticated user found');
-      throw new Error('Not authenticated');
-    }
-
-    console.log('createStaff: Authenticated user ID:', user.id);
-    console.log('createStaff: Staff data received:', staff);
-
-    // Ensure salon_id is set to the authenticated user's ID
-    const staffData = {
-      name: staff.name,
-      email: staff.email,
-      phone: staff.phone,
-      specialties: staff.specialties,
-      working_hours_start: staff.workingHoursStart,
-      working_hours_end: staff.workingHoursEnd,
-      working_days: staff.workingDays,
-      break_start: staff.breakStart,
-      break_end: staff.breakEnd,
-      efficiency: staff.efficiency,
-      rating: staff.rating,
-      image_url: staff.imageUrl,
-      hourly_rate: staff.hourlyRate,
-      commission_rate: staff.commissionRate,
-      status: staff.status,
-      notes: staff.notes,
-      hire_date: staff.hireDate,
-      salon_id: user.id // Explicitly set to authenticated user's ID
-    };
-
-    console.log('createStaff: Final data to insert:', staffData);
+    if (!user) throw new Error('Not authenticated');
 
     const { data, error } = await supabase
       .from('staff')
-      .insert(staffData)
+      .insert({
+        name: staff.name,
+        email: staff.email,
+        phone: staff.phone,
+        specialties: staff.specialties,
+        working_hours_start: staff.workingHoursStart,
+        working_hours_end: staff.workingHoursEnd,
+        working_days: staff.workingDays,
+        break_start: staff.breakStart,
+        break_end: staff.breakEnd,
+        efficiency: staff.efficiency || 100,
+        rating: staff.rating || 5.0,
+        image_url: staff.imageUrl,
+        hourly_rate: staff.hourlyRate || 0,
+        commission_rate: staff.commissionRate || 35,
+        status: staff.status || 'active',
+        notes: staff.notes,
+        hire_date: staff.hireDate,
+        salon_id: user.id
+      })
       .select()
       .single();
     
-    if (error) {
-      console.error('createStaff: Database error:', error);
-      console.error('createStaff: Error code:', error.code);
-      console.error('createStaff: Error message:', error.message);
-      console.error('createStaff: Error details:', error.details);
-      console.error('createStaff: Error hint:', error.hint);
-      
-      // Provide more specific error messages
-      if (error.code === '42501' || error.message.includes('row-level security')) {
-        throw new Error('Permission denied: Unable to create staff member. Please ensure you are properly authenticated.');
-      }
-      
-      throw error;
-    }
-    
-    console.log('createStaff: Successfully created staff:', data);
+    if (error) throw error;
     
     return {
       id: data.id,
@@ -203,25 +165,19 @@ export const staffApi = {
   },
 
   async createStaffWithRole(staff: Staff, role: 'staff' | 'receptionist' = 'staff'): Promise<Staff> {
-    console.log('=== createStaffWithRole Debug Info ===');
-    
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('createStaffWithRole: No authenticated user found');
-      throw new Error('Not authenticated');
-    }
-
-    console.log('createStaffWithRole: Authenticated user ID:', user.id);
-    console.log('createStaffWithRole: Staff data received:', staff);
-    console.log('createStaffWithRole: Role to assign:', role);
+    if (!user) throw new Error('Not authenticated');
 
     // First create the staff member
     const createdStaff = await this.createStaff(staff);
-    
-    // If staff has an email, we'll need to handle role assignment when they sign up
-    // For now, we just create the staff record
-    console.log('createStaffWithRole: Successfully created staff:', createdStaff);
-    
+
+    // Then assign role if staff has email (can be invited as user)
+    if (staff.email) {
+      // This would typically involve sending an invitation
+      // For now, we'll just create the staff record
+      console.log(`Staff ${createdStaff.name} created with role: ${role}`);
+    }
+
     return createdStaff;
   }
 };

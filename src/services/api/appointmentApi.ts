@@ -14,60 +14,57 @@ export const appointmentApi = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-
+    const offset = (page - 1) * pageSize;
+    
     let query = supabase
       .from('appointments')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('salon_id', user.id);
-    
+
     if (clientId) {
       query = query.eq('client_id', clientId);
     }
-    
+
     if (staffId) {
       query = query.eq('staff_id', staffId);
     }
 
-    if (startDate && endDate) {
-      query = query.gte('date', startDate).lte('date', endDate);
-    } else if (startDate) {
+    if (startDate) {
       query = query.gte('date', startDate);
-    } else if (endDate) {
+    }
+
+    if (endDate) {
       query = query.lte('date', endDate);
     }
-    
+
     const { data, error, count } = await query
       .order('date', { ascending: true })
       .order('start_time', { ascending: true })
-      .range(from, to);
+      .range(offset, offset + pageSize - 1);
     
     if (error) throw error;
     
-    const appointments = data?.map(appointment => ({
-      id: appointment.id,
-      clientId: appointment.client_id,
-      staffId: appointment.staff_id,
-      clientName: appointment.client_name,
-      clientPhone: appointment.client_phone,
-      service: appointment.service,
-      startTime: appointment.start_time,
-      endTime: appointment.end_time,
-      date: appointment.date,
-      price: appointment.price,
-      duration: appointment.duration,
-      status: appointment.status as Appointment['status'],
-      notes: appointment.notes,
-      salonId: appointment.salon_id,
-      createdAt: appointment.created_at,
-      updatedAt: appointment.updated_at
-    })) || [];
-
     return {
-      data: appointments,
+      data: data?.map(appointment => ({
+        id: appointment.id,
+        clientId: appointment.client_id,
+        staffId: appointment.staff_id,
+        clientName: appointment.client_name,
+        clientPhone: appointment.client_phone,
+        service: appointment.service,
+        startTime: appointment.start_time,
+        endTime: appointment.end_time,
+        date: appointment.date,
+        price: appointment.price,
+        duration: appointment.duration,
+        status: appointment.status as Appointment['status'],
+        notes: appointment.notes,
+        salonId: appointment.salon_id,
+        createdAt: appointment.created_at,
+        updatedAt: appointment.updated_at
+      })) || [],
       count: count || 0,
-      hasMore: (count || 0) > page * pageSize,
+      hasMore: (count || 0) > offset + pageSize,
       page,
       pageSize
     };
@@ -89,8 +86,8 @@ export const appointmentApi = {
         end_time: appointment.endTime,
         date: appointment.date,
         price: appointment.price,
-        duration: appointment.duration,
-        status: appointment.status,
+        duration: appointment.duration || 60,
+        status: appointment.status || 'Scheduled',
         notes: appointment.notes,
         salon_id: user.id
       })

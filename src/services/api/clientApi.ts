@@ -3,65 +3,51 @@ import { supabase } from '@/integrations/supabase/client';
 import { Client, PaginatedResult } from '../types';
 
 export const clientApi = {
-  async getClients(
-    searchTerm?: string,
-    page: number = 1,
-    pageSize: number = 50,
-    status?: string
-  ): Promise<PaginatedResult<Client>> {
+  async getClients(searchTerm?: string, page: number = 1, pageSize: number = 50, status?: string): Promise<PaginatedResult<Client>> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-
+    const offset = (page - 1) * pageSize;
+    
     let query = supabase
       .from('clients')
-      .select('*')
-      .eq('salon_id', user.id);
-    
-    // Use full-text search when available, fallback to ILIKE
+      .select('*', { count: 'exact' })
+      .eq('salon_id', user.id)
+      .order('created_at', { ascending: false });
+
     if (searchTerm) {
-      query = query.or(`
-        to_tsvector('english', name || ' ' || COALESCE(email, '') || ' ' || COALESCE(phone, '')) @@ plainto_tsquery('english', '${searchTerm}'),
-        name.ilike.%${searchTerm}%,
-        email.ilike.%${searchTerm}%,
-        phone.ilike.%${searchTerm}%
-      `);
+      query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
     }
 
-    if (status) {
+    if (status && status !== 'all') {
       query = query.eq('status', status);
     }
-    
+
     const { data, error, count } = await query
-      .order('created_at', { ascending: false })
-      .range(from, to);
+      .range(offset, offset + pageSize - 1);
     
     if (error) throw error;
     
-    const clients = data?.map(client => ({
-      id: client.id,
-      name: client.name,
-      email: client.email,
-      phone: client.phone,
-      status: client.status as Client['status'],
-      assignedStaff: client.assigned_staff,
-      notes: client.notes,
-      tags: client.tags,
-      totalSpent: client.total_spent,
-      visits: client.visits,
-      preferredStylist: client.preferred_stylist,
-      lastVisit: client.last_visit,
-      salonId: client.salon_id,
-      createdAt: client.created_at,
-      updatedAt: client.updated_at
-    })) || [];
-
     return {
-      data: clients,
+      data: data?.map(client => ({
+        id: client.id,
+        name: client.name,
+        email: client.email,
+        phone: client.phone,
+        status: client.status as Client['status'],
+        assignedStaff: client.assigned_staff,
+        notes: client.notes,
+        tags: client.tags,
+        totalSpent: client.total_spent,
+        visits: client.visits,
+        preferredStylist: client.preferred_stylist,
+        lastVisit: client.last_visit,
+        salonId: client.salon_id,
+        createdAt: client.created_at,
+        updatedAt: client.updated_at
+      })) || [],
       count: count || 0,
-      hasMore: (count || 0) > page * pageSize,
+      hasMore: (count || 0) > offset + pageSize,
       page,
       pageSize
     };
@@ -74,9 +60,10 @@ export const clientApi = {
       .eq('id', id)
       .single();
     
-    if (error) throw error;
-    
-    if (!data) return null;
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      throw error;
+    }
     
     return {
       id: data.id,
@@ -107,14 +94,13 @@ export const clientApi = {
         name: client.name,
         email: client.email,
         phone: client.phone,
-        status: client.status,
+        status: client.status || 'New',
         assigned_staff: client.assignedStaff,
         notes: client.notes,
         tags: client.tags,
-        total_spent: client.totalSpent,
-        visits: client.visits,
+        total_spent: client.totalSpent || 0,
+        visits: client.visits || 0,
         preferred_stylist: client.preferredStylist,
-        last_visit: client.lastVisit,
         salon_id: user.id
       })
       .select()
@@ -155,7 +141,6 @@ export const clientApi = {
         total_spent: client.totalSpent,
         visits: client.visits,
         preferred_stylist: client.preferredStylist,
-        last_visit: client.lastVisit,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)

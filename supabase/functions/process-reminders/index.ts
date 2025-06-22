@@ -41,11 +41,9 @@ Deno.serve(async (req) => {
 
     console.log('Starting reminder processing...');
 
-    // Get all active reminder settings
+    // Get all active reminder settings using RPC
     const { data: reminderSettings, error: settingsError } = await supabase
-      .from('reminder_settings')
-      .select('*')
-      .eq('is_enabled', true);
+      .rpc('get_all_reminder_settings');
 
     if (settingsError) {
       console.error('Error fetching reminder settings:', settingsError);
@@ -95,15 +93,14 @@ Deno.serve(async (req) => {
       console.log(`Found ${appointments?.length || 0} appointments needing reminders`);
 
       for (const appointment of appointments || []) {
-        // Check if reminder already exists
+        // Check if reminder already exists using RPC
         const { data: existingReminder } = await supabase
-          .from('appointment_reminders')
-          .select('id')
-          .eq('appointment_id', appointment.id)
-          .eq('reminder_type', settings.reminder_timing)
-          .single();
+          .rpc('check_reminder_exists', {
+            appointment_id_param: appointment.id,
+            reminder_type_param: settings.reminder_timing
+          });
 
-        if (existingReminder) {
+        if (existingReminder && existingReminder.length > 0) {
           console.log(`Reminder already exists for appointment ${appointment.id}`);
           continue;
         }
@@ -120,15 +117,13 @@ Deno.serve(async (req) => {
         const encodedMessage = encodeURIComponent(messageText);
         const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
 
-        // Insert reminder record
+        // Insert reminder record using RPC
         const { error: insertError } = await supabase
-          .from('appointment_reminders')
-          .insert({
-            appointment_id: appointment.id,
-            reminder_type: settings.reminder_timing,
-            scheduled_time: targetTime.toISOString(),
-            status: 'ready',
-            whatsapp_url: whatsappUrl
+          .rpc('create_appointment_reminder', {
+            appointment_id_param: appointment.id,
+            reminder_type_param: settings.reminder_timing,
+            scheduled_time_param: targetTime.toISOString(),
+            whatsapp_url_param: whatsappUrl
           });
 
         if (insertError) {

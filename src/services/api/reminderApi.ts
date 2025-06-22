@@ -4,38 +4,40 @@ import { ReminderSettings, AppointmentReminder } from '../types';
 
 export const reminderApi = {
   async getReminderSettings(): Promise<ReminderSettings | null> {
-    const { data, error } = await supabase
-      .from('reminder_settings')
-      .select('*')
-      .single();
-    
-    if (error) {
-      if (error.code === 'PGRST116') return null; // No rows returned
-      throw error;
+    try {
+      const { data, error } = await supabase
+        .rpc('get_reminder_settings');
+      
+      if (error) {
+        console.error('Error fetching reminder settings:', error);
+        return null;
+      }
+      
+      if (!data || data.length === 0) return null;
+      
+      const settings = data[0];
+      return {
+        id: settings.id,
+        salonId: settings.salon_id,
+        reminderTiming: settings.reminder_timing as '24_hours' | '2_hours',
+        isEnabled: settings.is_enabled,
+        messageTemplate: settings.message_template,
+        createdAt: settings.created_at,
+        updatedAt: settings.updated_at
+      };
+    } catch (error) {
+      console.error('Error in getReminderSettings:', error);
+      return null;
     }
-    
-    return {
-      id: data.id,
-      salonId: data.salon_id,
-      reminderTiming: data.reminder_timing as '24_hours' | '2_hours',
-      isEnabled: data.is_enabled,
-      messageTemplate: data.message_template,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
-    };
   },
 
   async createReminderSettings(settings: Partial<ReminderSettings>): Promise<ReminderSettings> {
     const { data, error } = await supabase
-      .from('reminder_settings')
-      .insert({
-        reminder_timing: settings.reminderTiming,
-        is_enabled: settings.isEnabled,
-        message_template: settings.messageTemplate,
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single();
+      .rpc('create_reminder_settings', {
+        reminder_timing_param: settings.reminderTiming,
+        is_enabled_param: settings.isEnabled,
+        message_template_param: settings.messageTemplate
+      });
     
     if (error) throw error;
     
@@ -52,15 +54,11 @@ export const reminderApi = {
 
   async updateReminderSettings(settings: Partial<ReminderSettings>): Promise<ReminderSettings> {
     const { data, error } = await supabase
-      .from('reminder_settings')
-      .update({
-        reminder_timing: settings.reminderTiming,
-        is_enabled: settings.isEnabled,
-        message_template: settings.messageTemplate,
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single();
+      .rpc('update_reminder_settings', {
+        reminder_timing_param: settings.reminderTiming,
+        is_enabled_param: settings.isEnabled,
+        message_template_param: settings.messageTemplate
+      });
     
     if (error) throw error;
     
@@ -76,30 +74,14 @@ export const reminderApi = {
   },
 
   async getAppointmentReminders(status?: string): Promise<AppointmentReminder[]> {
-    let query = supabase
-      .from('appointment_reminders')
-      .select(`
-        *,
-        appointments!inner(
-          id,
-          client_name,
-          service,
-          date,
-          start_time,
-          salon_id
-        )
-      `)
-      .order('scheduled_time', { ascending: true });
-
-    if (status) {
-      query = query.eq('status', status);
-    }
-
-    const { data, error } = await query;
+    const { data, error } = await supabase
+      .rpc('get_appointment_reminders', {
+        status_filter: status || null
+      });
     
     if (error) throw error;
     
-    return data.map(item => ({
+    return (data || []).map((item: any) => ({
       id: item.id,
       appointmentId: item.appointment_id,
       reminderType: item.reminder_type as '24_hours' | '2_hours',
@@ -114,13 +96,10 @@ export const reminderApi = {
 
   async updateReminderStatus(id: string, status: 'sent' | 'skipped'): Promise<void> {
     const { error } = await supabase
-      .from('appointment_reminders')
-      .update({
-        status,
-        sent_at: status === 'sent' ? new Date().toISOString() : null,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id);
+      .rpc('update_reminder_status', {
+        reminder_id: id,
+        new_status: status
+      });
     
     if (error) throw error;
   },

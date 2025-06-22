@@ -75,6 +75,35 @@ export interface Profile {
   updatedAt?: string;
 }
 
+export interface TimeOffRequest {
+  id?: string;
+  staffId: string;
+  salonId?: string;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+  status?: 'pending' | 'approved' | 'rejected';
+  requestedAt?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface StaffAvailability {
+  id?: string;
+  staffId: string;
+  salonId?: string;
+  date: string;
+  startTime?: string;
+  endTime?: string;
+  isAvailable?: boolean;
+  reason?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface PaginatedResult<T> {
   data: T[];
   count: number;
@@ -693,6 +722,247 @@ export const supabaseApi = {
   async deleteStaff(id: string): Promise<void> {
     const { error } = await supabase
       .from('staff')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  // New Time-off Request functions
+  async getTimeOffRequests(staffId?: string, status?: string): Promise<TimeOffRequest[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    let query = supabase
+      .from('time_off_requests')
+      .select('*')
+      .eq('salon_id', user.id);
+
+    if (staffId) {
+      query = query.eq('staff_id', staffId);
+    }
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query.order('requested_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    return data?.map(request => ({
+      id: request.id,
+      staffId: request.staff_id,
+      salonId: request.salon_id,
+      startDate: request.start_date,
+      endDate: request.end_date,
+      reason: request.reason,
+      status: request.status as TimeOffRequest['status'],
+      requestedAt: request.requested_at,
+      reviewedAt: request.reviewed_at,
+      reviewedBy: request.reviewed_by,
+      notes: request.notes,
+      createdAt: request.created_at,
+      updatedAt: request.updated_at
+    })) || [];
+  },
+
+  async createTimeOffRequest(request: TimeOffRequest): Promise<TimeOffRequest> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('time_off_requests')
+      .insert({
+        staff_id: request.staffId,
+        salon_id: user.id,
+        start_date: request.startDate,
+        end_date: request.endDate,
+        reason: request.reason,
+        status: request.status || 'pending',
+        notes: request.notes
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    return {
+      id: data.id,
+      staffId: data.staff_id,
+      salonId: data.salon_id,
+      startDate: data.start_date,
+      endDate: data.end_date,
+      reason: data.reason,
+      status: data.status as TimeOffRequest['status'],
+      requestedAt: data.requested_at,
+      reviewedAt: data.reviewed_at,
+      reviewedBy: data.reviewed_by,
+      notes: data.notes,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+  },
+
+  async updateTimeOffRequest(id: string, request: Partial<TimeOffRequest>): Promise<TimeOffRequest> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const updates: any = {
+      updated_at: new Date().toISOString()
+    };
+
+    if (request.status) {
+      updates.status = request.status;
+      if (request.status !== 'pending') {
+        updates.reviewed_at = new Date().toISOString();
+        updates.reviewed_by = user.id;
+      }
+    }
+
+    if (request.notes !== undefined) updates.notes = request.notes;
+    if (request.reason !== undefined) updates.reason = request.reason;
+    if (request.startDate) updates.start_date = request.startDate;
+    if (request.endDate) updates.end_date = request.endDate;
+
+    const { data, error } = await supabase
+      .from('time_off_requests')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    return {
+      id: data.id,
+      staffId: data.staff_id,
+      salonId: data.salon_id,
+      startDate: data.start_date,
+      endDate: data.end_date,
+      reason: data.reason,
+      status: data.status as TimeOffRequest['status'],
+      requestedAt: data.requested_at,
+      reviewedAt: data.reviewed_at,
+      reviewedBy: data.reviewed_by,
+      notes: data.notes,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+  },
+
+  async deleteTimeOffRequest(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('time_off_requests')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  // Staff Availability functions
+  async getStaffAvailability(staffId?: string, date?: string): Promise<StaffAvailability[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    let query = supabase
+      .from('staff_availability')
+      .select('*')
+      .eq('salon_id', user.id);
+
+    if (staffId) {
+      query = query.eq('staff_id', staffId);
+    }
+
+    if (date) {
+      query = query.eq('date', date);
+    }
+
+    const { data, error } = await query.order('date', { ascending: true });
+    
+    if (error) throw error;
+    
+    return data?.map(availability => ({
+      id: availability.id,
+      staffId: availability.staff_id,
+      salonId: availability.salon_id,
+      date: availability.date,
+      startTime: availability.start_time,
+      endTime: availability.end_time,
+      isAvailable: availability.is_available,
+      reason: availability.reason,
+      createdAt: availability.created_at,
+      updatedAt: availability.updated_at
+    })) || [];
+  },
+
+  async createStaffAvailability(availability: StaffAvailability): Promise<StaffAvailability> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('staff_availability')
+      .insert({
+        staff_id: availability.staffId,
+        salon_id: user.id,
+        date: availability.date,
+        start_time: availability.startTime,
+        end_time: availability.endTime,
+        is_available: availability.isAvailable !== false,
+        reason: availability.reason
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    return {
+      id: data.id,
+      staffId: data.staff_id,
+      salonId: data.salon_id,
+      date: data.date,
+      startTime: data.start_time,
+      endTime: data.end_time,
+      isAvailable: data.is_available,
+      reason: data.reason,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+  },
+
+  async updateStaffAvailability(id: string, availability: Partial<StaffAvailability>): Promise<StaffAvailability> {
+    const { data, error } = await supabase
+      .from('staff_availability')
+      .update({
+        start_time: availability.startTime,
+        end_time: availability.endTime,
+        is_available: availability.isAvailable,
+        reason: availability.reason,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    return {
+      id: data.id,
+      staffId: data.staff_id,
+      salonId: data.salon_id,
+      date: data.date,
+      startTime: data.start_time,
+      endTime: data.end_time,
+      isAvailable: data.is_available,
+      reason: data.reason,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+  },
+
+  async deleteStaffAvailability(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('staff_availability')
       .delete()
       .eq('id', id);
     

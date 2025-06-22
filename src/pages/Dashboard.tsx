@@ -1,4 +1,3 @@
-
 import { usePermissions } from "@/hooks/usePermissions";
 import StaffDashboard from "@/components/StaffDashboard";
 import ReceptionistDashboard from "@/components/ReceptionistDashboard";
@@ -6,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { Users, Calendar, Clock, Plus, ArrowUp, ArrowDown, DollarSign } from "lucide-react";
+import { Users, Calendar, Clock, Plus, ArrowUp, ArrowDown, DollarSign, Shield } from "lucide-react";
+import { Navigate } from "react-router-dom";
 
 const salesData = [
   { month: 'Jan', revenue: 45000, appointments: 120 },
@@ -43,9 +43,9 @@ const Dashboard = () => {
     );
   }
 
-  // Route to role-specific dashboards
+  // Staff should not have access to dashboard - redirect to appointments
   if (userRole === 'staff') {
-    return <StaffDashboard />;
+    return <Navigate to="/appointments" replace />;
   }
 
   if (userRole === 'receptionist') {

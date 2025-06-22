@@ -6,30 +6,9 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, User, DollarSign } from 'lucide-react';
-
-interface Appointment {
-  id: string;
-  staffId: string;
-  startTime: string;
-  endTime: string;
-  clientName: string;
-  clientPhone: string;
-  service: string;
-  price: number;
-  status: string;
-  duration: number; // in minutes
-}
-
-interface Staff {
-  id: string;
-  name: string;
-  image: string;
-  specialties: string[];
-  workingHours: { start: string; end: string };
-  efficiency: number;
-  rating: number;
-}
+import { Clock, User, DollarSign, Phone } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Staff, Appointment } from '@/services/types';
 
 interface TimeSlot {
   time: string;
@@ -49,18 +28,19 @@ const serviceColors = {
 };
 
 const statusColors = {
-  "confirmed": { bg: "#10b981", text: "#ffffff" },
-  "in-progress": { bg: "#3b82f6", text: "#ffffff" },
-  "upcoming": { bg: "#f59e0b", text: "#ffffff" },
-  "completed": { bg: "#6b7280", text: "#ffffff" },
-  "cancelled": { bg: "#ef4444", text: "#ffffff" },
+  "Scheduled": { bg: "#10b981", text: "#ffffff" },
+  "In Progress": { bg: "#3b82f6", text: "#ffffff" },
+  "Completed": { bg: "#6b7280", text: "#ffffff" },
+  "Cancelled": { bg: "#ef4444", text: "#ffffff" },
+  "No Show": { bg: "#f59e0b", text: "#ffffff" },
 };
 
 // Draggable Appointment Block Component
 const AppointmentBlock: React.FC<{
   appointment: Appointment;
   isDragging?: boolean;
-}> = ({ appointment, isDragging = false }) => {
+  isReadOnly?: boolean;
+}> = ({ appointment, isDragging = false, isReadOnly = false }) => {
   const {
     attributes,
     listeners,
@@ -68,7 +48,10 @@ const AppointmentBlock: React.FC<{
     transform,
     transition,
     isDragging: isSortableDragging,
-  } = useSortable({ id: appointment.id });
+  } = useSortable({ 
+    id: appointment.id,
+    disabled: isReadOnly 
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -77,22 +60,23 @@ const AppointmentBlock: React.FC<{
   };
 
   const colors = serviceColors[appointment.service as keyof typeof serviceColors] || 
-                 statusColors[appointment.status as keyof typeof statusColors];
+                 statusColors[appointment.status as keyof typeof statusColors] || 
+                 { bg: '#10b981', text: '#ffffff' };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
-      className={`cursor-grab active:cursor-grabbing mb-2 ${isDragging ? 'z-50' : ''}`}
+      {...(!isReadOnly ? listeners : {})}
+      className={`mb-2 ${!isReadOnly ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} ${isDragging ? 'z-50' : ''}`}
     >
       <Card 
         className="border-0 shadow-lg hover:shadow-xl transition-all duration-300"
         style={{ 
           backgroundColor: colors?.bg || '#10b981',
           borderLeft: `4px solid ${colors?.bg || '#10b981'}`,
-          minHeight: `${Math.max(appointment.duration / 15 * 20, 60)}px`
+          minHeight: `${Math.max((appointment.duration || 60) / 15 * 20, 60)}px`
         }}
       >
         <CardContent className="p-3 text-white">
@@ -123,10 +107,15 @@ const AppointmentBlock: React.FC<{
             <div className="text-xs opacity-90">{appointment.service}</div>
             
             <div className="flex items-center justify-between mt-2">
-              <span className="text-xs opacity-75">{appointment.clientPhone}</span>
+              {appointment.clientPhone && (
+                <div className="flex items-center gap-1">
+                  <Phone className="w-3 h-3" />
+                  <span className="text-xs opacity-75">{appointment.clientPhone}</span>
+                </div>
+              )}
               <div className="flex items-center gap-1">
                 <DollarSign className="w-3 h-3" />
-                <span className="font-bold text-sm">{appointment.price}</span>
+                <span className="font-bold text-sm">${appointment.price}</span>
               </div>
             </div>
           </div>
@@ -141,7 +130,8 @@ const TimeSlot: React.FC<{
   timeSlot: TimeSlot;
   appointments: Appointment[];
   staffId: string;
-}> = ({ timeSlot, appointments, staffId }) => {
+  isReadOnly?: boolean;
+}> = ({ timeSlot, appointments, staffId, isReadOnly = false }) => {
   const slotAppointments = appointments.filter(apt => 
     apt.staffId === staffId && apt.startTime === timeSlot.time
   );
@@ -151,7 +141,11 @@ const TimeSlot: React.FC<{
       <div className="text-xs text-gray-500 mb-1">{timeSlot.time}</div>
       <SortableContext items={slotAppointments.map(apt => apt.id)} strategy={verticalListSortingStrategy}>
         {slotAppointments.map(appointment => (
-          <AppointmentBlock key={appointment.id} appointment={appointment} />
+          <AppointmentBlock 
+            key={appointment.id} 
+            appointment={appointment} 
+            isReadOnly={isReadOnly}
+          />
         ))}
       </SortableContext>
     </div>
@@ -163,20 +157,36 @@ const StaffColumn: React.FC<{
   staff: Staff;
   timeSlots: TimeSlot[];
   appointments: Appointment[];
-}> = ({ staff, timeSlots, appointments }) => {
+  isReadOnly?: boolean;
+}> = ({ staff, timeSlots, appointments, isReadOnly = false }) => {
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
   return (
     <div className="min-w-[280px] bg-white rounded-lg border border-gray-200 shadow-sm">
       {/* Staff Header */}
       <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-teal-50 to-emerald-50">
         <div className="flex items-center gap-3">
-          <img
-            src={staff.image}
-            alt={staff.name}
-            className="w-10 h-10 rounded-full border-2 border-teal-200"
-          />
+          <Avatar className="w-10 h-10 ring-2 ring-teal-200">
+            <AvatarImage src={staff.imageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${staff.name}`} />
+            <AvatarFallback className="bg-gradient-to-br from-teal-400 to-cyan-500 text-white font-semibold">
+              {getInitials(staff.name)}
+            </AvatarFallback>
+          </Avatar>
           <div>
             <h3 className="font-semibold text-gray-800">{staff.name}</h3>
-            <p className="text-sm text-gray-600">{staff.rating}⭐ • {staff.efficiency}% efficiency</p>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span>{staff.rating || 5.0}⭐</span>
+              <span>•</span>
+              <span>{staff.efficiency || 100}% efficiency</span>
+            </div>
+            {staff.specialties && staff.specialties.length > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                {staff.specialties.slice(0, 2).join(', ')}
+                {staff.specialties.length > 2 && '...'}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -189,6 +199,7 @@ const StaffColumn: React.FC<{
             timeSlot={timeSlot}
             appointments={appointments}
             staffId={staff.id}
+            isReadOnly={isReadOnly}
           />
         ))}
       </div>
@@ -202,6 +213,7 @@ interface DragDropSchedulerProps {
   appointments: Appointment[];
   timeSlots: TimeSlot[];
   onAppointmentMove: (appointmentId: string, newStaffId: string, newTime: string) => void;
+  isReadOnly?: boolean;
 }
 
 const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
@@ -209,11 +221,14 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
   appointments,
   timeSlots,
   onAppointmentMove,
+  isReadOnly = false,
 }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null);
 
   const handleDragStart = (event: DragStartEvent) => {
+    if (isReadOnly) return;
+    
     const { active } = event;
     setActiveId(active.id as string);
     
@@ -222,6 +237,8 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    if (isReadOnly) return;
+    
     const { active, over } = event;
     
     if (!over || !draggedAppointment) {
@@ -249,6 +266,23 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
     setDraggedAppointment(null);
   };
 
+  if (isReadOnly) {
+    // Read-only version without drag and drop
+    return (
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {staff.map(staffMember => (
+          <StaffColumn
+            key={staffMember.id}
+            staff={staffMember}
+            timeSlots={timeSlots}
+            appointments={appointments}
+            isReadOnly={true}
+          />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <DndContext
       collisionDetection={closestCenter}
@@ -262,6 +296,7 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
             staff={staffMember}
             timeSlots={timeSlots}
             appointments={appointments}
+            isReadOnly={false}
           />
         ))}
       </div>

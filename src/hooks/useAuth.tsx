@@ -2,6 +2,7 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useStaffAuth } from '@/hooks/useStaffAuth';
 
 interface AuthContextType {
   user: User | null;
@@ -40,6 +41,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    // Also clear any staff session
+    localStorage.removeItem('staff_session');
   };
 
   return (

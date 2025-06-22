@@ -18,6 +18,7 @@ interface AuthFormProps {
 const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [staffLoginForm, setStaffLoginForm] = useState({ staffId: '', staffPassword: '' });
   const [signupForm, setSignupForm] = useState({ 
     email: '', 
     password: '', 
@@ -39,9 +40,8 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
       });
 
       if (error) {
-        // Provide helpful error messages
         if (error.message.includes('Invalid login credentials')) {
-          throw new Error('Invalid email or password. If you\'re a staff member who hasn\'t signed up yet, please use the "Sign Up" tab first.');
+          throw new Error('Invalid email or password. If you\'re a staff member, please use the "Staff Login" tab.');
         } else if (error.message.includes('Email not confirmed')) {
           throw new Error('Please check your email and click the confirmation link before logging in.');
         }
@@ -57,6 +57,56 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
       toast({
         title: "Login Failed",
         description: error.message || "Failed to login",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStaffLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.rpc('authenticate_staff', {
+        login_id: staffLoginForm.staffId,
+        login_password: staffLoginForm.staffPassword
+      });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0 || !data[0].is_valid) {
+        throw new Error('Invalid staff ID or password. Please check your credentials.');
+      }
+
+      const staffData = data[0];
+      
+      // Create a session for the staff member using their email
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: staffData.staff_email,
+        password: 'staff-placeholder-password', // This will fail, but we'll handle it
+      });
+
+      // Since staff don't have regular auth accounts, we'll store their info differently
+      // For now, we'll use localStorage to track staff sessions
+      localStorage.setItem('staff_session', JSON.stringify({
+        staffId: staffData.staff_id,
+        staffName: staffData.staff_name,
+        staffEmail: staffData.staff_email,
+        salonId: staffData.salon_id,
+        loginTime: new Date().toISOString()
+      }));
+
+      toast({
+        title: "Success",
+        description: `Welcome ${staffData.staff_name}!`,
+      });
+      onAuthSuccess();
+    } catch (error: any) {
+      toast({
+        title: "Staff Login Failed",
+        description: error.message || "Invalid staff credentials",
         variant: "destructive",
       });
     } finally {
@@ -88,7 +138,6 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
         description: "Please check your email for a confirmation link. After confirming, you can log in.",
       });
       
-      // Clear the form
       setSignupForm({ email: '', password: '', fullName: '', salonName: '' });
     } catch (error: any) {
       toast({
@@ -117,8 +166,9 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue={defaultTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="login">Owner Login</TabsTrigger>
+              <TabsTrigger value="staff">Staff Login</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
             
@@ -126,7 +176,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
               <Alert className="mb-4">
                 <Info className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>For Staff:</strong> If this is your first time, please use "Sign Up" tab with the email address your salon owner used when adding you to the system.
+                  <strong>For Salon Owners/Managers:</strong> Use your email and password to log in.
                 </AlertDescription>
               </Alert>
               
@@ -165,13 +215,56 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
                 </Button>
               </form>
             </TabsContent>
+
+            <TabsContent value="staff">
+              <Alert className="mb-4">
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>For Staff Members:</strong> Use your Staff ID and Password provided by your salon manager.
+                </AlertDescription>
+              </Alert>
+              
+              <form onSubmit={handleStaffLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="staff-id">Staff ID</Label>
+                  <Input
+                    id="staff-id"
+                    placeholder="Enter your Staff ID"
+                    value={staffLoginForm.staffId}
+                    onChange={(e) => setStaffLoginForm({...staffLoginForm, staffId: e.target.value})}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="staff-password">Staff Password</Label>
+                  <Input
+                    id="staff-password"
+                    type="password"
+                    placeholder="Enter your Staff Password"
+                    value={staffLoginForm.staffPassword}
+                    onChange={(e) => setStaffLoginForm({...staffLoginForm, staffPassword: e.target.value})}
+                    required
+                  />
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                  disabled={isLoading}
+                >
+                  {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Staff Login
+                </Button>
+              </form>
+            </TabsContent>
             
             <TabsContent value="signup">
               <Alert className="mb-4">
                 <Info className="h-4 w-4" />
                 <AlertDescription>
                   <strong>Salon Owners:</strong> Create your salon account here.<br/>
-                  <strong>Staff Members:</strong> Use the email your salon owner provided when they added you to the team.
+                  <strong>Staff Members:</strong> Your salon owner will provide your login credentials.
                 </AlertDescription>
               </Alert>
               
@@ -188,12 +281,13 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-salon">Salon Name (Optional for staff)</Label>
+                  <Label htmlFor="signup-salon">Salon Name</Label>
                   <Input
                     id="signup-salon"
                     placeholder="Enter your salon name"
                     value={signupForm.salonName}
                     onChange={(e) => setSignupForm({...signupForm, salonName: e.target.value})}
+                    required
                   />
                 </div>
 

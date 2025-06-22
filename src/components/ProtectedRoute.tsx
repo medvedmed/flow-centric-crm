@@ -1,5 +1,6 @@
 
 import { useAuth } from '@/hooks/useAuth';
+import { useStaffAuth } from '@/hooks/useStaffAuth';
 import AuthForm from './AuthForm';
 import { Loader2 } from 'lucide-react';
 
@@ -8,7 +9,10 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const { isStaff, isLoading: staffLoading } = useStaffAuth();
+
+  const isLoading = authLoading || staffLoading;
 
   if (isLoading) {
     return (
@@ -18,7 +22,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  if (!user) {
+  // Allow access if user is logged in OR if it's a staff member
+  if (!user && !isStaff) {
     return <AuthForm onAuthSuccess={() => {}} />;
   }
 

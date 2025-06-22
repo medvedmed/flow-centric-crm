@@ -1,5 +1,15 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabaseApi, Client, Appointment, Staff, Profile, TimeOffRequest, StaffAvailability, PaginatedResult } from '../services/supabaseApi';
+import { 
+  supabaseApi, 
+  Client, 
+  Appointment, 
+  Staff, 
+  Profile, 
+  TimeOffRequest, 
+  StaffAvailability, 
+  PaginatedResult 
+} from '../services/supabaseApi';
 import { useToast } from './use-toast';
 
 // Profile hooks

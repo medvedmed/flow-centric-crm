@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
 import { useCreateStaff } from "@/hooks/useCrmData";
+import { useAuth } from "@/hooks/useAuth";
 import type { Staff as StaffType } from "@/services/supabaseApi";
 
 const AddStaffDialog = () => {
   const createStaffMutation = useCreateStaff();
+  const { user, session } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [newStaff, setNewStaff] = useState<Partial<StaffType>>({
     name: "",
@@ -35,12 +37,33 @@ const AddStaffDialog = () => {
   };
 
   const handleAddStaff = () => {
-    if (!newStaff.name || !newStaff.email) {
+    console.log('=== Add Staff Debug Info ===');
+    console.log('User:', user);
+    console.log('Session:', session);
+    console.log('User ID:', user?.id);
+    console.log('New Staff Data:', newStaff);
+    
+    if (!user || !session) {
+      console.error('No authenticated user or session found');
       return;
     }
 
-    createStaffMutation.mutate(newStaff as StaffType, {
-      onSuccess: () => {
+    if (!newStaff.name || !newStaff.email) {
+      console.error('Missing required fields: name or email');
+      return;
+    }
+
+    // Ensure salon_id is set to the authenticated user's ID
+    const staffToCreate = {
+      ...newStaff,
+      salonId: user.id // Explicitly set salon_id to user.id
+    } as StaffType;
+
+    console.log('Final staff data to create:', staffToCreate);
+
+    createStaffMutation.mutate(staffToCreate, {
+      onSuccess: (createdStaff) => {
+        console.log('Staff created successfully:', createdStaff);
         setNewStaff({
           name: "",
           email: "",
@@ -59,9 +82,26 @@ const AddStaffDialog = () => {
           notes: ""
         });
         setIsOpen(false);
+      },
+      onError: (error) => {
+        console.error('Failed to create staff:', error);
+        // Additional error details
+        if (error instanceof Error) {
+          console.error('Error message:', error.message);
+          console.error('Error stack:', error.stack);
+        }
       }
     });
   };
+
+  // Show authentication status in UI for debugging
+  if (!user || !session) {
+    return (
+      <div className="text-sm text-red-600 p-2 border border-red-200 rounded">
+        Authentication required to add staff. Please log in.
+      </div>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -75,6 +115,13 @@ const AddStaffDialog = () => {
         <DialogHeader>
           <DialogTitle>Add New Staff Member</DialogTitle>
         </DialogHeader>
+        
+        {createStaffMutation.error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+            <strong>Error:</strong> {createStaffMutation.error instanceof Error ? createStaffMutation.error.message : 'Failed to create staff member'}
+          </div>
+        )}
+
         <div className="space-y-4">
           <div>
             <Label htmlFor="staffName">Full Name *</Label>
@@ -159,7 +206,7 @@ const AddStaffDialog = () => {
             <Button 
               onClick={handleAddStaff} 
               className="flex-1"
-              disabled={createStaffMutation.isPending}
+              disabled={createStaffMutation.isPending || !newStaff.name || !newStaff.email}
             >
               {createStaffMutation.isPending ? "Adding..." : "Add Staff Member"}
             </Button>

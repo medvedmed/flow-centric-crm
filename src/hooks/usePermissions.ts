@@ -1,11 +1,12 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { permissionApi, PermissionArea } from '@/services/permissionApi';
+import { analyticsApi } from '@/services/api/analyticsApi';
 
 export const usePermissions = () => {
   const { data: permissionsData, isLoading: roleLoading, error } = useQuery({
     queryKey: ['user-permissions'],
-    queryFn: () => permissionApi.getCurrentUserPermissions(),
+    queryFn: () => analyticsApi.getCurrentUserPermissions(),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -38,5 +39,20 @@ export const usePermissions = () => {
     hasPermission,
     userRole: permissionsData?.role,
     salonId: permissionsData?.salonId
+  };
+};
+
+export const useRoleManagement = () => {
+  const { data: rolePermissions, isLoading: permissionsLoading, error, refetch: refetchPermissions } = useQuery({
+    queryKey: ['role-permissions'],
+    queryFn: () => permissionApi.getRolePermissions(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  return {
+    rolePermissions,
+    permissionsLoading,
+    error,
+    refetchPermissions
   };
 };

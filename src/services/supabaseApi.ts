@@ -87,8 +87,8 @@ export const supabaseApi = {
       fullName: data.full_name,
       salonName: data.salon_name,
       phone: data.phone,
-      role: data.role,
-      subscriptionStatus: data.subscription_status,
+      role: data.role as 'salon_owner' | 'staff' | 'admin',
+      subscriptionStatus: data.subscription_status as 'trial' | 'active' | 'cancelled' | 'expired',
       subscriptionEndDate: data.subscription_end_date,
       createdAt: data.created_at,
       updatedAt: data.updated_at
@@ -115,8 +115,8 @@ export const supabaseApi = {
       fullName: data.full_name,
       salonName: data.salon_name,
       phone: data.phone,
-      role: data.role,
-      subscriptionStatus: data.subscription_status,
+      role: data.role as 'salon_owner' | 'staff' | 'admin',
+      subscriptionStatus: data.subscription_status as 'trial' | 'active' | 'cancelled' | 'expired',
       subscriptionEndDate: data.subscription_end_date,
       createdAt: data.created_at,
       updatedAt: data.updated_at

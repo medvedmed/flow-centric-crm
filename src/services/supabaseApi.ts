@@ -994,5 +994,152 @@ export const supabaseApi = {
     };
 
     return stats;
+  },
+
+  // Enhanced staff creation with automatic role assignment
+  async createStaffWithRole(staff: Staff, role: 'staff' | 'receptionist' = 'staff'): Promise<Staff> {
+    console.log('=== createStaffWithRole Debug Info ===');
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('createStaffWithRole: No authenticated user found');
+      throw new Error('Not authenticated');
+    }
+
+    console.log('createStaffWithRole: Authenticated user ID:', user.id);
+    console.log('createStaffWithRole: Staff data received:', staff);
+    console.log('createStaffWithRole: Role to assign:', role);
+
+    // First create the staff member
+    const createdStaff = await this.createStaff(staff);
+    
+    // If staff has an email, we'll need to handle role assignment when they sign up
+    // For now, we just create the staff record
+    console.log('createStaffWithRole: Successfully created staff:', createdStaff);
+    
+    return createdStaff;
+  },
+
+  // Get current user's effective permissions
+  async getCurrentUserPermissions(): Promise<Record<string, boolean>> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return {};
+
+    try {
+      // Get user role first
+      const { data: userRole } = await supabase
+        .from('user_roles')
+        .select('role, salon_id')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .single();
+
+      if (!userRole) {
+        // If no role found, assume salon owner (for backward compatibility)
+        return {
+          'dashboard.view': true,
+          'appointments.view': true,
+          'appointments.create': true,
+          'appointments.edit': true,
+          'appointments.delete': true,
+          'clients.view': true,
+          'clients.create': true,
+          'clients.edit': true,
+          'clients.delete': true,
+          'staff_management.view': true,
+          'staff_management.create': true,
+          'staff_management.edit': true,
+          'staff_management.delete': true,
+          'services.view': true,
+          'services.create': true,
+          'services.edit': true,
+          'services.delete': true,
+          'inventory.view': true,
+          'inventory.create': true,
+          'inventory.edit': true,
+          'inventory.delete': true,
+          'reports.view': true,
+          'reports.create': true,
+          'reports.edit': true,
+          'reports.delete': true,
+          'settings.view': true,
+          'settings.create': true,
+          'settings.edit': true,
+          'settings.delete': true,
+          'schedule_management.view': true,
+          'schedule_management.create': true,
+          'schedule_management.edit': true,
+          'schedule_management.delete': true,
+          'time_off_requests.view': true,
+          'time_off_requests.create': true,
+          'time_off_requests.edit': true,
+          'time_off_requests.delete': true
+        };
+      }
+
+      // Salon owners have all permissions
+      if (userRole.role === 'salon_owner') {
+        return {
+          'dashboard.view': true,
+          'appointments.view': true,
+          'appointments.create': true,
+          'appointments.edit': true,
+          'appointments.delete': true,
+          'clients.view': true,
+          'clients.create': true,
+          'clients.edit': true,
+          'clients.delete': true,
+          'staff_management.view': true,
+          'staff_management.create': true,
+          'staff_management.edit': true,
+          'staff_management.delete': true,
+          'services.view': true,
+          'services.create': true,
+          'services.edit': true,
+          'services.delete': true,
+          'inventory.view': true,
+          'inventory.create': true,
+          'inventory.edit': true,
+          'inventory.delete': true,
+          'reports.view': true,
+          'reports.create': true,
+          'reports.edit': true,
+          'reports.delete': true,
+          'settings.view': true,
+          'settings.create': true,
+          'settings.edit': true,
+          'settings.delete': true,
+          'schedule_management.view': true,
+          'schedule_management.create': true,
+          'schedule_management.edit': true,
+          'schedule_management.delete': true,
+          'time_off_requests.view': true,
+          'time_off_requests.create': true,
+          'time_off_requests.edit': true,
+          'time_off_requests.delete': true
+        };
+      }
+
+      // Get role-specific permissions
+      const { data: permissions } = await supabase
+        .from('role_permissions')
+        .select('area, can_view, can_create, can_edit, can_delete')
+        .eq('salon_id', userRole.salon_id)
+        .eq('role', userRole.role);
+
+      const permissionMap: Record<string, boolean> = {};
+      
+      permissions?.forEach(perm => {
+        permissionMap[`${perm.area}.view`] = perm.can_view;
+        permissionMap[`${perm.area}.create`] = perm.can_create;
+        permissionMap[`${perm.area}.edit`] = perm.can_edit;
+        permissionMap[`${perm.area}.delete`] = perm.can_delete;
+      });
+
+      return permissionMap;
+    } catch (error) {
+      console.error('Error fetching user permissions:', error);
+      return {};
+    }
   }
 };

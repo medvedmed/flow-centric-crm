@@ -203,6 +203,53 @@ export type Database = {
         }
         Relationships: []
       }
+      role_permissions: {
+        Row: {
+          area: Database["public"]["Enums"]["permission_area"]
+          can_create: boolean | null
+          can_delete: boolean | null
+          can_edit: boolean | null
+          can_view: boolean | null
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          salon_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          area: Database["public"]["Enums"]["permission_area"]
+          can_create?: boolean | null
+          can_delete?: boolean | null
+          can_edit?: boolean | null
+          can_view?: boolean | null
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          salon_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          area?: Database["public"]["Enums"]["permission_area"]
+          can_create?: boolean | null
+          can_delete?: boolean | null
+          can_edit?: boolean | null
+          can_view?: boolean | null
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          salon_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff: {
         Row: {
           break_end: string | null
@@ -407,15 +454,76 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          role: Database["public"]["Enums"]["app_role"]
+          salon_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: Database["public"]["Enums"]["app_role"]
+          salon_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: Database["public"]["Enums"]["app_role"]
+          salon_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_id: string; salon_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_permission: {
+        Args: {
+          user_id: string
+          salon_id: string
+          area: Database["public"]["Enums"]["permission_area"]
+          action: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "salon_owner" | "manager" | "staff" | "receptionist"
+      permission_area:
+        | "dashboard"
+        | "appointments"
+        | "clients"
+        | "staff_management"
+        | "services"
+        | "inventory"
+        | "reports"
+        | "settings"
+        | "schedule_management"
+        | "time_off_requests"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -530,6 +638,20 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["salon_owner", "manager", "staff", "receptionist"],
+      permission_area: [
+        "dashboard",
+        "appointments",
+        "clients",
+        "staff_management",
+        "services",
+        "inventory",
+        "reports",
+        "settings",
+        "schedule_management",
+        "time_off_requests",
+      ],
+    },
   },
 } as const

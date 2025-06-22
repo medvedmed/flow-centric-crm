@@ -395,6 +395,8 @@ export type Database = {
           salon_id: string | null
           specialties: string[] | null
           staff_code: string | null
+          staff_login_id: string | null
+          staff_login_password: string | null
           status: string | null
           updated_at: string | null
           working_days: string[] | null
@@ -419,6 +421,8 @@ export type Database = {
           salon_id?: string | null
           specialties?: string[] | null
           staff_code?: string | null
+          staff_login_id?: string | null
+          staff_login_password?: string | null
           status?: string | null
           updated_at?: string | null
           working_days?: string[] | null
@@ -443,6 +447,8 @@ export type Database = {
           salon_id?: string | null
           specialties?: string[] | null
           staff_code?: string | null
+          staff_login_id?: string | null
+          staff_login_password?: string | null
           status?: string | null
           updated_at?: string | null
           working_days?: string[] | null
@@ -626,6 +632,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      authenticate_staff: {
+        Args: { login_id: string; login_password: string }
+        Returns: {
+          staff_id: string
+          staff_name: string
+          staff_email: string
+          salon_id: string
+          is_valid: boolean
+        }[]
+      }
       check_reminder_exists: {
         Args: { appointment_id_param: string; reminder_type_param: string }
         Returns: {
@@ -666,6 +682,14 @@ export type Database = {
         Returns: string
       }
       generate_staff_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_staff_login_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_staff_login_password: {
         Args: Record<PropertyKey, never>
         Returns: string
       }

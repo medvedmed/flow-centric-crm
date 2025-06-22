@@ -48,13 +48,15 @@ export interface Staff {
   imageUrl?: string;
   hourlyRate?: number;
   commissionRate?: number;
-  status: 'active' | 'inactive' | 'on_leave';
+  status?: 'active' | 'inactive' | 'on_leave';
   notes?: string;
   hireDate?: string;
-  salonId: string;
-  staffCode?: string; // Add the new staff_code field
-  createdAt: string;
-  updatedAt: string;
+  salonId?: string;
+  staffCode?: string;
+  staffLoginId?: string;
+  staffLoginPassword?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Appointment {

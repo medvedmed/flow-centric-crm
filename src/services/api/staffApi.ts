@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Staff } from '../types';
 
@@ -41,6 +40,8 @@ export const staffApi = {
       hireDate: staff.hire_date,
       salonId: staff.salon_id,
       staffCode: staff.staff_code,
+      staffLoginId: staff.staff_login_id,
+      staffLoginPassword: staff.staff_login_password,
       createdAt: staff.created_at,
       updatedAt: staff.updated_at
     })) || [];
@@ -70,8 +71,7 @@ export const staffApi = {
         status: staff.status || 'active',
         notes: staff.notes,
         hire_date: staff.hireDate,
-        salon_id: user.id,
-        staff_code: null // No longer generating staff codes
+        salon_id: user.id
       })
       .select()
       .single();
@@ -99,6 +99,8 @@ export const staffApi = {
       hireDate: data.hire_date,
       salonId: data.salon_id,
       staffCode: data.staff_code,
+      staffLoginId: data.staff_login_id,
+      staffLoginPassword: data.staff_login_password,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -154,6 +156,8 @@ export const staffApi = {
       hireDate: data.hire_date,
       salonId: data.salon_id,
       staffCode: data.staff_code,
+      staffLoginId: data.staff_login_id,
+      staffLoginPassword: data.staff_login_password,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -169,16 +173,8 @@ export const staffApi = {
   },
 
   async createStaffWithRole(staff: Staff, role: 'staff' | 'receptionist' = 'staff'): Promise<Staff> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
-
-    // Create the staff member (without staff code)
     const createdStaff = await this.createStaff(staff);
-
-    // The existing trigger assign_staff_role_by_email will automatically
-    // assign the staff role when they sign up with the email
     console.log(`Staff ${createdStaff.name} created with role: ${role}`);
-
     return createdStaff;
   }
 };

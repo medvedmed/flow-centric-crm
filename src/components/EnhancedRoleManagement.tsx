@@ -137,7 +137,7 @@ export const EnhancedRoleManagement: React.FC = () => {
                                 </div>
                                 <PermissionGate area="settings" action="edit">
                                   <Switch
-                                    checked={permission?.[key as keyof typeof permission] || false}
+                                    checked={Boolean(permission?.[key as 'canView' | 'canCreate' | 'canEdit' | 'canDelete']) || false}
                                     onCheckedChange={(value) =>
                                       handlePermissionToggle(
                                         role.key,

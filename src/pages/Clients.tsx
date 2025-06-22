@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Filter, Users, Mail, Phone, Edit, Trash, Loader2 } from "lucide-react";
 import { useClients, useCreateClient, useDeleteClient } from "@/hooks/useCrmData";
-import { Client } from "@/services/crmApi";
+import { Client } from "@/services/localCrmApi";
 
 const Clients = () => {
   const [searchTerm, setSearchTerm] = useState("");

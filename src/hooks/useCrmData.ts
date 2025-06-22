@@ -1,13 +1,13 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { crmApi, Client, Appointment } from '../services/crmApi';
+import { localCrmApi, Client, Appointment } from '../services/localCrmApi';
 import { useToast } from './use-toast';
-import { webhookService } from '../services/webhookService';
 
 // Client hooks
 export const useClients = (searchTerm?: string) => {
   return useQuery({
     queryKey: ['clients', searchTerm],
-    queryFn: () => crmApi.getClients(searchTerm),
+    queryFn: () => localCrmApi.getClients(searchTerm),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
@@ -15,7 +15,7 @@ export const useClients = (searchTerm?: string) => {
 export const useClient = (id: string) => {
   return useQuery({
     queryKey: ['client', id],
-    queryFn: () => crmApi.getClient(id),
+    queryFn: () => localCrmApi.getClient(id),
     enabled: !!id,
   });
 };
@@ -25,12 +25,9 @@ export const useCreateClient = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (client: Client) => crmApi.createClient(client),
+    mutationFn: (client: Client) => localCrmApi.createClient(client),
     onSuccess: async (createdClient) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      
-      // Send webhook for new client
-      await webhookService.clientCreated(createdClient);
       
       toast({
         title: "Success",
@@ -54,7 +51,7 @@ export const useUpdateClient = () => {
 
   return useMutation({
     mutationFn: ({ id, client }: { id: string; client: Partial<Client> }) => 
-      crmApi.updateClient(id, client),
+      localCrmApi.updateClient(id, client),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast({
@@ -78,7 +75,7 @@ export const useDeleteClient = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (id: string) => crmApi.deleteClient(id),
+    mutationFn: (id: string) => localCrmApi.deleteClient(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast({
@@ -101,7 +98,7 @@ export const useDeleteClient = () => {
 export const useAppointments = (clientId?: string, staffId?: string) => {
   return useQuery({
     queryKey: ['appointments', clientId, staffId],
-    queryFn: () => crmApi.getAppointments(clientId, staffId),
+    queryFn: () => localCrmApi.getAppointments(clientId, staffId),
     staleTime: 2 * 60 * 1000, // 2 minutes for more frequent updates
   });
 };
@@ -111,7 +108,7 @@ export const useCreateAppointment = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (appointment: Appointment) => crmApi.createAppointment(appointment),
+    mutationFn: (appointment: Appointment) => localCrmApi.createAppointment(appointment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       toast({
@@ -136,7 +133,7 @@ export const useUpdateAppointment = () => {
 
   return useMutation({
     mutationFn: ({ id, appointment }: { id: string; appointment: Partial<Appointment> }) => 
-      crmApi.updateAppointment(id, appointment),
+      localCrmApi.updateAppointment(id, appointment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       toast({
@@ -160,7 +157,7 @@ export const useDeleteAppointment = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (id: string) => crmApi.deleteAppointment(id),
+    mutationFn: (id: string) => localCrmApi.deleteAppointment(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       toast({

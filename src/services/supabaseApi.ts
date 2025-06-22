@@ -154,7 +154,7 @@ export const supabaseApi = {
 
     let query = supabase
       .from('clients')
-      .select('*, count(*) OVER() as total_count', { count: 'exact' })
+      .select('*')
       .eq('salon_id', user.id);
     
     // Use full-text search when available, fallback to ILIKE
@@ -346,7 +346,7 @@ export const supabaseApi = {
 
     let query = supabase
       .from('appointments')
-      .select('*, count(*) OVER() as total_count', { count: 'exact' })
+      .select('*')
       .eq('salon_id', user.id);
     
     if (clientId) {

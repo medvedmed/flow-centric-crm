@@ -12,9 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Search, Filter, Users, Mail, Phone, Edit, Trash, Loader2 } from "lucide-react";
 import { useClients, useCreateClient, useDeleteClient } from "@/hooks/useCrmData";
 import { Client } from "@/services/supabaseApi";
+import PaginationControls from "@/components/PaginationControls";
 
 const Clients = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newClient, setNewClient] = useState<Omit<Client, 'id'>>({
     name: "",
@@ -25,10 +27,15 @@ const Clients = () => {
     notes: ""
   });
 
-  // Use React Query hooks
-  const { data: clients = [], isLoading, error } = useClients(searchTerm);
+  // Use React Query hooks - now expecting PaginatedResult
+  const { data: clientsResult, isLoading, error } = useClients(searchTerm, currentPage);
   const createClientMutation = useCreateClient();
   const deleteClientMutation = useDeleteClient();
+
+  // Extract data from paginated result
+  const clients = clientsResult?.data || [];
+  const totalCount = clientsResult?.count || 0;
+  const hasMore = clientsResult?.hasMore || false;
 
   const handleAddClient = async () => {
     if (!newClient.name || !newClient.email) {
@@ -203,7 +210,7 @@ const Clients = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-teal-900">
-              {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : statusCounts.total}
+              {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : totalCount}
             </div>
           </CardContent>
         </Card>
@@ -271,81 +278,94 @@ const Clients = () => {
               <Loader2 className="w-8 h-8 animate-spin" />
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Assigned Staff</TableHead>
-                  <TableHead>Notes</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {clients.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1 text-sm">
-                          <Mail className="w-3 h-3" />
-                          {client.email}
-                        </div>
-                        {client.phone && (
-                          <div className="flex items-center gap-1 text-sm">
-                            <Phone className="w-3 h-3" />
-                            {client.phone}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={client.status === 'VIP' ? 'default' : 
-                                client.status === 'Regular' ? 'secondary' : 'outline'}
-                        className={client.status === 'VIP' ? 'bg-amber-100 text-amber-800' : ''}
-                      >
-                        {client.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{client.assignedStaff || '-'}</TableCell>
-                    <TableCell>
-                      <span className="text-sm text-gray-600">
-                        {client.notes ? (client.notes.length > 50 ? client.notes.substring(0, 50) + '...' : client.notes) : '-'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => client.id && handleDeleteClient(client.id)}
-                          className="text-red-600 hover:text-red-700"
-                          disabled={deleteClientMutation.isPending}
-                        >
-                          {deleteClientMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Trash className="w-4 h-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {clients.length === 0 && !isLoading && (
+            <>
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                      No clients found. Add your first client to get started.
-                    </TableCell>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Assigned Staff</TableHead>
+                    <TableHead>Notes</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {clients.map((client) => (
+                    <TableRow key={client.id}>
+                      <TableCell className="font-medium">{client.name}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1 text-sm">
+                            <Mail className="w-3 h-3" />
+                            {client.email}
+                          </div>
+                          {client.phone && (
+                            <div className="flex items-center gap-1 text-sm">
+                              <Phone className="w-3 h-3" />
+                              {client.phone}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={client.status === 'VIP' ? 'default' : 
+                                  client.status === 'Regular' ? 'secondary' : 'outline'}
+                          className={client.status === 'VIP' ? 'bg-amber-100 text-amber-800' : ''}
+                        >
+                          {client.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{client.assignedStaff || '-'}</TableCell>
+                      <TableCell>
+                        <span className="text-sm text-gray-600">
+                          {client.notes ? (client.notes.length > 50 ? client.notes.substring(0, 50) + '...' : client.notes) : '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => client.id && handleDeleteClient(client.id)}
+                            className="text-red-600 hover:text-red-700"
+                            disabled={deleteClientMutation.isPending}
+                          >
+                            {deleteClientMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Trash className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {clients.length === 0 && !isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                        No clients found. Add your first client to get started.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {totalCount > 0 && (
+                <PaginationControls
+                  page={currentPage}
+                  pageSize={50}
+                  total={totalCount}
+                  hasMore={hasMore}
+                  onPageChange={setCurrentPage}
+                />
+              )}
+            </>
           )}
         </CardContent>
       </Card>

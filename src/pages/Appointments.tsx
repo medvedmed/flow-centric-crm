@@ -87,14 +87,18 @@ const AppointmentsContent = () => {
     price: 0
   });
 
-  // Use React Query hooks
-  const { data: appointments = [], isLoading: appointmentsLoading, refetch: refetchAppointments } = useAppointments();
-  const { data: clients = [] } = useClients();
+  // Use React Query hooks - now expecting PaginatedResult
+  const { data: appointmentsResult, isLoading: appointmentsLoading, refetch: refetchAppointments } = useAppointments();
+  const { data: clientsResult } = useClients();
   const createAppointmentMutation = useCreateAppointment();
   const createClientMutation = useCreateClient();
   const updateAppointmentMutation = useUpdateAppointment();
 
   const timeSlots = generateTimeSlots();
+
+  // Extract data from paginated results
+  const appointments = appointmentsResult?.data || [];
+  const clients = clientsResult?.data || [];
 
   // Transform API appointments to match the scheduler format
   const transformedAppointments = appointments.map(apt => ({

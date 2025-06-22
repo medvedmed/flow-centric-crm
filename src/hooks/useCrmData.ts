@@ -46,7 +46,7 @@ export const useClients = (
     queryKey: ['clients', searchTerm, page, pageSize, status],
     queryFn: () => supabaseApi.getClients(searchTerm, page, pageSize, status),
     staleTime: 2 * 60 * 1000, // 2 minutes for frequent updates
-    keepPreviousData: true, // Keep previous data while loading new page
+    placeholderData: (previousData) => previousData, // Replaces keepPreviousData
   });
 };
 
@@ -227,7 +227,7 @@ export const useAppointments = (
     queryKey: ['appointments', clientId, staffId, startDate, endDate, page, pageSize],
     queryFn: () => supabaseApi.getAppointments(clientId, staffId, startDate, endDate, page, pageSize),
     staleTime: 1 * 60 * 1000, // 1 minute for real-time updates
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData, // Replaces keepPreviousData
   });
 };
 

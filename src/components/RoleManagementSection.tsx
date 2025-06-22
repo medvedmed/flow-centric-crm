@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,8 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { permissionApi, AppRole } from '@/services/permissionApi';
 import { Users, UserPlus, Shield } from 'lucide-react';
+import StaffInviteDialog from "./StaffInviteDialog";
 
-export const RoleManagementSection: React.FC = () => {
+export const RoleManagementSection = () => {
   const { toast } = useToast();
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserRole, setNewUserRole] = useState<AppRole>('staff');
@@ -67,11 +67,17 @@ export const RoleManagementSection: React.FC = () => {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Role Management
-          </CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Team Management
+            </CardTitle>
+            <CardDescription>
+              Manage your salon staff and their roles
+            </CardDescription>
+          </div>
+          <StaffInviteDialog />
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Role Descriptions */}
@@ -141,3 +147,5 @@ export const RoleManagementSection: React.FC = () => {
     </div>
   );
 };
+
+export default RoleManagementSection;

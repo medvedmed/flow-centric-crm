@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Scissors } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 
 interface AuthFormProps {
   onAuthSuccess: () => void;
@@ -23,6 +24,8 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     salonName: '' 
   });
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get('tab') || 'login';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,10 +64,11 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
         email: signupForm.email,
         password: signupForm.password,
         options: {
-          emailRedirectTo: 'https://0ead72f8-81b0-4cdc-a1b2-a7d93ae983f1.lovableproject.com/',
+          emailRedirectTo: `${window.location.origin}/?welcome=true`,
           data: {
             full_name: signupForm.fullName,
             salon_name: signupForm.salonName,
+            role: 'salon_owner'
           }
         }
       });
@@ -94,14 +98,14 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
             <Scissors className="w-6 h-6 text-white" />
           </div>
           <CardTitle className="text-2xl bg-gradient-to-r from-teal-500 to-cyan-600 bg-clip-text text-transparent">
-            Salon CRM
+            Aura Platform
           </CardTitle>
           <CardDescription>
-            Manage your salon with ease
+            Professional salon management system
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs defaultValue={defaultTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -192,7 +196,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
                   disabled={isLoading}
                 >
                   {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Create Account
+                  Create Salon Account
                 </Button>
               </form>
             </TabsContent>

@@ -1,113 +1,159 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, Send, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
-
-interface WhatsAppReminder {
-  id: string;
-  clientName: string;
-  clientPhone: string;
-  appointmentDate: string;
-  appointmentTime: string;
-  sentAt: string;
-  status: 'sent' | 'failed' | 'pending';
-}
+import { MessageSquare, Send, CheckCircle, Clock, AlertTriangle, ExternalLink, Play } from 'lucide-react';
+import { reminderApi } from '@/services/api/reminderApi';
+import { ReminderSettings, AppointmentReminder } from '@/services/types';
 
 export const WhatsAppSection: React.FC = () => {
   const { toast } = useToast();
-  const [isConnected, setIsConnected] = useState(false);
-  const [apiKey, setApiKey] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [autoReminders, setAutoReminders] = useState(true);
-  const [reminderTemplate, setReminderTemplate] = useState(
-    'Hi {clientName}! This is a reminder for your appointment tomorrow at {time}. See you at the salon!'
-  );
+  const [loading, setLoading] = useState(false);
+  const [processingReminders, setProcessingReminders] = useState(false);
+  const [settings, setSettings] = useState<ReminderSettings | null>(null);
+  const [reminders, setReminders] = useState<AppointmentReminder[]>([]);
+  
+  const [formData, setFormData] = useState({
+    reminderTiming: '24_hours' as '24_hours' | '2_hours',
+    isEnabled: true,
+    messageTemplate: 'Hi {clientName}! This is a reminder for your {service} appointment tomorrow at {time}. See you at the salon!'
+  });
 
-  // Mock data for sent reminders
-  const [sentReminders] = useState<WhatsAppReminder[]>([
-    {
-      id: '1',
-      clientName: 'Alice Smith',
-      clientPhone: '+1-555-0123',
-      appointmentDate: '2024-06-23',
-      appointmentTime: '10:00 AM',
-      sentAt: '2024-06-22 18:30',
-      status: 'sent'
-    },
-    {
-      id: '2',
-      clientName: 'Bob Wilson',
-      clientPhone: '+1-555-0456',
-      appointmentDate: '2024-06-23',
-      appointmentTime: '2:00 PM',
-      sentAt: '2024-06-22 18:31',
-      status: 'sent'
-    },
-    {
-      id: '3',
-      clientName: 'Carol Brown',
-      clientPhone: '+1-555-0789',
-      appointmentDate: '2024-06-23',
-      appointmentTime: '11:00 AM',
-      sentAt: '2024-06-22 18:32',
-      status: 'failed'
+  useEffect(() => {
+    loadReminderSettings();
+    loadPendingReminders();
+  }, []);
+
+  const loadReminderSettings = async () => {
+    try {
+      const data = await reminderApi.getReminderSettings();
+      if (data) {
+        setSettings(data);
+        setFormData({
+          reminderTiming: data.reminderTiming,
+          isEnabled: data.isEnabled,
+          messageTemplate: data.messageTemplate
+        });
+      }
+    } catch (error) {
+      console.error('Error loading reminder settings:', error);
     }
-  ]);
-
-  const handleConnect = () => {
-    if (!apiKey || !phoneNumber) {
-      toast({
-        title: "Missing Information",
-        description: "Please enter both API key and phone number",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Simulate connection
-    setIsConnected(true);
-    toast({
-      title: "WhatsApp Connected",
-      description: "Successfully connected to WhatsApp API",
-    });
   };
 
-  const handleDisconnect = () => {
-    setIsConnected(false);
-    setApiKey('');
-    setPhoneNumber('');
-    toast({
-      title: "WhatsApp Disconnected",
-      description: "WhatsApp integration has been disabled",
-    });
+  const loadPendingReminders = async () => {
+    try {
+      const data = await reminderApi.getAppointmentReminders('ready');
+      setReminders(data);
+    } catch (error) {
+      console.error('Error loading pending reminders:', error);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    setLoading(true);
+    try {
+      if (settings) {
+        await reminderApi.updateReminderSettings(formData);
+      } else {
+        await reminderApi.createReminderSettings(formData);
+      }
+      
+      await loadReminderSettings();
+      toast({
+        title: "Success",
+        description: "Reminder settings updated successfully!",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update reminder settings",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProcessReminders = async () => {
+    setProcessingReminders(true);
+    try {
+      await reminderApi.processReminders();
+      await loadPendingReminders();
+      toast({
+        title: "Success",
+        description: "Reminders processed successfully!",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to process reminders",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingReminders(false);
+    }
+  };
+
+  const handleSendReminder = async (reminder: AppointmentReminder) => {
+    if (reminder.whatsappUrl) {
+      window.open(reminder.whatsappUrl, '_blank');
+      
+      try {
+        await reminderApi.updateReminderStatus(reminder.id, 'sent');
+        await loadPendingReminders();
+        toast({
+          title: "Reminder Sent",
+          description: "WhatsApp reminder opened successfully!",
+        });
+      } catch (error) {
+        console.error('Error updating reminder status:', error);
+      }
+    }
+  };
+
+  const handleSkipReminder = async (reminder: AppointmentReminder) => {
+    try {
+      await reminderApi.updateReminderStatus(reminder.id, 'skipped');
+      await loadPendingReminders();
+      toast({
+        title: "Reminder Skipped",
+        description: "Reminder has been marked as skipped",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to skip reminder",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case 'ready':
+        return <Clock className="w-4 h-4 text-blue-600" />;
       case 'sent':
         return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case 'failed':
-        return <AlertTriangle className="w-4 h-4 text-red-600" />;
-      case 'pending':
-        return <Clock className="w-4 h-4 text-yellow-600" />;
+      case 'skipped':
+        return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
       default:
-        return null;
+        return <Clock className="w-4 h-4 text-gray-600" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'ready':
+        return 'bg-blue-100 text-blue-800';
       case 'sent':
         return 'bg-green-100 text-green-800';
-      case 'failed':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
+      case 'skipped':
         return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -116,114 +162,131 @@ export const WhatsAppSection: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Connection Setup */}
+      {/* Reminder Settings */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
-            WhatsApp API Configuration
+            WhatsApp Reminder Settings
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <div className={`w-3 h-3 rounded-full ${formData.isEnabled ? 'bg-green-500' : 'bg-gray-500'}`}></div>
               <span className="font-medium">
-                {isConnected ? 'Connected to WhatsApp' : 'Not Connected'}
+                {formData.isEnabled ? 'Automatic Reminders Enabled' : 'Automatic Reminders Disabled'}
               </span>
             </div>
-            {isConnected && (
-              <Button variant="outline" size="sm" onClick={handleDisconnect}>
-                Disconnect
-              </Button>
-            )}
+            <Switch
+              checked={formData.isEnabled}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isEnabled: checked }))}
+            />
           </div>
 
-          {!isConnected && (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="apiKey">WhatsApp API Key</Label>
-                <Input
-                  id="apiKey"
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Enter your WhatsApp API key"
-                />
-              </div>
-              <div>
-                <Label htmlFor="phoneNumber">Business Phone Number</Label>
-                <Input
-                  id="phoneNumber"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="+1-555-123-4567"
-                />
-              </div>
-              <Button onClick={handleConnect} className="w-full">
-                Connect WhatsApp
-              </Button>
-            </div>
-          )}
+          <div>
+            <Label htmlFor="reminderTiming">Reminder Timing</Label>
+            <select
+              id="reminderTiming"
+              value={formData.reminderTiming}
+              onChange={(e) => setFormData(prev => ({ ...prev, reminderTiming: e.target.value as '24_hours' | '2_hours' }))}
+              className="w-full p-2 border rounded-md"
+            >
+              <option value="24_hours">24 Hours Before Appointment</option>
+              <option value="2_hours">2 Hours Before Appointment</option>
+            </select>
+          </div>
 
-          {isConnected && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="autoReminders">Automatic Reminders</Label>
-                <Switch
-                  id="autoReminders"
-                  checked={autoReminders}
-                  onCheckedChange={setAutoReminders}
-                />
-              </div>
-              <div>
-                <Label htmlFor="reminderTemplate">Reminder Message Template</Label>
-                <textarea
-                  id="reminderTemplate"
-                  className="w-full p-3 border rounded-md resize-none"
-                  rows={3}
-                  value={reminderTemplate}
-                  onChange={(e) => setReminderTemplate(e.target.value)}
-                  placeholder="Use {clientName}, {time}, {date} as placeholders"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Available placeholders: {'{clientName}'}, {'{time}'}, {'{date}'}
-                </p>
-              </div>
-            </div>
-          )}
+          <div>
+            <Label htmlFor="messageTemplate">Message Template</Label>
+            <Textarea
+              id="messageTemplate"
+              value={formData.messageTemplate}
+              onChange={(e) => setFormData(prev => ({ ...prev, messageTemplate: e.target.value }))}
+              placeholder="Use {clientName}, {service}, {time}, {date} as placeholders"
+              rows={4}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Available placeholders: {'{clientName}'}, {'{service}'}, {'{time}'}, {'{date}'}
+            </p>
+          </div>
+
+          <Button onClick={handleSaveSettings} disabled={loading} className="w-full">
+            {loading ? "Saving..." : "Save Settings"}
+          </Button>
         </CardContent>
       </Card>
 
-      {/* Sent Reminders */}
-      {isConnected && (
+      {/* Process Reminders */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Play className="h-5 w-5" />
+            Process Reminders
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Click below to check for appointments that need reminders and generate WhatsApp links.
+            </p>
+            <Button 
+              onClick={handleProcessReminders} 
+              disabled={processingReminders || !formData.isEnabled}
+              className="w-full"
+            >
+              <Play className="w-4 h-4 mr-2" />
+              {processingReminders ? "Processing..." : "Process Reminders Now"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pending Reminders */}
+      {reminders.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Send className="h-5 w-5" />
-              Sent Reminders Today
+              Ready to Send ({reminders.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {sentReminders.map((reminder) => (
+              {reminders.map((reminder) => (
                 <div key={reminder.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
                     {getStatusIcon(reminder.status)}
                     <div>
-                      <p className="font-medium">{reminder.clientName}</p>
+                      <p className="font-medium">Appointment Reminder</p>
                       <p className="text-sm text-gray-600">
-                        {reminder.appointmentDate} at {reminder.appointmentTime}
+                        Scheduled: {new Date(reminder.scheduledTime).toLocaleString()}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="flex items-center gap-2">
                     <Badge className={getStatusColor(reminder.status)}>
                       {reminder.status.toUpperCase()}
                     </Badge>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Sent: {reminder.sentAt}
-                    </p>
+                    {reminder.status === 'ready' && (
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          onClick={() => handleSendReminder(reminder)}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <ExternalLink className="w-3 h-3 mr-1" />
+                          Send
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleSkipReminder(reminder)}
+                        >
+                          Skip
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -235,15 +298,16 @@ export const WhatsAppSection: React.FC = () => {
       {/* Instructions */}
       <Card>
         <CardHeader>
-          <CardTitle>Setup Instructions</CardTitle>
+          <CardTitle>How It Works</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2 text-sm text-gray-600">
-            <p>1. Sign up for a WhatsApp Business API account</p>
-            <p>2. Get your API key from your WhatsApp provider</p>
-            <p>3. Verify your business phone number</p>
-            <p>4. Enter your credentials above to connect</p>
-            <p>5. Automatic reminders will be sent 24 hours before appointments</p>
+            <p>1. Enable automatic reminders and choose your preferred timing (24 hours or 2 hours before appointments)</p>
+            <p>2. Customize your message template with client and appointment details</p>
+            <p>3. Click "Process Reminders Now" to generate WhatsApp links for upcoming appointments</p>
+            <p>4. Click "Send" to open WhatsApp with the pre-filled message</p>
+            <p>5. Send the message directly from your WhatsApp account</p>
+            <p className="text-blue-600 font-medium">💡 Pro tip: Set up a daily routine to process and send reminders!</p>
           </div>
         </CardContent>
       </Card>

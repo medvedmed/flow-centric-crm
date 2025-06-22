@@ -1,4 +1,3 @@
-
 // Re-export all types
 export * from './types';
 
@@ -11,6 +10,9 @@ export { timeOffApi } from './api/timeOffApi';
 export { availabilityApi } from './api/availabilityApi';
 export { analyticsApi } from './api/analyticsApi';
 export { reportsApi } from './api/reportsApi';
+
+// Re-export reminder API
+export { reminderApi } from './api/reminderApi';
 
 // Create the main supabaseApi object that maintains the existing interface
 export const supabaseApi = {
@@ -54,6 +56,14 @@ export const supabaseApi = {
   createStaffAvailability: (availability: any) => import('./api/availabilityApi').then(m => m.availabilityApi.createStaffAvailability(availability)),
   updateStaffAvailability: (id: string, availability: any) => import('./api/availabilityApi').then(m => m.availabilityApi.updateStaffAvailability(id, availability)),
   deleteStaffAvailability: (id: string) => import('./api/availabilityApi').then(m => m.availabilityApi.deleteStaffAvailability(id)),
+
+  // Reminder functions
+  getReminderSettings: () => import('./api/reminderApi').then(m => m.reminderApi.getReminderSettings()),
+  createReminderSettings: (settings: any) => import('./api/reminderApi').then(m => m.reminderApi.createReminderSettings(settings)),
+  updateReminderSettings: (settings: any) => import('./api/reminderApi').then(m => m.reminderApi.updateReminderSettings(settings)),
+  getAppointmentReminders: (status?: string) => import('./api/reminderApi').then(m => m.reminderApi.getAppointmentReminders(status)),
+  updateReminderStatus: (id: string, status: 'sent' | 'skipped') => import('./api/reminderApi').then(m => m.reminderApi.updateReminderStatus(id, status)),
+  processReminders: () => import('./api/reminderApi').then(m => m.reminderApi.processReminders()),
 
   // Analytics functions
   getClientStats: () => import('./api/analyticsApi').then(m => m.analyticsApi.getClientStats()),

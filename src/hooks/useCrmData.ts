@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   supabaseApi, 
@@ -484,6 +483,95 @@ export const useClientStats = () => {
     queryKey: ['client-stats'],
     queryFn: () => supabaseApi.getClientStats(),
     staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+};
+
+// Reminder hooks
+export const useReminderSettings = () => {
+  return useQuery({
+    queryKey: ['reminder-settings'],
+    queryFn: () => supabaseApi.getReminderSettings(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+export const useCreateReminderSettings = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (settings: any) => supabaseApi.createReminderSettings(settings),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reminder-settings'] });
+      toast({
+        title: "Success",
+        description: "Reminder settings created successfully!",
+      });
+    },
+    onError: (error) => {
+      console.error('Error creating reminder settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create reminder settings. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+export const useUpdateReminderSettings = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (settings: any) => supabaseApi.updateReminderSettings(settings),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reminder-settings'] });
+      toast({
+        title: "Success",
+        description: "Reminder settings updated successfully!",
+      });
+    },
+    onError: (error) => {
+      console.error('Error updating reminder settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update reminder settings. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+export const useAppointmentReminders = (status?: string) => {
+  return useQuery({
+    queryKey: ['appointment-reminders', status],
+    queryFn: () => supabaseApi.getAppointmentReminders(status),
+    staleTime: 1 * 60 * 1000, // 1 minute for real-time updates
+  });
+};
+
+export const useProcessReminders = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: () => supabaseApi.processReminders(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointment-reminders'] });
+      toast({
+        title: "Success",
+        description: "Reminders processed successfully!",
+      });
+    },
+    onError: (error) => {
+      console.error('Error processing reminders:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process reminders. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 };
 

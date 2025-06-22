@@ -1,4 +1,3 @@
-
 export interface Profile {
   id: string;
   email: string;
@@ -130,4 +129,26 @@ export interface PaginatedResult<T> {
   hasMore: boolean;
   page: number;
   pageSize: number;
+}
+
+export interface ReminderSettings {
+  id: string;
+  salonId: string;
+  reminderTiming: '24_hours' | '2_hours';
+  isEnabled: boolean;
+  messageTemplate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AppointmentReminder {
+  id: string;
+  appointmentId: string;
+  reminderType: '24_hours' | '2_hours';
+  scheduledTime: string;
+  sentAt?: string;
+  status: 'pending' | 'ready' | 'sent' | 'skipped';
+  whatsappUrl?: string;
+  createdAt: string;
+  updatedAt: string;
 }

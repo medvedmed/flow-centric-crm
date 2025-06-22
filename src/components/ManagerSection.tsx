@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users } from 'lucide-react';
-import { useClients, useUpdateClient, useDeleteClient } from '@/hooks/useCrmData';
+import { useClients, useUpdateClient, useDeleteClient, useStaff, useDeleteStaff } from '@/hooks/useCrmData';
 import { useToast } from '@/hooks/use-toast';
 import { ClientSearch } from './manager/ClientSearch';
 import { ClientCard } from './manager/ClientCard';
@@ -10,17 +10,32 @@ import { ClientCard } from './manager/ClientCard';
 const ManagerSection = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
-  const { data: clientsData, isLoading } = useClients(searchTerm, 1, 100);
+  
+  // Fetch both clients and staff
+  const { data: clientsData, isLoading: clientsLoading } = useClients(searchTerm, 1, 100);
+  const { data: staffData = [], isLoading: staffLoading } = useStaff();
+  
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
+  const deleteStaff = useDeleteStaff();
   const { toast } = useToast();
 
   const clients = clientsData?.data || [];
+  const staff = staffData || [];
 
-  const handleTogglePortal = async (clientId: string, currentStatus: boolean) => {
+  const handleTogglePortal = async (entityId: string, currentStatus: boolean, isStaff: boolean) => {
+    if (isStaff) {
+      // Staff always have access, no need to toggle
+      toast({
+        title: 'Info',
+        description: 'Staff members always have system access',
+      });
+      return;
+    }
+
     try {
       await updateClient.mutateAsync({
-        id: clientId,
+        id: entityId,
         client: { isPortalEnabled: !currentStatus }
       });
       toast({
@@ -36,53 +51,80 @@ const ManagerSection = () => {
     }
   };
 
-  const handleCopyCredentials = (clientId: string, password: string) => {
-    const credentials = `Client ID: ${clientId}\nPassword: ${password}`;
-    navigator.clipboard.writeText(credentials);
-    toast({
-      title: 'Copied',
-      description: 'Client credentials copied to clipboard',
-    });
+  const handleCopyCredentials = (loginId: string, password: string, isStaff: boolean) => {
+    if (isStaff) {
+      const credentials = `Login Email: ${loginId}\nPassword: Use signup credentials`;
+      navigator.clipboard.writeText(credentials);
+      toast({
+        title: 'Copied',
+        description: 'Staff login details copied to clipboard',
+      });
+    } else {
+      const credentials = `Client ID: ${loginId}\nPassword: ${password}`;
+      navigator.clipboard.writeText(credentials);
+      toast({
+        title: 'Copied',
+        description: 'Client credentials copied to clipboard',
+      });
+    }
   };
 
-  const handleDeleteClient = async (clientId: string, clientName: string) => {
+  const handleDeleteEntity = async (entityId: string, entityName: string, isStaff: boolean) => {
     try {
-      await deleteClient.mutateAsync(clientId);
-      toast({
-        title: 'Success',
-        description: `${clientName} has been deleted successfully`,
-      });
+      if (isStaff) {
+        await deleteStaff.mutateAsync(entityId);
+        toast({
+          title: 'Success',
+          description: `${entityName} has been removed from staff successfully`,
+        });
+      } else {
+        await deleteClient.mutateAsync(entityId);
+        toast({
+          title: 'Success',
+          description: `${entityName} has been deleted successfully`,
+        });
+      }
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to delete client',
+        description: `Failed to delete ${isStaff ? 'staff member' : 'client'}`,
         variant: 'destructive',
       });
     }
   };
 
-  const togglePasswordVisibility = (clientId: string) => {
+  const togglePasswordVisibility = (entityId: string) => {
     setShowPasswords(prev => ({
       ...prev,
-      [clientId]: !prev[clientId]
+      [entityId]: !prev[entityId]
     }));
   };
 
+  // Filter both clients and staff based on search term
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (client.clientId && client.clientId.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const filteredStaff = staff.filter(member =>
+    member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (member.email && member.email.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const isLoading = clientsLoading || staffLoading;
+
   if (isLoading) {
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="text-center">Loading clients...</div>
+          <div className="text-center">Loading clients and staff...</div>
         </CardContent>
       </Card>
     );
   }
+
+  const totalEntities = filteredClients.length + filteredStaff.length;
 
   return (
     <div className="space-y-6">
@@ -90,10 +132,10 @@ const ManagerSection = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Client Manager
+            Client & Staff Manager
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Manage client portal access, credentials, and account settings
+            Manage client portal access, staff system access, credentials, and account settings
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -103,24 +145,42 @@ const ManagerSection = () => {
           />
 
           <div className="space-y-4">
-            {filteredClients.length === 0 ? (
+            {totalEntities === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {searchTerm ? 'No clients found matching your search.' : 'No clients added yet.'}
+                {searchTerm ? 'No clients or staff found matching your search.' : 'No clients or staff added yet.'}
               </div>
             ) : (
-              filteredClients.map((client) => (
-                <ClientCard
-                  key={client.id}
-                  client={client}
-                  showPassword={showPasswords[client.id] || false}
-                  onTogglePassword={() => togglePasswordVisibility(client.id)}
-                  onCopyCredentials={() => 
-                    client.clientPassword && handleCopyCredentials(client.clientId!, client.clientPassword)
-                  }
-                  onTogglePortal={() => handleTogglePortal(client.id, client.isPortalEnabled || false)}
-                  onDeleteClient={() => handleDeleteClient(client.id, client.name)}
-                />
-              ))
+              <>
+                {/* Staff Members */}
+                {filteredStaff.map((member) => (
+                  <ClientCard
+                    key={`staff-${member.id}`}
+                    staff={member}
+                    showPassword={showPasswords[member.id] || false}
+                    onTogglePassword={() => togglePasswordVisibility(member.id)}
+                    onCopyCredentials={() => 
+                      handleCopyCredentials(member.email || '', '', true)
+                    }
+                    onTogglePortal={() => handleTogglePortal(member.id, true, true)}
+                    onDeleteClient={() => handleDeleteEntity(member.id, member.name, true)}
+                  />
+                ))}
+                
+                {/* Clients */}
+                {filteredClients.map((client) => (
+                  <ClientCard
+                    key={`client-${client.id}`}
+                    client={client}
+                    showPassword={showPasswords[client.id] || false}
+                    onTogglePassword={() => togglePasswordVisibility(client.id)}
+                    onCopyCredentials={() => 
+                      client.clientPassword && handleCopyCredentials(client.clientId!, client.clientPassword, false)
+                    }
+                    onTogglePortal={() => handleTogglePortal(client.id, client.isPortalEnabled || false, false)}
+                    onDeleteClient={() => handleDeleteEntity(client.id, client.name, false)}
+                  />
+                ))}
+              </>
             )}
           </div>
         </CardContent>

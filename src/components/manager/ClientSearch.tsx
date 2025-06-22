@@ -12,7 +12,7 @@ export const ClientSearch = ({ searchTerm, onSearchChange }: ClientSearchProps) 
     <div className="flex items-center space-x-2">
       <Search className="h-4 w-4 text-muted-foreground" />
       <Input
-        placeholder="Search clients by name, email, or ID..."
+        placeholder="Search clients and staff by name, email, or ID..."
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
         className="max-w-sm"

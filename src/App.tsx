@@ -16,6 +16,7 @@ import Inventory from "./pages/Inventory";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Help from "./pages/Help";
+import WebhookTest from "./pages/WebhookTest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/help" element={<Help />} />
+                  <Route path="/webhook-test" element={<WebhookTest />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </div>

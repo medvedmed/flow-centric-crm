@@ -1,7 +1,7 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { crmApi, Client, Appointment } from '../services/crmApi';
 import { useToast } from './use-toast';
+import { webhookService } from '../services/webhookService';
 
 // Client hooks
 export const useClients = (searchTerm?: string) => {
@@ -26,8 +26,12 @@ export const useCreateClient = () => {
 
   return useMutation({
     mutationFn: (client: Client) => crmApi.createClient(client),
-    onSuccess: () => {
+    onSuccess: async (createdClient) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      
+      // Send webhook for new client
+      await webhookService.clientCreated(createdClient);
+      
       toast({
         title: "Success",
         description: "Client created successfully!",

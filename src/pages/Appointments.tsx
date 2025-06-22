@@ -12,6 +12,7 @@ import { LanguageProvider, useLanguage } from "@/contexts/LanguageContext";
 import LanguageToggle from "@/components/LanguageToggle";
 import { useAppointments, useCreateAppointment, useUpdateAppointment, useClients, useCreateClient } from "@/hooks/useCrmData";
 import { Appointment, Client } from "@/services/crmApi";
+import { webhookService } from "@/services/webhookService";
 
 // Interfaces
 interface Staff {
@@ -118,7 +119,7 @@ const AppointmentsContent = () => {
       const endTime = new Date(startTime.getTime() + (appointment.duration || 60) * 60000);
       const endTimeString = endTime.toTimeString().slice(0, 5);
 
-      await updateAppointmentMutation.mutateAsync({
+      const updatedAppointment = await updateAppointmentMutation.mutateAsync({
         id: appointmentId,
         appointment: {
           staffId: newStaffId,
@@ -126,6 +127,9 @@ const AppointmentsContent = () => {
           endTime: endTimeString
         }
       });
+
+      // Send webhook for appointment update
+      await webhookService.appointmentUpdated(updatedAppointment);
 
       refetchAppointments();
     } catch (error) {
@@ -198,7 +202,10 @@ const AppointmentsContent = () => {
       };
 
       console.log('Creating appointment:', newAppointment);
-      await createAppointmentMutation.mutateAsync(newAppointment);
+      const createdAppointment = await createAppointmentMutation.mutateAsync(newAppointment);
+
+      // Send webhook for new appointment
+      await webhookService.appointmentCreated(createdAppointment);
 
       setIsBookingOpen(false);
       setSelectedSlot(null);

@@ -191,47 +191,71 @@ export type Database = {
       }
       staff: {
         Row: {
+          break_end: string | null
+          break_start: string | null
+          commission_rate: number | null
           created_at: string | null
           efficiency: number | null
           email: string | null
+          hire_date: string | null
+          hourly_rate: number | null
           id: string
           image_url: string | null
           name: string
+          notes: string | null
           phone: string | null
           rating: number | null
           salon_id: string | null
           specialties: string[] | null
+          status: string | null
           updated_at: string | null
+          working_days: string[] | null
           working_hours_end: string | null
           working_hours_start: string | null
         }
         Insert: {
+          break_end?: string | null
+          break_start?: string | null
+          commission_rate?: number | null
           created_at?: string | null
           efficiency?: number | null
           email?: string | null
+          hire_date?: string | null
+          hourly_rate?: number | null
           id?: string
           image_url?: string | null
           name: string
+          notes?: string | null
           phone?: string | null
           rating?: number | null
           salon_id?: string | null
           specialties?: string[] | null
+          status?: string | null
           updated_at?: string | null
+          working_days?: string[] | null
           working_hours_end?: string | null
           working_hours_start?: string | null
         }
         Update: {
+          break_end?: string | null
+          break_start?: string | null
+          commission_rate?: number | null
           created_at?: string | null
           efficiency?: number | null
           email?: string | null
+          hire_date?: string | null
+          hourly_rate?: number | null
           id?: string
           image_url?: string | null
           name?: string
+          notes?: string | null
           phone?: string | null
           rating?: number | null
           salon_id?: string | null
           specialties?: string[] | null
+          status?: string | null
           updated_at?: string | null
+          working_days?: string[] | null
           working_hours_end?: string | null
           working_hours_start?: string | null
         }

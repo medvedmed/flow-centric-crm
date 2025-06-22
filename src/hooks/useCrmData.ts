@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabaseApi, Client, Appointment, Profile } from '../services/supabaseApi';
+import { supabaseApi, Client, Appointment, Staff, Profile } from '../services/supabaseApi';
 import { useToast } from './use-toast';
 
 // Profile hooks
@@ -126,12 +126,85 @@ export const useDeleteClient = () => {
   });
 };
 
-// Staff hooks
+// Staff hooks with full CRUD operations
 export const useStaff = () => {
   return useQuery({
     queryKey: ['staff'],
     queryFn: () => supabaseApi.getStaff(),
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+export const useCreateStaff = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (staff: Staff) => supabaseApi.createStaff(staff),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+      toast({
+        title: "Success",
+        description: "Staff member created successfully!",
+      });
+    },
+    onError: (error) => {
+      console.error('Error creating staff:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create staff member. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+export const useUpdateStaff = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: ({ id, staff }: { id: string; staff: Partial<Staff> }) => 
+      supabaseApi.updateStaff(id, staff),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+      toast({
+        title: "Success",
+        description: "Staff member updated successfully!",
+      });
+    },
+    onError: (error) => {
+      console.error('Error updating staff:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update staff member. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+export const useDeleteStaff = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (id: string) => supabaseApi.deleteStaff(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+      toast({
+        title: "Success",
+        description: "Staff member deleted successfully!",
+      });
+    },
+    onError: (error) => {
+      console.error('Error deleting staff:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete staff member. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 };
 

@@ -1,24 +1,37 @@
 
+export interface Profile {
+  id: string;
+  email: string;
+  full_name?: string;
+  salon_name?: string;
+  phone?: string;
+  role?: string;
+  subscription_status?: string;
+  subscription_end_date?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Client {
-  id?: string;
+  id: string;
   name: string;
   email: string;
   phone?: string;
-  status: 'New' | 'Regular' | 'VIP' | 'Active' | 'Inactive';
+  status: 'New' | 'Regular' | 'VIP' | 'Inactive';
   assignedStaff?: string;
   notes?: string;
   tags?: string;
-  totalSpent?: number;
-  visits?: number;
   preferredStylist?: string;
   lastVisit?: string;
-  salonId?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  visits: number;
+  totalSpent: number;
+  salonId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Staff {
-  id?: string;
+  id: string;
   name: string;
   email?: string;
   phone?: string;
@@ -33,79 +46,80 @@ export interface Staff {
   imageUrl?: string;
   hourlyRate?: number;
   commissionRate?: number;
-  status?: 'active' | 'inactive' | 'on_leave';
+  status: 'active' | 'inactive' | 'on_leave';
   notes?: string;
   hireDate?: string;
-  salonId?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  salonId: string;
+  staffCode?: string; // Add the new staff_code field
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Appointment {
-  id?: string;
-  clientId?: string;
-  staffId: string;
+  id: string;
+  clientId: string;
   clientName: string;
   clientPhone?: string;
+  staffId?: string;
   service: string;
+  date: string;
   startTime: string;
   endTime: string;
-  date: string;
-  price?: number;
-  duration?: number;
-  status?: 'Scheduled' | 'Confirmed' | 'In Progress' | 'Completed' | 'Cancelled';
+  duration: number;
+  price: number;
+  status: 'Scheduled' | 'Confirmed' | 'In Progress' | 'Completed' | 'Cancelled' | 'No Show';
   notes?: string;
-  salonId?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface Profile {
-  id: string;
-  email: string;
-  fullName?: string;
-  salonName?: string;
-  phone?: string;
-  role: 'salon_owner' | 'staff' | 'admin';
-  subscriptionStatus: 'trial' | 'active' | 'cancelled' | 'expired';
-  subscriptionEndDate?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  salonId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TimeOffRequest {
-  id?: string;
+  id: string;
   staffId: string;
-  salonId?: string;
   startDate: string;
   endDate: string;
   reason?: string;
-  status?: 'pending' | 'approved' | 'rejected';
-  requestedAt?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  notes?: string;
+  requestedAt: string;
   reviewedAt?: string;
   reviewedBy?: string;
-  notes?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  salonId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface StaffAvailability {
-  id?: string;
+  id: string;
   staffId: string;
-  salonId?: string;
   date: string;
   startTime?: string;
   endTime?: string;
-  isAvailable?: boolean;
+  isAvailable: boolean;
   reason?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  salonId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface PaginatedResult<T> {
-  data: T[];
-  count: number;
-  hasMore: boolean;
-  page: number;
-  pageSize: number;
+export interface ClientStats {
+  totalClients: number;
+  newThisMonth: number;
+  avgVisitsPerClient: number;
+  topSpenders: Client[];
+}
+
+export interface Permission {
+  area: string;
+  canView: boolean;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+}
+
+export interface UserPermissions {
+  role: string;
+  salonId: string | null;
+  permissions: Record<string, Permission>;
 }

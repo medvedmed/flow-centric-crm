@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Staff } from '../types';
 
@@ -40,6 +39,7 @@ export const staffApi = {
       notes: staff.notes,
       hireDate: staff.hire_date,
       salonId: staff.salon_id,
+      staffCode: staff.staff_code,
       createdAt: staff.created_at,
       updatedAt: staff.updated_at
     })) || [];
@@ -48,6 +48,10 @@ export const staffApi = {
   async createStaff(staff: Staff): Promise<Staff> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
+
+    // Generate staff code
+    const { data: staffCodeData, error: codeError } = await supabase.rpc('generate_staff_code');
+    if (codeError) throw codeError;
 
     const { data, error } = await supabase
       .from('staff')
@@ -69,7 +73,8 @@ export const staffApi = {
         status: staff.status || 'active',
         notes: staff.notes,
         hire_date: staff.hireDate,
-        salon_id: user.id
+        salon_id: user.id,
+        staff_code: staffCodeData
       })
       .select()
       .single();
@@ -96,6 +101,7 @@ export const staffApi = {
       notes: data.notes,
       hireDate: data.hire_date,
       salonId: data.salon_id,
+      staffCode: data.staff_code,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -150,6 +156,7 @@ export const staffApi = {
       notes: data.notes,
       hireDate: data.hire_date,
       salonId: data.salon_id,
+      staffCode: data.staff_code,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };

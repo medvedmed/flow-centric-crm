@@ -268,6 +268,7 @@ export type Database = {
           rating: number | null
           salon_id: string | null
           specialties: string[] | null
+          staff_code: string | null
           status: string | null
           updated_at: string | null
           working_days: string[] | null
@@ -291,6 +292,7 @@ export type Database = {
           rating?: number | null
           salon_id?: string | null
           specialties?: string[] | null
+          staff_code?: string | null
           status?: string | null
           updated_at?: string | null
           working_days?: string[] | null
@@ -314,6 +316,7 @@ export type Database = {
           rating?: number | null
           salon_id?: string | null
           specialties?: string[] | null
+          staff_code?: string | null
           status?: string | null
           updated_at?: string | null
           working_days?: string[] | null
@@ -497,6 +500,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_staff_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_user_by_staff_code: {
+        Args: { code: string }
+        Returns: {
+          user_id: string
+          email: string
+          salon_id: string
+        }[]
+      }
       get_user_role: {
         Args: { user_id: string; salon_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Define interfaces that match our Supabase schema exactly
@@ -15,6 +14,7 @@ export interface Client {
   visits?: number;
   preferredStylist?: string;
   lastVisit?: string;
+  salonId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -30,6 +30,7 @@ export interface Staff {
   efficiency?: number;
   rating?: number;
   imageUrl?: string;
+  salonId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -48,15 +49,89 @@ export interface Appointment {
   duration?: number;
   status?: 'Scheduled' | 'Confirmed' | 'In Progress' | 'Completed' | 'Cancelled';
   notes?: string;
+  salonId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Profile {
+  id: string;
+  email: string;
+  fullName?: string;
+  salonName?: string;
+  phone?: string;
+  role: 'salon_owner' | 'staff' | 'admin';
+  subscriptionStatus: 'trial' | 'active' | 'cancelled' | 'expired';
+  subscriptionEndDate?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
 // Client API functions
 export const supabaseApi = {
+  // Profile functions
+  async getProfile(): Promise<Profile | null> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .single();
+    
+    if (error) {
+      if (error.code === 'PGRST116') return null; // No rows returned
+      throw error;
+    }
+    
+    return {
+      id: data.id,
+      email: data.email,
+      fullName: data.full_name,
+      salonName: data.salon_name,
+      phone: data.phone,
+      role: data.role,
+      subscriptionStatus: data.subscription_status,
+      subscriptionEndDate: data.subscription_end_date,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+  },
+
+  async updateProfile(profile: Partial<Profile>): Promise<Profile> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: profile.fullName,
+        salon_name: profile.salonName,
+        phone: profile.phone,
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    return {
+      id: data.id,
+      email: data.email,
+      fullName: data.full_name,
+      salonName: data.salon_name,
+      phone: data.phone,
+      role: data.role,
+      subscriptionStatus: data.subscription_status,
+      subscriptionEndDate: data.subscription_end_date,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+  },
+
   // Client functions
   async getClients(searchTerm?: string): Promise<Client[]> {
-    let query = supabase.from('clients').select('*');
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    let query = supabase
+      .from('clients')
+      .select('*')
+      .eq('salon_id', user.id);
     
     if (searchTerm) {
       query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
@@ -79,6 +154,7 @@ export const supabaseApi = {
       visits: client.visits,
       preferredStylist: client.preferred_stylist,
       lastVisit: client.last_visit,
+      salonId: client.salon_id,
       createdAt: client.created_at,
       updatedAt: client.updated_at
     })) || [];
@@ -108,12 +184,16 @@ export const supabaseApi = {
       visits: data.visits,
       preferredStylist: data.preferred_stylist,
       lastVisit: data.last_visit,
+      salonId: data.salon_id,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
   },
 
   async createClient(client: Client): Promise<Client> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
     const { data, error } = await supabase
       .from('clients')
       .insert({
@@ -127,7 +207,8 @@ export const supabaseApi = {
         total_spent: client.totalSpent,
         visits: client.visits,
         preferred_stylist: client.preferredStylist,
-        last_visit: client.lastVisit
+        last_visit: client.lastVisit,
+        salon_id: user.id
       })
       .select()
       .single();
@@ -147,6 +228,7 @@ export const supabaseApi = {
       visits: data.visits,
       preferredStylist: data.preferred_stylist,
       lastVisit: data.last_visit,
+      salonId: data.salon_id,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -188,6 +270,7 @@ export const supabaseApi = {
       visits: data.visits,
       preferredStylist: data.preferred_stylist,
       lastVisit: data.last_visit,
+      salonId: data.salon_id,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -202,9 +285,15 @@ export const supabaseApi = {
     if (error) throw error;
   },
 
-  // Appointment functions
+  // Appointment functions with salon isolation
   async getAppointments(clientId?: string, staffId?: string): Promise<Appointment[]> {
-    let query = supabase.from('appointments').select('*');
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    let query = supabase
+      .from('appointments')
+      .select('*')
+      .eq('salon_id', user.id);
     
     if (clientId) {
       query = query.eq('client_id', clientId);
@@ -232,12 +321,16 @@ export const supabaseApi = {
       duration: appointment.duration,
       status: appointment.status as Appointment['status'],
       notes: appointment.notes,
+      salonId: appointment.salon_id,
       createdAt: appointment.created_at,
       updatedAt: appointment.updated_at
     })) || [];
   },
 
   async createAppointment(appointment: Appointment): Promise<Appointment> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
     const { data, error } = await supabase
       .from('appointments')
       .insert({
@@ -252,7 +345,8 @@ export const supabaseApi = {
         price: appointment.price,
         duration: appointment.duration,
         status: appointment.status,
-        notes: appointment.notes
+        notes: appointment.notes,
+        salon_id: user.id
       })
       .select()
       .single();
@@ -273,6 +367,7 @@ export const supabaseApi = {
       duration: data.duration,
       status: data.status as Appointment['status'],
       notes: data.notes,
+      salonId: data.salon_id,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -316,6 +411,7 @@ export const supabaseApi = {
       duration: data.duration,
       status: data.status as Appointment['status'],
       notes: data.notes,
+      salonId: data.salon_id,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -330,11 +426,15 @@ export const supabaseApi = {
     if (error) throw error;
   },
 
-  // Staff functions
+  // Staff functions with salon isolation
   async getStaff(): Promise<Staff[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
     const { data, error } = await supabase
       .from('staff')
       .select('*')
+      .eq('salon_id', user.id)
       .order('name', { ascending: true });
     
     if (error) throw error;
@@ -350,6 +450,7 @@ export const supabaseApi = {
       efficiency: staff.efficiency,
       rating: staff.rating,
       imageUrl: staff.image_url,
+      salonId: staff.salon_id,
       createdAt: staff.created_at,
       updatedAt: staff.updated_at
     })) || [];

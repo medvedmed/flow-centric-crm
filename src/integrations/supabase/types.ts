@@ -21,6 +21,7 @@ export type Database = {
           id: string
           notes: string | null
           price: number | null
+          salon_id: string | null
           service: string
           staff_id: string | null
           start_time: string
@@ -38,6 +39,7 @@ export type Database = {
           id?: string
           notes?: string | null
           price?: number | null
+          salon_id?: string | null
           service: string
           staff_id?: string | null
           start_time: string
@@ -55,6 +57,7 @@ export type Database = {
           id?: string
           notes?: string | null
           price?: number | null
+          salon_id?: string | null
           service?: string
           staff_id?: string | null
           start_time?: string
@@ -67,6 +70,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -89,6 +99,7 @@ export type Database = {
           notes: string | null
           phone: string | null
           preferred_stylist: string | null
+          salon_id: string | null
           status: string | null
           tags: string | null
           total_spent: number | null
@@ -105,6 +116,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           preferred_stylist?: string | null
+          salon_id?: string | null
           status?: string | null
           tags?: string | null
           total_spent?: number | null
@@ -121,38 +133,59 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           preferred_stylist?: string | null
+          salon_id?: string | null
           status?: string | null
           tags?: string | null
           total_spent?: number | null
           updated_at?: string | null
           visits?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      knowledge: {
+      profiles: {
         Row: {
-          Address: string | null
+          created_at: string | null
           email: string
-          location: string | null
-          name: number
-          nots: string | null
-          "phone number": string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          role: string | null
+          salon_name: string | null
+          subscription_end_date: string | null
+          subscription_status: string | null
+          updated_at: string | null
         }
         Insert: {
-          Address?: string | null
+          created_at?: string | null
           email: string
-          location?: string | null
-          name?: number
-          nots?: string | null
-          "phone number"?: string | null
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          role?: string | null
+          salon_name?: string | null
+          subscription_end_date?: string | null
+          subscription_status?: string | null
+          updated_at?: string | null
         }
         Update: {
-          Address?: string | null
+          created_at?: string | null
           email?: string
-          location?: string | null
-          name?: number
-          nots?: string | null
-          "phone number"?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          role?: string | null
+          salon_name?: string | null
+          subscription_end_date?: string | null
+          subscription_status?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -166,6 +199,7 @@ export type Database = {
           name: string
           phone: string | null
           rating: number | null
+          salon_id: string | null
           specialties: string[] | null
           updated_at: string | null
           working_hours_end: string | null
@@ -180,6 +214,7 @@ export type Database = {
           name: string
           phone?: string | null
           rating?: number | null
+          salon_id?: string | null
           specialties?: string[] | null
           updated_at?: string | null
           working_hours_end?: string | null
@@ -194,12 +229,21 @@ export type Database = {
           name?: string
           phone?: string | null
           rating?: number | null
+          salon_id?: string | null
           specialties?: string[] | null
           updated_at?: string | null
           working_hours_end?: string | null
           working_hours_start?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "staff_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

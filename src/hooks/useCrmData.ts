@@ -1,7 +1,39 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabaseApi, Client, Appointment } from '../services/supabaseApi';
+import { supabaseApi, Client, Appointment, Profile } from '../services/supabaseApi';
 import { useToast } from './use-toast';
+
+// Profile hooks
+export const useProfile = () => {
+  return useQuery({
+    queryKey: ['profile'],
+    queryFn: () => supabaseApi.getProfile(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+export const useUpdateProfile = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (profile: Partial<Profile>) => supabaseApi.updateProfile(profile),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      toast({
+        title: "Success",
+        description: "Profile updated successfully!",
+      });
+    },
+    onError: (error) => {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+};
 
 // Client hooks
 export const useClients = (searchTerm?: string) => {
@@ -91,6 +123,15 @@ export const useDeleteClient = () => {
         variant: "destructive",
       });
     },
+  });
+};
+
+// Staff hooks
+export const useStaff = () => {
+  return useQuery({
+    queryKey: ['staff'],
+    queryFn: () => supabaseApi.getStaff(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 

@@ -9,6 +9,50 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      appointment_reminders: {
+        Row: {
+          appointment_id: string
+          created_at: string
+          id: string
+          reminder_type: string
+          scheduled_time: string
+          sent_at: string | null
+          status: string
+          updated_at: string
+          whatsapp_url: string | null
+        }
+        Insert: {
+          appointment_id: string
+          created_at?: string
+          id?: string
+          reminder_type: string
+          scheduled_time: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          whatsapp_url?: string | null
+        }
+        Update: {
+          appointment_id?: string
+          created_at?: string
+          id?: string
+          reminder_type?: string
+          scheduled_time?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          whatsapp_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_reminders_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           client_id: string | null
@@ -202,6 +246,44 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      reminder_settings: {
+        Row: {
+          created_at: string
+          id: string
+          is_enabled: boolean
+          message_template: string
+          reminder_timing: string
+          salon_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          message_template?: string
+          reminder_timing?: string
+          salon_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          message_template?: string
+          reminder_timing?: string
+          salon_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminder_settings_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       role_permissions: {
         Row: {
@@ -500,9 +582,78 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_reminder_exists: {
+        Args: { appointment_id_param: string; reminder_type_param: string }
+        Returns: {
+          id: string
+        }[]
+      }
+      create_appointment_reminder: {
+        Args: {
+          appointment_id_param: string
+          reminder_type_param: string
+          scheduled_time_param: string
+          whatsapp_url_param: string
+        }
+        Returns: string
+      }
+      create_reminder_settings: {
+        Args: {
+          reminder_timing_param: string
+          is_enabled_param: boolean
+          message_template_param: string
+        }
+        Returns: {
+          id: string
+          salon_id: string
+          reminder_timing: string
+          is_enabled: boolean
+          message_template: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
       generate_staff_code: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_all_reminder_settings: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          salon_id: string
+          reminder_timing: string
+          is_enabled: boolean
+          message_template: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      get_appointment_reminders: {
+        Args: { status_filter?: string }
+        Returns: {
+          id: string
+          appointment_id: string
+          reminder_type: string
+          scheduled_time: string
+          sent_at: string
+          status: string
+          whatsapp_url: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      get_reminder_settings: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          salon_id: string
+          reminder_timing: string
+          is_enabled: boolean
+          message_template: string
+          created_at: string
+          updated_at: string
+        }[]
       }
       get_user_by_staff_code: {
         Args: { code: string }
@@ -524,6 +675,26 @@ export type Database = {
           action: string
         }
         Returns: boolean
+      }
+      update_reminder_settings: {
+        Args: {
+          reminder_timing_param: string
+          is_enabled_param: boolean
+          message_template_param: string
+        }
+        Returns: {
+          id: string
+          salon_id: string
+          reminder_timing: string
+          is_enabled: boolean
+          message_template: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      update_reminder_status: {
+        Args: { reminder_id: string; new_status: string }
+        Returns: undefined
       }
     }
     Enums: {

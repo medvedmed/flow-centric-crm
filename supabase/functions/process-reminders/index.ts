@@ -57,19 +57,33 @@ Deno.serve(async (req) => {
     for (const settings of reminderSettings || []) {
       console.log(`Processing reminders for salon ${settings.salon_id}`);
 
-      // Calculate target appointment time based on reminder timing
+      // Calculate target appointment date/time based on reminder timing
       const now = new Date();
-      let targetTime: Date;
+      let targetDate: string;
+      let startTimeRange: { start: string; end: string };
       
       if (settings.reminder_timing === '24_hours') {
-        targetTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+        // For 24-hour reminders, look for appointments tomorrow
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        targetDate = tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD format
+        
+        // Look for appointments throughout the day
+        startTimeRange = { start: '00:00:00', end: '23:59:59' };
       } else {
-        targetTime = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 hours from now
+        // For 2-hour reminders, look for appointments today
+        targetDate = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+        
+        // Look for appointments starting in about 2 hours (give or take 30 minutes)
+        const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+        const startBuffer = new Date(twoHoursFromNow.getTime() - 30 * 60 * 1000);
+        const endBuffer = new Date(twoHoursFromNow.getTime() + 30 * 60 * 1000);
+        
+        startTimeRange = {
+          start: startBuffer.toTimeString().split(' ')[0],
+          end: endBuffer.toTimeString().split(' ')[0]
+        };
       }
-
-      const targetDate = targetTime.toISOString().split('T')[0]; // YYYY-MM-DD format
-      const targetTimeStart = new Date(targetTime.getTime() - 30 * 60 * 1000); // 30 min before
-      const targetTimeEnd = new Date(targetTime.getTime() + 30 * 60 * 1000); // 30 min after
 
       // Find appointments that need reminders
       const { data: appointments, error: appointmentsError } = await supabase
@@ -80,8 +94,8 @@ Deno.serve(async (req) => {
         `)
         .eq('salon_id', settings.salon_id)
         .eq('date', targetDate)
-        .gte('start_time', targetTimeStart.toTimeString().split(' ')[0])
-        .lte('start_time', targetTimeEnd.toTimeString().split(' ')[0])
+        .gte('start_time', startTimeRange.start)
+        .lte('start_time', startTimeRange.end)
         .in('status', ['Scheduled', 'Confirmed'])
         .not('clients.phone', 'is', null);
 
@@ -117,12 +131,18 @@ Deno.serve(async (req) => {
         const encodedMessage = encodeURIComponent(messageText);
         const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
 
+        // Calculate scheduled time for the reminder
+        const appointmentDateTime = new Date(`${appointment.date}T${appointment.start_time}`);
+        const scheduledTime = settings.reminder_timing === '24_hours' 
+          ? new Date(appointmentDateTime.getTime() - 24 * 60 * 60 * 1000)
+          : new Date(appointmentDateTime.getTime() - 2 * 60 * 60 * 1000);
+
         // Insert reminder record using RPC
         const { error: insertError } = await supabase
           .rpc('create_appointment_reminder', {
             appointment_id_param: appointment.id,
             reminder_type_param: settings.reminder_timing,
-            scheduled_time_param: targetTime.toISOString(),
+            scheduled_time_param: scheduledTime.toISOString(),
             whatsapp_url_param: whatsappUrl
           });
 

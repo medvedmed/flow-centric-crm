@@ -41,14 +41,15 @@ export const reminderApi = {
     
     if (error) throw error;
     
+    const result = data[0];
     return {
-      id: data.id,
-      salonId: data.salon_id,
-      reminderTiming: data.reminder_timing as '24_hours' | '2_hours',
-      isEnabled: data.is_enabled,
-      messageTemplate: data.message_template,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
+      id: result.id,
+      salonId: result.salon_id,
+      reminderTiming: result.reminder_timing as '24_hours' | '2_hours',
+      isEnabled: result.is_enabled,
+      messageTemplate: result.message_template,
+      createdAt: result.created_at,
+      updatedAt: result.updated_at
     };
   },
 
@@ -62,14 +63,15 @@ export const reminderApi = {
     
     if (error) throw error;
     
+    const result = data[0];
     return {
-      id: data.id,
-      salonId: data.salon_id,
-      reminderTiming: data.reminder_timing as '24_hours' | '2_hours',
-      isEnabled: data.is_enabled,
-      messageTemplate: data.message_template,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
+      id: result.id,
+      salonId: result.salon_id,
+      reminderTiming: result.reminder_timing as '24_hours' | '2_hours',
+      isEnabled: result.is_enabled,
+      messageTemplate: result.message_template,
+      createdAt: result.created_at,
+      updatedAt: result.updated_at
     };
   },
 

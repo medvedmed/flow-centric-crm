@@ -38,7 +38,7 @@ const Clients = () => {
   const deleteClient = useDeleteClient();
 
   const clients = clientsData?.data || [];
-  const totalCount = clientsData?.total || 0;
+  const totalCount = clientsData?.count || 0;
   const totalPages = Math.ceil(totalCount / pageSize);
 
   useEffect(() => {

@@ -35,6 +35,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   requiredArea: PermissionArea;
   requiredAction: 'view' | 'create' | 'edit' | 'delete';
+  roles?: string[]; // Optional: restrict to specific roles
 }
 
 const mainMenuItems: NavItem[] = [
@@ -64,28 +65,32 @@ const mainMenuItems: NavItem[] = [
     url: "/services", 
     icon: Scissors,
     requiredArea: "services",
-    requiredAction: "view"
+    requiredAction: "view",
+    roles: ["salon_owner", "manager"] // Hide from staff/receptionist
   },
   {
     title: "Staff",
     url: "/staff",
     icon: UserCheck,
     requiredArea: "staff_management",
-    requiredAction: "view"
+    requiredAction: "view",
+    roles: ["salon_owner", "manager"] // Only owners and managers
   },
   {
     title: "Inventory",
     url: "/inventory",
     icon: Package,
     requiredArea: "inventory",
-    requiredAction: "view"
+    requiredAction: "view",
+    roles: ["salon_owner", "manager"] // Hide from staff/receptionist
   },
   {
     title: "Reports",
     url: "/reports",
     icon: FileText,
     requiredArea: "reports",
-    requiredAction: "view"
+    requiredAction: "view",
+    roles: ["salon_owner", "manager", "receptionist"] // Staff can't see reports
   },
 ];
 
@@ -95,7 +100,8 @@ const adminMenuItems: NavItem[] = [
     url: "/settings",
     icon: Settings,
     requiredArea: "settings",
-    requiredAction: "view"
+    requiredAction: "view",
+    roles: ["salon_owner", "manager"] // Only owners and managers
   },
   {
     title: "Help & Support",
@@ -142,7 +148,18 @@ export function AppSidebar() {
 
   const getAccessibleItems = (items: NavItem[]) => {
     if (roleLoading) return [];
-    return items.filter(item => hasPermissionSync(item.requiredArea, item.requiredAction));
+    return items.filter(item => {
+      // Check permission first
+      const hasPermission = hasPermissionSync(item.requiredArea, item.requiredAction);
+      if (!hasPermission) return false;
+      
+      // Check role restriction if specified
+      if (item.roles && userRole) {
+        return item.roles.includes(userRole);
+      }
+      
+      return true;
+    });
   };
 
   const accessibleMainItems = getAccessibleItems(mainMenuItems);
@@ -168,7 +185,9 @@ export function AppSidebar() {
         {accessibleMainItems.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Salon Management
+              {userRole === 'staff' ? 'My Work' : 
+               userRole === 'receptionist' ? 'Front Desk' : 
+               'Salon Management'}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -224,7 +243,12 @@ export function AppSidebar() {
             <Shield className="text-white font-semibold text-sm w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">Salon Admin</p>
+            <p className="text-sm font-medium truncate">
+              {userRole === 'salon_owner' ? 'Salon Owner' : 
+               userRole === 'manager' ? 'Manager' :
+               userRole === 'staff' ? 'Staff Member' :
+               userRole === 'receptionist' ? 'Receptionist' : 'User'}
+            </p>
             <div className="flex items-center gap-2 mt-1">
               {userRole && (
                 <Badge className={`text-xs px-2 py-0.5 ${getRoleBadgeColor(userRole)}`}>

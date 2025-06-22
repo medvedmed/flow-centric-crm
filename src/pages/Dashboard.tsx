@@ -1,3 +1,4 @@
+
 import { usePermissions } from "@/hooks/usePermissions";
 import StaffDashboard from "@/components/StaffDashboard";
 import ReceptionistDashboard from "@/components/ReceptionistDashboard";

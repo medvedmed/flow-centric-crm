@@ -17,14 +17,14 @@ export const profileApi = {
     return {
       id: data.id,
       email: data.email,
-      fullName: data.full_name,
-      salonName: data.salon_name,
+      full_name: data.full_name,
+      salon_name: data.salon_name,
       phone: data.phone,
       role: data.role as 'salon_owner' | 'staff' | 'admin',
-      subscriptionStatus: data.subscription_status as 'trial' | 'active' | 'cancelled' | 'expired',
-      subscriptionEndDate: data.subscription_end_date,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
+      subscription_status: data.subscription_status as 'trial' | 'active' | 'cancelled' | 'expired',
+      subscription_end_date: data.subscription_end_date,
+      created_at: data.created_at,
+      updated_at: data.updated_at
     };
   },
 
@@ -32,8 +32,8 @@ export const profileApi = {
     const { data, error } = await supabase
       .from('profiles')
       .update({
-        full_name: profile.fullName,
-        salon_name: profile.salonName,
+        full_name: profile.full_name,
+        salon_name: profile.salon_name,
         phone: profile.phone,
         updated_at: new Date().toISOString()
       })
@@ -45,14 +45,14 @@ export const profileApi = {
     return {
       id: data.id,
       email: data.email,
-      fullName: data.full_name,
-      salonName: data.salon_name,
+      full_name: data.full_name,
+      salon_name: data.salon_name,
       phone: data.phone,
       role: data.role as 'salon_owner' | 'staff' | 'admin',
-      subscriptionStatus: data.subscription_status as 'trial' | 'active' | 'cancelled' | 'expired',
-      subscriptionEndDate: data.subscription_end_date,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
+      subscription_status: data.subscription_status as 'trial' | 'active' | 'cancelled' | 'expired',
+      subscription_end_date: data.subscription_end_date,
+      created_at: data.created_at,
+      updated_at: data.updated_at
     };
   }
 };

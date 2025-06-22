@@ -7,9 +7,9 @@ import {
   Staff, 
   Profile, 
   TimeOffRequest, 
-  StaffAvailability, 
-  PaginatedResult 
+  StaffAvailability
 } from '../services/supabaseApi';
+import { PaginatedResult } from '../services/types';
 import { useToast } from './use-toast';
 
 // Profile hooks

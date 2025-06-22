@@ -31,7 +31,7 @@ export const SalonProfileSection: React.FC = () => {
       const profile = await profileApi.getProfile();
       if (profile) {
         setSalonInfo({
-          salonName: profile.salonName || '',
+          salonName: profile.salon_name || '',
           phone: profile.phone || '',
           address: '',
           description: '',
@@ -49,7 +49,7 @@ export const SalonProfileSection: React.FC = () => {
     setLoading(true);
     try {
       await profileApi.updateProfile({
-        salonName: salonInfo.salonName,
+        salon_name: salonInfo.salonName,
         phone: salonInfo.phone
       });
       

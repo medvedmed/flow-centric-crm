@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Filter, Users, Mail, Phone, Edit, Trash, Loader2 } from "lucide-react";
 import { useClients, useCreateClient, useDeleteClient } from "@/hooks/useCrmData";
-import { Client } from "@/services/supabaseApi";
+import { Client } from "@/services/types";
 import PaginationControls from "@/components/PaginationControls";
 
 const Clients = () => {
@@ -24,7 +24,12 @@ const Clients = () => {
     phone: "",
     status: "New",
     assignedStaff: "",
-    notes: ""
+    notes: "",
+    visits: 0,
+    totalSpent: 0,
+    salonId: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   });
 
   // Use React Query hooks - now expecting PaginatedResult
@@ -43,14 +48,28 @@ const Clients = () => {
     }
 
     try {
-      await createClientMutation.mutateAsync(newClient);
+      const clientToCreate: Omit<Client, 'id'> = {
+        ...newClient,
+        visits: 0,
+        totalSpent: 0,
+        salonId: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      await createClientMutation.mutateAsync(clientToCreate as Client);
       setNewClient({
         name: "",
         email: "",
         phone: "",
         status: "New",
         assignedStaff: "",
-        notes: ""
+        notes: "",
+        visits: 0,
+        totalSpent: 0,
+        salonId: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
       setIsAddDialogOpen(false);
     } catch (error) {
@@ -155,7 +174,6 @@ const Clients = () => {
                       <SelectItem value="New">New</SelectItem>
                       <SelectItem value="Regular">Regular</SelectItem>
                       <SelectItem value="VIP">VIP</SelectItem>
-                      <SelectItem value="Active">Active</SelectItem>
                       <SelectItem value="Inactive">Inactive</SelectItem>
                     </SelectContent>
                   </Select>

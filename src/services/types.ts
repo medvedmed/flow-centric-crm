@@ -123,3 +123,11 @@ export interface UserPermissions {
   salonId: string | null;
   permissions: Record<string, Permission>;
 }
+
+export interface PaginatedResult<T> {
+  data: T[];
+  count: number;
+  hasMore: boolean;
+  page: number;
+  pageSize: number;
+}

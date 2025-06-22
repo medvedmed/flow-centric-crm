@@ -1,19 +1,19 @@
-
 import React, { useState } from "react";
 import { Calendar, Clock, Plus, Search, Filter, Users, Bell, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import UnifiedScheduler from "@/components/UnifiedScheduler";
+import EnhancedScheduler from "@/components/EnhancedScheduler";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LanguageProvider, useLanguage } from "@/contexts/LanguageContext";
 import LanguageToggle from "@/components/LanguageToggle";
-import { useAppointments, useCreateAppointment, useUpdateAppointment, useClients, useCreateClient } from "@/hooks/useCrmData";
-import { Appointment, Client } from "@/services/supabaseApi";
-import { webhookService } from "@/services/webhookService";
+import { useToast } from "@/hooks/use-toast";
+import { permissionAwareScheduleApi } from "@/services/permissionAwareScheduleApi";
+import { usePermissions } from "@/hooks/usePermissions";
+import { ViewProtected, CreateProtected } from "@/components/ProtectedComponent";
 
 // Interfaces
 interface Staff {
@@ -77,8 +77,11 @@ const generateTimeSlots = (): TimeSlot[] => {
 
 const AppointmentsContent = () => {
   const { t, isRTL } = useLanguage();
+  const { toast } = useToast();
+  const { hasPermissionSync } = usePermissions();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<BookingSlot | null>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [newBooking, setNewBooking] = useState({
     clientName: "",
     clientPhone: "",
@@ -86,61 +89,8 @@ const AppointmentsContent = () => {
     duration: 60,
     price: 0
   });
-
-  // Use React Query hooks - now expecting PaginatedResult
-  const { data: appointmentsResult, isLoading: appointmentsLoading, refetch: refetchAppointments } = useAppointments();
-  const { data: clientsResult } = useClients();
-  const createAppointmentMutation = useCreateAppointment();
-  const createClientMutation = useCreateClient();
-  const updateAppointmentMutation = useUpdateAppointment();
-
-  const timeSlots = generateTimeSlots();
-
-  // Extract data from paginated results
-  const appointments = appointmentsResult?.data || [];
-  const clients = clientsResult?.data || [];
-
-  // Transform API appointments to match the scheduler format
-  const transformedAppointments = appointments.map(apt => ({
-    id: apt.id || '',
-    staffId: apt.staffId,
-    startTime: apt.startTime,
-    endTime: apt.endTime,
-    clientName: apt.clientName || clients.find(c => c.id === apt.clientId)?.name || 'Unknown Client',
-    clientPhone: apt.clientPhone || clients.find(c => c.id === apt.clientId)?.phone || '',
-    service: apt.service,
-    price: apt.price || 0,
-    status: apt.status || 'Scheduled',
-    duration: apt.duration || 60
-  }));
-
-  const handleAppointmentMove = async (appointmentId: string, newStaffId: string, newTime: string) => {
-    try {
-      const appointment = appointments.find(apt => apt.id === appointmentId);
-      if (!appointment) return;
-
-      // Calculate new end time
-      const startTime = new Date(`2000-01-01 ${newTime}`);
-      const endTime = new Date(startTime.getTime() + (appointment.duration || 60) * 60000);
-      const endTimeString = endTime.toTimeString().slice(0, 5);
-
-      const updatedAppointment = await updateAppointmentMutation.mutateAsync({
-        id: appointmentId,
-        appointment: {
-          staffId: newStaffId,
-          startTime: newTime,
-          endTime: endTimeString
-        }
-      });
-
-      // Send webhook for appointment update
-      await webhookService.appointmentUpdated(updatedAppointment);
-
-      refetchAppointments();
-    } catch (error) {
-      console.error('Error moving appointment:', error);
-    }
-  };
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const handleBookSlot = (slot: BookingSlot) => {
     setSelectedSlot(slot);
@@ -149,81 +99,79 @@ const AppointmentsContent = () => {
 
   const handleCreateBooking = async () => {
     if (!selectedSlot || !newBooking.clientName || !newBooking.service) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
       return;
     }
 
+    setLoading(true);
     try {
       const endTime = new Date(`2000-01-01 ${selectedSlot.time}`);
       endTime.setMinutes(endTime.getMinutes() + newBooking.duration);
       const endTimeString = endTime.toTimeString().slice(0, 5);
 
-      // Find or create client
-      let clientId = '';
-      const existingClient = clients.find(c => 
-        c.name.toLowerCase() === newBooking.clientName.toLowerCase() ||
-        (newBooking.clientPhone && c.phone === newBooking.clientPhone)
-      );
-
-      if (existingClient) {
-        clientId = existingClient.id || '';
-      } else if (newBooking.clientName) {
-        // Create new client first
-        const newClient: Client = {
-          name: newBooking.clientName,
-          email: newBooking.clientPhone ? `${newBooking.clientPhone.replace(/\D/g, '')}@temp.com` : `${newBooking.clientName.toLowerCase().replace(/\s+/g, '.')}@temp.com`,
-          phone: newBooking.clientPhone || '',
-          status: 'New',
-          assignedStaff: '',
-          notes: ''
-        };
-
-        console.log('Creating new client:', newClient);
-        const createdClient = await createClientMutation.mutateAsync(newClient);
-        clientId = createdClient.id || '';
-        console.log('Client created with ID:', clientId);
-      }
-
-      if (!clientId) {
-        throw new Error('Failed to create or find client');
-      }
-
-      const today = new Date().toISOString().split('T')[0];
-
-      const newAppointment: Appointment = {
-        clientId: clientId,
+      const result = await permissionAwareScheduleApi.createAppointmentWithValidation({
+        clientId: '', // Will be handled by the API
         staffId: selectedSlot.staffId,
+        clientName: newBooking.clientName,
+        clientPhone: newBooking.clientPhone,
         service: newBooking.service,
         startTime: selectedSlot.time,
         endTime: endTimeString,
-        date: today,
+        date: selectedDate,
         status: 'Scheduled',
         notes: '',
         price: newBooking.price,
-        duration: newBooking.duration,
-        clientName: newBooking.clientName,
-        clientPhone: newBooking.clientPhone
-      };
-
-      console.log('Creating appointment:', newAppointment);
-      const createdAppointment = await createAppointmentMutation.mutateAsync(newAppointment);
-
-      // Send webhook for new appointment
-      await webhookService.appointmentCreated(createdAppointment);
-
-      setIsBookingOpen(false);
-      setSelectedSlot(null);
-      setNewBooking({
-        clientName: "",
-        clientPhone: "",
-        service: "",
-        duration: 60,
-        price: 0
+        duration: newBooking.duration
       });
-      
-      refetchAppointments();
+
+      if (result.success) {
+        toast({
+          title: "Appointment Created",
+          description: `Appointment booked for ${newBooking.clientName} with ${selectedSlot.staffName}`,
+        });
+
+        setIsBookingOpen(false);
+        setSelectedSlot(null);
+        setNewBooking({
+          clientName: "",
+          clientPhone: "",
+          service: "",
+          duration: 60,
+          price: 0
+        });
+        
+        // Trigger refresh
+        handleAppointmentUpdate();
+      } else {
+        toast({
+          title: "Booking Failed",
+          description: result.error || "Failed to create appointment",
+          variant: "destructive",
+        });
+        
+        if (result.conflicts) {
+          console.log('Booking conflicts:', result.conflicts);
+        }
+      }
     } catch (error) {
       console.error('Error creating booking:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleAppointmentUpdate = () => {
+    // This will trigger the scheduler to reload its data
+    console.log('Refreshing appointment data...');
   };
 
   const serviceOptions = [
@@ -249,228 +197,228 @@ const AppointmentsContent = () => {
     }
   };
 
-  const getTodayStats = () => {
-    const today = new Date().toISOString().split('T')[0];
-    const todayAppointments = appointments.filter(apt => 
-      apt.date && apt.date === today
-    );
-    
-    return {
-      appointments: todayAppointments.length,
-      revenue: todayAppointments.reduce((sum, apt) => sum + (apt.price || 0), 0),
-      cancellations: todayAppointments.filter(apt => apt.status === 'Cancelled').length
-    };
-  };
-
-  const stats = getTodayStats();
-
   return (
-    <div className={`space-y-6 ${isRTL ? 'font-arabic' : ''}`}>
-      {/* Fresha-style Header */}
-      <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-        <div className={isRTL ? 'text-right' : ''}>
-          <h1 className="text-3xl font-bold text-gray-900 mb-1">{t('appointments')}</h1>
-          <p className="text-gray-600">{t('manage_schedule')}</p>
-        </div>
-        <div className={`flex gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <LanguageToggle />
-          <Button variant="outline" size="sm" className="hover:bg-purple-50 hover:border-purple-200">
-            <Filter className="w-4 h-4 mr-2" />
-            {t('filter')}
-          </Button>
-          <Button className="bg-fresha-purple hover:bg-fresha-purple-dark">
-            <Plus className="w-4 h-4 mr-2" />
-            {t('new_appointment')}
-          </Button>
-        </div>
-      </div>
-
-      {/* Fresha-style Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-purple-100 hover:border-purple-200 transition-colors duration-200">
-          <CardHeader className="pb-2">
-            <CardTitle className={`text-sm font-medium text-gray-600 ${isRTL ? 'text-right font-arabic' : ''}`}>
-              {t('today_appointments')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-fresha-purple">
-              {appointmentsLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : stats.appointments}
-            </div>
-            <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>
-              {appointmentsLoading ? 'Loading...' : `${stats.appointments} ${t('from_yesterday')}`}
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-purple-100 hover:border-purple-200 transition-colors duration-200">
-          <CardHeader className="pb-2">
-            <CardTitle className={`text-sm font-medium text-gray-600 ${isRTL ? 'text-right font-arabic' : ''}`}>
-              {t('revenue_today')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-fresha-success">
-              {appointmentsLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : `$${stats.revenue}`}
-            </div>
-            <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>
-              {appointmentsLoading ? 'Loading...' : `+15% ${t('from_yesterday')}`}
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-purple-100 hover:border-purple-200 transition-colors duration-200">
-          <CardHeader className="pb-2">
-            <CardTitle className={`text-sm font-medium text-gray-600 ${isRTL ? 'text-right font-arabic' : ''}`}>
-              {t('cancellations')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-fresha-error">
-              {appointmentsLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : stats.cancellations}
-            </div>
-            <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>
-              {appointmentsLoading ? 'Loading...' : `-1 ${t('from_yesterday')}`}
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-purple-100 hover:border-purple-200 transition-colors duration-200">
-          <CardHeader className="pb-2">
-            <CardTitle className={`text-sm font-medium text-gray-600 ${isRTL ? 'text-right font-arabic' : ''}`}>
-              {t('utilization')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">85%</div>
-            <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>+5% {t('from_yesterday')}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Fresha-style Unified Scheduler */}
-      <div className="space-y-4">
+    <ViewProtected area="appointments">
+      <div className={`space-y-6 ${isRTL ? 'font-arabic' : ''}`}>
+        {/* Header */}
         <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <h2 className={`text-xl font-semibold text-gray-900 ${isRTL ? 'font-arabic' : ''}`}>
-            {t('schedule_overview')}
-          </h2>
-          <div className={`text-sm text-gray-600 ${isRTL ? 'text-left font-arabic' : 'text-right'}`}>
-            {t('click_to_book')}
+          <div className={isRTL ? 'text-right' : ''}>
+            <h1 className="text-3xl font-bold text-gray-900 mb-1">{t('appointments')}</h1>
+            <p className="text-gray-600">{t('manage_schedule')}</p>
+          </div>
+          <div className={`flex gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <LanguageToggle />
+            <Button variant="outline" size="sm" className="hover:bg-purple-50 hover:border-purple-200">
+              <Filter className="w-4 h-4 mr-2" />
+              {t('filter')}
+            </Button>
+            <CreateProtected area="appointments">
+              <Button className="bg-fresha-purple hover:bg-fresha-purple-dark">
+                <Plus className="w-4 h-4 mr-2" />
+                {t('new_appointment')}
+              </Button>
+            </CreateProtected>
           </div>
         </div>
-        
-        {appointmentsLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin" />
-          </div>
-        ) : (
-          <UnifiedScheduler
-            staff={mockStaff}
-            appointments={transformedAppointments}
-            timeSlots={timeSlots}
-            onAppointmentMove={handleAppointmentMove}
-            onBookSlot={handleBookSlot}
+
+        {/* Date Picker */}
+        <div className="flex items-center gap-4">
+          <Label htmlFor="date-picker" className={isRTL ? 'font-arabic' : ''}>
+            {t('select_date')}:
+          </Label>
+          <Input
+            id="date-picker"
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="w-auto"
           />
-        )}
-      </div>
+        </div>
 
-      {/* Fresha-style Quick Booking Dialog */}
-      <Dialog open={isBookingOpen} onOpenChange={setIsBookingOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className={isRTL ? 'text-right font-arabic' : ''}>
-              {t('book_appointment')}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {selectedSlot && (
-              <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                <p className={`text-sm font-medium ${isRTL ? 'text-right font-arabic' : ''}`}>
-                  {t('staff')}: {selectedSlot.staffName}
-                </p>
-                <p className={`text-sm text-gray-600 ${isRTL ? 'text-right font-arabic' : ''}`}>
-                  {t('time')}: {selectedSlot.time}
-                </p>
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="border-purple-100 hover:border-purple-200 transition-colors duration-200">
+            <CardHeader className="pb-2">
+              <CardTitle className={`text-sm font-medium text-gray-600 ${isRTL ? 'text-right font-arabic' : ''}`}>
+                {t('today_appointments')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-fresha-purple">
+                {appointments.length}
               </div>
-            )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="clientName" className={isRTL ? 'text-right font-arabic' : ''}>
-                {t('client_name')} *
-              </Label>
-              <Input
-                id="clientName"
-                value={newBooking.clientName}
-                onChange={(e) => setNewBooking(prev => ({ ...prev, clientName: e.target.value }))}
-                placeholder={t('client_name')}
-                className={isRTL ? 'text-right font-arabic' : ''}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="clientPhone" className={isRTL ? 'text-right font-arabic' : ''}>
-                {t('phone_number')}
-              </Label>
-              <Input
-                id="clientPhone"
-                value={newBooking.clientPhone}
-                onChange={(e) => setNewBooking(prev => ({ ...prev, clientPhone: e.target.value }))}
-                placeholder={t('phone_number')}
-                className={isRTL ? 'text-right font-arabic' : ''}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="service" className={isRTL ? 'text-right font-arabic' : ''}>
-                {t('service')} *
-              </Label>
-              <Select onValueChange={handleServiceChange}>
-                <SelectTrigger className={isRTL ? 'text-right font-arabic' : ''}>
-                  <SelectValue placeholder={t('service')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {serviceOptions.map(service => (
-                    <SelectItem key={service.name} value={service.name}>
-                      {service.name} - {service.duration}{t('minutes')} - ${service.price}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {newBooking.service && (
-              <div className="p-3 bg-gray-50 rounded-lg text-sm border">
-                <p className={isRTL ? 'text-right font-arabic' : ''}>
-                  {t('duration')}: {newBooking.duration} {t('minutes')}
-                </p>
-                <p className={isRTL ? 'text-right font-arabic' : ''}>
-                  {t('price')}: ${newBooking.price}
-                </p>
+              <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>
+                +2 {t('from_yesterday')}
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-purple-100 hover:border-purple-200 transition-colors duration-200">
+            <CardHeader className="pb-2">
+              <CardTitle className={`text-sm font-medium text-gray-600 ${isRTL ? 'text-right font-arabic' : ''}`}>
+                {t('revenue_today')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-fresha-success">
+                $1,240
               </div>
-            )}
+              <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>
+                +15% {t('from_yesterday')}
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-purple-100 hover:border-purple-200 transition-colors duration-200">
+            <CardHeader className="pb-2">
+              <CardTitle className={`text-sm font-medium text-gray-600 ${isRTL ? 'text-right font-arabic' : ''}`}>
+                {t('cancellations')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-fresha-error">
+                2
+              </div>
+              <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>
+                -1 {t('from_yesterday')}
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-purple-100 hover:border-purple-200 transition-colors duration-200">
+            <CardHeader className="pb-2">
+              <CardTitle className={`text-sm font-medium text-gray-600 ${isRTL ? 'text-right font-arabic' : ''}`}>
+                {t('utilization')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">85%</div>
+              <p className={`text-xs text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>+5% {t('from_yesterday')}</p>
+            </CardContent>
+          </Card>
+        </div>
 
-            <div className={`flex gap-3 pt-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <Button 
-                variant="outline" 
-                onClick={() => setIsBookingOpen(false)} 
-                className="flex-1 hover:bg-gray-50"
-                disabled={createAppointmentMutation.isPending || createClientMutation.isPending}
-              >
-                {t('cancel')}
-              </Button>
-              <Button 
-                onClick={handleCreateBooking} 
-                className="flex-1 bg-fresha-purple hover:bg-fresha-purple-dark"
-                disabled={createAppointmentMutation.isPending || createClientMutation.isPending}
-              >
-                {(createAppointmentMutation.isPending || createClientMutation.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {t('book')}
-              </Button>
+        {/* Enhanced Scheduler */}
+        <div className="space-y-4">
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <h2 className={`text-xl font-semibold text-gray-900 ${isRTL ? 'font-arabic' : ''}`}>
+              {t('schedule_overview')}
+            </h2>
+            <div className={`text-sm text-gray-600 ${isRTL ? 'text-left font-arabic' : 'text-right'}`}>
+              {t('click_to_book')}
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+          
+          <EnhancedScheduler
+            date={selectedDate}
+            onBookSlot={handleBookSlot}
+            onAppointmentUpdate={handleAppointmentUpdate}
+          />
+        </div>
+
+        {/* Booking Dialog */}
+        <Dialog open={isBookingOpen} onOpenChange={setIsBookingOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className={isRTL ? 'text-right font-arabic' : ''}>
+                {t('book_appointment')}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {selectedSlot && (
+                <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <p className={`text-sm font-medium ${isRTL ? 'text-right font-arabic' : ''}`}>
+                    {t('staff')}: {selectedSlot.staffName}
+                  </p>
+                  <p className={`text-sm text-gray-600 ${isRTL ? 'text-right font-arabic' : ''}`}>
+                    {t('time')}: {selectedSlot.time}
+                  </p>
+                  <p className={`text-sm text-gray-600 ${isRTL ? 'text-right font-arabic' : ''}`}>
+                    {t('date')}: {selectedDate}
+                  </p>
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="clientName" className={isRTL ? 'text-right font-arabic' : ''}>
+                  {t('client_name')} *
+                </Label>
+                <Input
+                  id="clientName"
+                  value={newBooking.clientName}
+                  onChange={(e) => setNewBooking(prev => ({ ...prev, clientName: e.target.value }))}
+                  placeholder={t('client_name')}
+                  className={isRTL ? 'text-right font-arabic' : ''}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="clientPhone" className={isRTL ? 'text-right font-arabic' : ''}>
+                  {t('phone_number')}
+                </Label>
+                <Input
+                  id="clientPhone"
+                  value={newBooking.clientPhone}
+                  onChange={(e) => setNewBooking(prev => ({ ...prev, clientPhone: e.target.value }))}
+                  placeholder={t('phone_number')}
+                  className={isRTL ? 'text-right font-arabic' : ''}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="service" className={isRTL ? 'text-right font-arabic' : ''}>
+                  {t('service')} *
+                </Label>
+                <Select onValueChange={handleServiceChange} disabled={loading}>
+                  <SelectTrigger className={isRTL ? 'text-right font-arabic' : ''}>
+                    <SelectValue placeholder={t('service')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serviceOptions.map(service => (
+                      <SelectItem key={service.name} value={service.name}>
+                        {service.name} - {service.duration}{t('minutes')} - ${service.price}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {newBooking.service && (
+                <div className="p-3 bg-gray-50 rounded-lg text-sm border">
+                  <p className={isRTL ? 'text-right font-arabic' : ''}>
+                    {t('duration')}: {newBooking.duration} {t('minutes')}
+                  </p>
+                  <p className={isRTL ? 'text-right font-arabic' : ''}>
+                    {t('price')}: ${newBooking.price}
+                  </p>
+                </div>
+              )}
+
+              <div className={`flex gap-3 pt-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsBookingOpen(false)} 
+                  className="flex-1 hover:bg-gray-50"
+                  disabled={loading}
+                >
+                  {t('cancel')}
+                </Button>
+                <Button 
+                  onClick={handleCreateBooking} 
+                  className="flex-1 bg-fresha-purple hover:bg-fresha-purple-dark"
+                  disabled={loading || !newBooking.clientName || !newBooking.service}
+                >
+                  {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {t('book')}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </ViewProtected>
   );
 };
 

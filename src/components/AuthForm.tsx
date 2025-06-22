@@ -61,7 +61,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
         email: signupForm.email,
         password: signupForm.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: 'https://0ead72f8-81b0-4cdc-a1b2-a7d93ae983f1.lovableproject.com/',
           data: {
             full_name: signupForm.fullName,
             salon_name: signupForm.salonName,

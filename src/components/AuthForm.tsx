@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Scissors } from 'lucide-react';
+import { Loader2, Scissors, Info } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface AuthFormProps {
   onAuthSuccess: () => void;
@@ -37,7 +38,15 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
         password: loginForm.password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Provide helpful error messages
+        if (error.message.includes('Invalid login credentials')) {
+          throw new Error('Invalid email or password. If you\'re a staff member who hasn\'t signed up yet, please use the "Sign Up" tab first.');
+        } else if (error.message.includes('Email not confirmed')) {
+          throw new Error('Please check your email and click the confirmation link before logging in.');
+        }
+        throw error;
+      }
 
       toast({
         title: "Success",
@@ -46,7 +55,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
       onAuthSuccess();
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: "Login Failed",
         description: error.message || "Failed to login",
         variant: "destructive",
       });
@@ -68,7 +77,6 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
           data: {
             full_name: signupForm.fullName,
             salon_name: signupForm.salonName || null,
-            role: 'salon_owner'
           }
         }
       });
@@ -76,12 +84,15 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Account created successfully! Please check your email for verification.",
+        title: "Account Created!",
+        description: "Please check your email for a confirmation link. After confirming, you can log in.",
       });
+      
+      // Clear the form
+      setSignupForm({ email: '', password: '', fullName: '', salonName: '' });
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: "Signup Failed",
         description: error.message || "Failed to create account",
         variant: "destructive",
       });
@@ -112,6 +123,13 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
             </TabsList>
             
             <TabsContent value="login">
+              <Alert className="mb-4">
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>For Staff:</strong> If this is your first time, please use "Sign Up" tab with the email address your salon owner used when adding you to the system.
+                </AlertDescription>
+              </Alert>
+              
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
@@ -137,10 +155,6 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
                   />
                 </div>
                 
-                <div className="text-xs text-muted-foreground text-center">
-                  Both salon owners and staff can login using their email and password
-                </div>
-                
                 <Button 
                   type="submit" 
                   className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700"
@@ -153,6 +167,14 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
             </TabsContent>
             
             <TabsContent value="signup">
+              <Alert className="mb-4">
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Salon Owners:</strong> Create your salon account here.<br/>
+                  <strong>Staff Members:</strong> Use the email your salon owner provided when they added you to the team.
+                </AlertDescription>
+              </Alert>
+              
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Full Name</Label>
@@ -166,13 +188,12 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-salon">Salon Name</Label>
+                  <Label htmlFor="signup-salon">Salon Name (Optional for staff)</Label>
                   <Input
                     id="signup-salon"
                     placeholder="Enter your salon name"
                     value={signupForm.salonName}
                     onChange={(e) => setSignupForm({...signupForm, salonName: e.target.value})}
-                    required
                   />
                 </div>
 
@@ -192,10 +213,11 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
                   <Input
                     id="signup-password"
                     type="password"
-                    placeholder="Create a password"
+                    placeholder="Create a password (min 6 characters)"
                     value={signupForm.password}
                     onChange={(e) => setSignupForm({...signupForm, password: e.target.value})}
                     required
+                    minLength={6}
                   />
                 </div>
                 <Button 
@@ -204,7 +226,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
                   disabled={isLoading}
                 >
                   {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Create Salon Account
+                  Create Account
                 </Button>
               </form>
             </TabsContent>

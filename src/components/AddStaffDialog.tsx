@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -145,20 +144,22 @@ const AddStaffDialog = () => {
             <div className="text-center p-4 bg-green-50 border border-green-200 rounded-lg">
               <h3 className="font-semibold text-green-800 mb-2">{createdStaff.name} Added!</h3>
               <p className="text-sm text-green-700 mb-4">
-                Your new staff member can now login using:
+                Your staff member needs to create their account to access the system:
               </p>
               
               <div className="space-y-3">
                 <div className="bg-white p-3 rounded border">
-                  <Label className="text-xs text-gray-600">Email</Label>
+                  <Label className="text-xs text-gray-600">Staff Email</Label>
                   <p className="font-mono text-sm">{createdStaff.email}</p>
                 </div>
               </div>
               
-              <div className="text-xs text-gray-600 mt-4 space-y-1">
-                <p>• Staff can login using their email address</p>
-                <p>• They'll need to create a password during first signup</p>
-                <p>• They'll automatically get staff role permissions</p>
+              <div className="text-xs text-gray-600 mt-4 space-y-1 text-left">
+                <p className="font-semibold">Next Steps for {createdStaff.name}:</p>
+                <p>• Visit the login page and click "Sign Up"</p>
+                <p>• Use the email: <span className="font-mono">{createdStaff.email}</span></p>
+                <p>• Create a password and confirm their email</p>
+                <p>• They'll automatically get staff permissions</p>
               </div>
             </div>
             
@@ -168,6 +169,12 @@ const AddStaffDialog = () => {
           </div>
         ) : (
           <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-800">
+                <strong>Important:</strong> After adding a staff member, they need to sign up using the email you provide here.
+              </p>
+            </div>
+            
             <div>
               <Label htmlFor="staffName">Full Name *</Label>
               <Input
@@ -187,7 +194,7 @@ const AddStaffDialog = () => {
                 placeholder="Enter email address"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Staff will use this email to login to the system
+                Staff will use this email to sign up and access the system
               </p>
             </div>
             <div>

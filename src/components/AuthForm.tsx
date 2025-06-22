@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Scissors, Users } from 'lucide-react';
+import { Loader2, Scissors } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 
 interface AuthFormProps {
@@ -16,15 +16,13 @@ interface AuthFormProps {
 
 const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [loginForm, setLoginForm] = useState({ email: '', password: '', staffCode: '' });
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [signupForm, setSignupForm] = useState({ 
     email: '', 
     password: '', 
     fullName: '', 
-    salonName: '',
-    staffCode: ''
+    salonName: ''
   });
-  const [loginMode, setLoginMode] = useState<'email' | 'staff'>('email');
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get('tab') || 'login';
@@ -34,22 +32,8 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     setIsLoading(true);
 
     try {
-      let email = loginForm.email;
-      
-      // If using staff code login, we need to find the email first
-      if (loginMode === 'staff' && loginForm.staffCode) {
-        const { data: staffData, error: staffError } = await supabase
-          .rpc('get_user_by_staff_code', { code: loginForm.staffCode.toUpperCase() });
-        
-        if (staffError || !staffData || staffData.length === 0) {
-          throw new Error('Invalid staff code. Please check your code and try again.');
-        }
-        
-        email = staffData[0].email;
-      }
-
       const { error } = await supabase.auth.signInWithPassword({
-        email: email,
+        email: loginForm.email,
         password: loginForm.password,
       });
 
@@ -76,22 +60,6 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     setIsLoading(true);
 
     try {
-      // If signing up with staff code, validate it first
-      if (signupForm.staffCode) {
-        const { data: staffData, error: staffError } = await supabase
-          .from('staff')
-          .select('email, salon_id')
-          .eq('staff_code', signupForm.staffCode.toUpperCase())
-          .single();
-        
-        if (staffError || !staffData) {
-          throw new Error('Invalid staff code. Please check your code and try again.');
-        }
-        
-        // Use the email from the staff record
-        signupForm.email = staffData.email;
-      }
-
       const { error } = await supabase.auth.signUp({
         email: signupForm.email,
         password: signupForm.password,
@@ -100,7 +68,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
           data: {
             full_name: signupForm.fullName,
             salon_name: signupForm.salonName || null,
-            role: signupForm.staffCode ? 'staff' : 'salon_owner'
+            role: 'salon_owner'
           }
         }
       });
@@ -109,9 +77,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
 
       toast({
         title: "Success",
-        description: signupForm.staffCode 
-          ? "Staff account created successfully! Please check your email for verification."
-          : "Account created successfully! Please check your email for verification.",
+        description: "Account created successfully! Please check your email for verification.",
       });
     } catch (error: any) {
       toast({
@@ -147,58 +113,17 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
             
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
-                <div className="flex gap-2 mb-4">
-                  <Button
-                    type="button"
-                    variant={loginMode === 'email' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setLoginMode('email')}
-                    className="flex-1"
-                  >
-                    <Scissors className="w-4 h-4 mr-2" />
-                    Owner/Manager
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={loginMode === 'staff' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setLoginMode('staff')}
-                    className="flex-1"
-                  >
-                    <Users className="w-4 h-4 mr-2" />
-                    Staff
-                  </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="login-email">Email</Label>
+                  <Input
+                    id="login-email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={loginForm.email}
+                    onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
+                    required
+                  />
                 </div>
-
-                {loginMode === 'email' ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
-                    <Input
-                      id="login-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={loginForm.email}
-                      onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
-                      required
-                    />
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label htmlFor="staff-code">Staff Code</Label>
-                    <Input
-                      id="staff-code"
-                      placeholder="Enter your 6-character staff code"
-                      value={loginForm.staffCode}
-                      onChange={(e) => setLoginForm({...loginForm, staffCode: e.target.value})}
-                      maxLength={6}
-                      style={{ textTransform: 'uppercase' }}
-                      required
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Ask your salon owner/manager for your staff code
-                    </p>
-                  </div>
-                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Password</Label>
@@ -211,6 +136,11 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
                     required
                   />
                 </div>
+                
+                <div className="text-xs text-muted-foreground text-center">
+                  Both salon owners and staff can login using their email and password
+                </div>
+                
                 <Button 
                   type="submit" 
                   className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700"
@@ -236,32 +166,15 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="staff-code-signup">Staff Code (Optional)</Label>
+                  <Label htmlFor="signup-salon">Salon Name</Label>
                   <Input
-                    id="staff-code-signup"
-                    placeholder="Enter staff code if joining a salon"
-                    value={signupForm.staffCode}
-                    onChange={(e) => setSignupForm({...signupForm, staffCode: e.target.value})}
-                    maxLength={6}
-                    style={{ textTransform: 'uppercase' }}
+                    id="signup-salon"
+                    placeholder="Enter your salon name"
+                    value={signupForm.salonName}
+                    onChange={(e) => setSignupForm({...signupForm, salonName: e.target.value})}
+                    required
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Leave empty if you're creating a new salon account
-                  </p>
                 </div>
-
-                {!signupForm.staffCode && (
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-salon">Salon Name</Label>
-                    <Input
-                      id="signup-salon"
-                      placeholder="Enter your salon name"
-                      value={signupForm.salonName}
-                      onChange={(e) => setSignupForm({...signupForm, salonName: e.target.value})}
-                      required={!signupForm.staffCode}
-                    />
-                  </div>
-                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
@@ -271,14 +184,8 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
                     placeholder="Enter your email"
                     value={signupForm.email}
                     onChange={(e) => setSignupForm({...signupForm, email: e.target.value})}
-                    required={!signupForm.staffCode}
-                    disabled={!!signupForm.staffCode}
+                    required
                   />
-                  {signupForm.staffCode && (
-                    <p className="text-xs text-muted-foreground">
-                      Email will be auto-filled from staff code
-                    </p>
-                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
@@ -297,7 +204,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
                   disabled={isLoading}
                 >
                   {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {signupForm.staffCode ? 'Join as Staff' : 'Create Salon Account'}
+                  Create Salon Account
                 </Button>
               </form>
             </TabsContent>

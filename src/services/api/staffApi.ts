@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Staff } from '../types';
 
@@ -49,10 +50,6 @@ export const staffApi = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Generate staff code
-    const { data: staffCodeData, error: codeError } = await supabase.rpc('generate_staff_code');
-    if (codeError) throw codeError;
-
     const { data, error } = await supabase
       .from('staff')
       .insert({
@@ -74,7 +71,7 @@ export const staffApi = {
         notes: staff.notes,
         hire_date: staff.hireDate,
         salon_id: user.id,
-        staff_code: staffCodeData
+        staff_code: null // No longer generating staff codes
       })
       .select()
       .single();
@@ -175,15 +172,12 @@ export const staffApi = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // First create the staff member
+    // Create the staff member (without staff code)
     const createdStaff = await this.createStaff(staff);
 
-    // Then assign role if staff has email (can be invited as user)
-    if (staff.email) {
-      // This would typically involve sending an invitation
-      // For now, we'll just create the staff record
-      console.log(`Staff ${createdStaff.name} created with role: ${role}`);
-    }
+    // The existing trigger assign_staff_role_by_email will automatically
+    // assign the staff role when they sign up with the email
+    console.log(`Staff ${createdStaff.name} created with role: ${role}`);
 
     return createdStaff;
   }

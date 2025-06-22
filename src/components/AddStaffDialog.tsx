@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Copy, Check } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useCreateStaff } from "@/hooks/useCrmData";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -16,7 +15,6 @@ const AddStaffDialog = () => {
   const { user, session } = useAuth();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
-  const [copiedCode, setCopiedCode] = useState(false);
   const [newStaff, setNewStaff] = useState<Partial<StaffType>>({
     name: "",
     email: "",
@@ -39,24 +37,6 @@ const AddStaffDialog = () => {
   const handleSpecialtyChange = (value: string) => {
     const specialties = value.split(',').map(s => s.trim()).filter(s => s);
     setNewStaff({ ...newStaff, specialties });
-  };
-
-  const copyStaffCode = async (code: string) => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopiedCode(true);
-      toast({
-        title: "Copied!",
-        description: "Staff code copied to clipboard",
-      });
-      setTimeout(() => setCopiedCode(false), 2000);
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to copy staff code",
-        variant: "destructive"
-      });
-    }
   };
 
   const handleAddStaff = () => {
@@ -92,7 +72,10 @@ const AddStaffDialog = () => {
           title: "Success",
           description: `${createdStaffData.name} has been added to your team!`,
         });
-        // Don't close dialog immediately, show the staff code first
+        // Close dialog after successful creation
+        setTimeout(() => {
+          resetForm();
+        }, 2000);
       },
       onError: (error) => {
         console.error('Failed to create staff:', error);
@@ -124,7 +107,6 @@ const AddStaffDialog = () => {
       notes: ""
     });
     setCreatedStaff(null);
-    setCopiedCode(false);
     setIsOpen(false);
   };
 
@@ -163,7 +145,7 @@ const AddStaffDialog = () => {
             <div className="text-center p-4 bg-green-50 border border-green-200 rounded-lg">
               <h3 className="font-semibold text-green-800 mb-2">{createdStaff.name} Added!</h3>
               <p className="text-sm text-green-700 mb-4">
-                Share these login credentials with your new staff member:
+                Your new staff member can now login using:
               </p>
               
               <div className="space-y-3">
@@ -171,30 +153,11 @@ const AddStaffDialog = () => {
                   <Label className="text-xs text-gray-600">Email</Label>
                   <p className="font-mono text-sm">{createdStaff.email}</p>
                 </div>
-                
-                <div className="bg-white p-3 rounded border">
-                  <Label className="text-xs text-gray-600">Staff Code</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="outline" className="font-mono text-lg px-3 py-1">
-                      {(createdStaff as any).staffCode || 'GENERATING...'}
-                    </Badge>
-                    {(createdStaff as any).staffCode && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => copyStaffCode((createdStaff as any).staffCode)}
-                        className="h-8 w-8 p-0"
-                      >
-                        {copiedCode ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      </Button>
-                    )}
-                  </div>
-                </div>
               </div>
               
               <div className="text-xs text-gray-600 mt-4 space-y-1">
-                <p>• Staff can log in using either their email OR staff code</p>
-                <p>• They'll need to create a password during signup</p>
+                <p>• Staff can login using their email address</p>
+                <p>• They'll need to create a password during first signup</p>
                 <p>• They'll automatically get staff role permissions</p>
               </div>
             </div>
@@ -223,6 +186,9 @@ const AddStaffDialog = () => {
                 onChange={(e) => setNewStaff({...newStaff, email: e.target.value})}
                 placeholder="Enter email address"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Staff will use this email to login to the system
+              </p>
             </div>
             <div>
               <Label htmlFor="staffPhone">Phone</Label>

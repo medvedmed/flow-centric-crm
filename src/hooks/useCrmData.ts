@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabaseApi, Client, Appointment, Staff, Profile } from '../services/supabaseApi';
+import { supabaseApi, Client, Appointment, Staff, Profile, PaginatedResult } from '../services/supabaseApi';
 import { useToast } from './use-toast';
 
 // Profile hooks
@@ -35,12 +35,18 @@ export const useUpdateProfile = () => {
   });
 };
 
-// Client hooks
-export const useClients = (searchTerm?: string) => {
+// Enhanced client hooks with pagination
+export const useClients = (
+  searchTerm?: string,
+  page: number = 1,
+  pageSize: number = 50,
+  status?: string
+) => {
   return useQuery({
-    queryKey: ['clients', searchTerm],
-    queryFn: () => supabaseApi.getClients(searchTerm),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryKey: ['clients', searchTerm, page, pageSize, status],
+    queryFn: () => supabaseApi.getClients(searchTerm, page, pageSize, status),
+    staleTime: 2 * 60 * 1000, // 2 minutes for frequent updates
+    keepPreviousData: true, // Keep previous data while loading new page
   });
 };
 
@@ -126,11 +132,11 @@ export const useDeleteClient = () => {
   });
 };
 
-// Staff hooks with full CRUD operations
-export const useStaff = () => {
+// Enhanced staff hooks
+export const useStaff = (status?: string) => {
   return useQuery({
-    queryKey: ['staff'],
-    queryFn: () => supabaseApi.getStaff(),
+    queryKey: ['staff', status],
+    queryFn: () => supabaseApi.getStaff(status),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
@@ -208,12 +214,20 @@ export const useDeleteStaff = () => {
   });
 };
 
-// Appointment hooks
-export const useAppointments = (clientId?: string, staffId?: string) => {
+// Enhanced appointment hooks with date filtering
+export const useAppointments = (
+  clientId?: string,
+  staffId?: string,
+  startDate?: string,
+  endDate?: string,
+  page: number = 1,
+  pageSize: number = 100
+) => {
   return useQuery({
-    queryKey: ['appointments', clientId, staffId],
-    queryFn: () => supabaseApi.getAppointments(clientId, staffId),
-    staleTime: 2 * 60 * 1000, // 2 minutes for more frequent updates
+    queryKey: ['appointments', clientId, staffId, startDate, endDate, page, pageSize],
+    queryFn: () => supabaseApi.getAppointments(clientId, staffId, startDate, endDate, page, pageSize),
+    staleTime: 1 * 60 * 1000, // 1 minute for real-time updates
+    keepPreviousData: true,
   });
 };
 
@@ -288,4 +302,38 @@ export const useDeleteAppointment = () => {
       });
     },
   });
+};
+
+// New analytics hooks
+export const useClientStats = () => {
+  return useQuery({
+    queryKey: ['client-stats'],
+    queryFn: () => supabaseApi.getClientStats(),
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+};
+
+// Cache management utilities
+export const useCacheManagement = () => {
+  const queryClient = useQueryClient();
+
+  const invalidateAllData = () => {
+    queryClient.invalidateQueries({ queryKey: ['clients'] });
+    queryClient.invalidateQueries({ queryKey: ['staff'] });
+    queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    queryClient.invalidateQueries({ queryKey: ['client-stats'] });
+  };
+
+  const prefetchClients = (page: number, searchTerm?: string) => {
+    queryClient.prefetchQuery({
+      queryKey: ['clients', searchTerm, page, 50],
+      queryFn: () => supabaseApi.getClients(searchTerm, page, 50),
+      staleTime: 2 * 60 * 1000,
+    });
+  };
+
+  return {
+    invalidateAllData,
+    prefetchClients,
+  };
 };

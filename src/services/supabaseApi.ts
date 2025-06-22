@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Define interfaces that match our Supabase schema exactly
@@ -76,7 +75,15 @@ export interface Profile {
   updatedAt?: string;
 }
 
-// Client API functions
+export interface PaginatedResult<T> {
+  data: T[];
+  count: number;
+  hasMore: boolean;
+  page: number;
+  pageSize: number;
+}
+
+// Client API functions with optimized queries
 export const supabaseApi = {
   // Profile functions
   async getProfile(): Promise<Profile | null> {
@@ -132,25 +139,45 @@ export const supabaseApi = {
     };
   },
 
-  // Client functions
-  async getClients(searchTerm?: string): Promise<Client[]> {
+  // Optimized client functions with pagination and full-text search
+  async getClients(
+    searchTerm?: string,
+    page: number = 1,
+    pageSize: number = 50,
+    status?: string
+  ): Promise<PaginatedResult<Client>> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
     let query = supabase
       .from('clients')
-      .select('*')
+      .select('*, count(*) OVER() as total_count', { count: 'exact' })
       .eq('salon_id', user.id);
     
+    // Use full-text search when available, fallback to ILIKE
     if (searchTerm) {
-      query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+      query = query.or(`
+        to_tsvector('english', name || ' ' || COALESCE(email, '') || ' ' || COALESCE(phone, '')) @@ plainto_tsquery('english', '${searchTerm}'),
+        name.ilike.%${searchTerm}%,
+        email.ilike.%${searchTerm}%,
+        phone.ilike.%${searchTerm}%
+      `);
+    }
+
+    if (status) {
+      query = query.eq('status', status);
     }
     
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(from, to);
     
     if (error) throw error;
     
-    return data?.map(client => ({
+    const clients = data?.map(client => ({
       id: client.id,
       name: client.name,
       email: client.email,
@@ -167,6 +194,14 @@ export const supabaseApi = {
       createdAt: client.created_at,
       updatedAt: client.updated_at
     })) || [];
+
+    return {
+      data: clients,
+      count: count || 0,
+      hasMore: (count || 0) > page * pageSize,
+      page,
+      pageSize
+    };
   },
 
   async getClient(id: string): Promise<Client | null> {
@@ -294,14 +329,24 @@ export const supabaseApi = {
     if (error) throw error;
   },
 
-  // Appointment functions with salon isolation
-  async getAppointments(clientId?: string, staffId?: string): Promise<Appointment[]> {
+  // Optimized appointment functions with date-based queries
+  async getAppointments(
+    clientId?: string,
+    staffId?: string,
+    startDate?: string,
+    endDate?: string,
+    page: number = 1,
+    pageSize: number = 100
+  ): Promise<PaginatedResult<Appointment>> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
     let query = supabase
       .from('appointments')
-      .select('*')
+      .select('*, count(*) OVER() as total_count', { count: 'exact' })
       .eq('salon_id', user.id);
     
     if (clientId) {
@@ -311,12 +356,23 @@ export const supabaseApi = {
     if (staffId) {
       query = query.eq('staff_id', staffId);
     }
+
+    if (startDate && endDate) {
+      query = query.gte('date', startDate).lte('date', endDate);
+    } else if (startDate) {
+      query = query.gte('date', startDate);
+    } else if (endDate) {
+      query = query.lte('date', endDate);
+    }
     
-    const { data, error } = await query.order('date', { ascending: true }).order('start_time', { ascending: true });
+    const { data, error, count } = await query
+      .order('date', { ascending: true })
+      .order('start_time', { ascending: true })
+      .range(from, to);
     
     if (error) throw error;
     
-    return data?.map(appointment => ({
+    const appointments = data?.map(appointment => ({
       id: appointment.id,
       clientId: appointment.client_id,
       staffId: appointment.staff_id,
@@ -334,6 +390,14 @@ export const supabaseApi = {
       createdAt: appointment.created_at,
       updatedAt: appointment.updated_at
     })) || [];
+
+    return {
+      data: appointments,
+      count: count || 0,
+      hasMore: (count || 0) > page * pageSize,
+      page,
+      pageSize
+    };
   },
 
   async createAppointment(appointment: Appointment): Promise<Appointment> {
@@ -435,16 +499,21 @@ export const supabaseApi = {
     if (error) throw error;
   },
 
-  // Staff functions with full CRUD operations
-  async getStaff(): Promise<Staff[]> {
+  // Optimized staff functions
+  async getStaff(status?: string): Promise<Staff[]> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('staff')
       .select('*')
-      .eq('salon_id', user.id)
-      .order('name', { ascending: true });
+      .eq('salon_id', user.id);
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query.order('name', { ascending: true });
     
     if (error) throw error;
     
@@ -590,5 +659,32 @@ export const supabaseApi = {
       .eq('id', id);
     
     if (error) throw error;
+  },
+
+  // Analytics and reporting functions
+  async getClientStats(): Promise<{
+    totalClients: number;
+    newClients: number;
+    activeClients: number;
+    vipClients: number;
+  }> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('clients')
+      .select('status')
+      .eq('salon_id', user.id);
+    
+    if (error) throw error;
+
+    const stats = {
+      totalClients: data?.length || 0,
+      newClients: data?.filter(c => c.status === 'New').length || 0,
+      activeClients: data?.filter(c => c.status === 'Active').length || 0,
+      vipClients: data?.filter(c => c.status === 'VIP').length || 0,
+    };
+
+    return stats;
   }
 };

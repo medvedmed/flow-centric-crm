@@ -1,4 +1,6 @@
-
+import { usePermissions } from "@/hooks/usePermissions";
+import StaffDashboard from "@/components/StaffDashboard";
+import ReceptionistDashboard from "@/components/ReceptionistDashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +32,26 @@ const todayAppointments = [
 ];
 
 const Dashboard = () => {
+  const { userRole, roleLoading } = usePermissions();
+
+  if (roleLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
+      </div>
+    );
+  }
+
+  // Route to role-specific dashboards
+  if (userRole === 'staff') {
+    return <StaffDashboard />;
+  }
+
+  if (userRole === 'receptionist') {
+    return <ReceptionistDashboard />;
+  }
+
+  // Default to owner/manager dashboard (existing Dashboard component)
   return (
     <div className="space-y-6">
       {/* Header */}

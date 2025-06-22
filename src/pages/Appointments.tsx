@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Calendar, Clock, Plus, Search, Filter, Users, Bell, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LanguageProvider, useLanguage } from "@/contexts/LanguageContext";
 import LanguageToggle from "@/components/LanguageToggle";
 import { useAppointments, useCreateAppointment, useUpdateAppointment, useClients, useCreateClient } from "@/hooks/useCrmData";
-import { Appointment, Client } from "@/services/crmApi";
+import { Appointment, Client } from "@/services/supabaseApi";
 import { webhookService } from "@/services/webhookService";
 
 // Interfaces
@@ -40,7 +41,7 @@ interface BookingSlot {
 // Mock staff data - in a real app, this would come from the API too
 const mockStaff: Staff[] = [
   {
-    id: "1",
+    id: "550e8400-e29b-41d4-a716-446655440001",
     name: "Sarah Johnson",
     image: "https://images.unsplash.com/photo-1494790108755-2616b612b494?w=400&h=400&fit=crop&crop=face",
     specialties: ["Hair Styling", "Coloring"],
@@ -49,7 +50,7 @@ const mockStaff: Staff[] = [
     rating: 4.8
   },
   {
-    id: "2", 
+    id: "550e8400-e29b-41d4-a716-446655440002", 
     name: "Michael Chen",
     image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
     specialties: ["Massage", "Facial"],
@@ -169,8 +170,7 @@ const AppointmentsContent = () => {
           phone: newBooking.clientPhone || '',
           status: 'New',
           assignedStaff: '',
-          notes: '',
-          tags: ''
+          notes: ''
         };
 
         console.log('Creating new client:', newClient);
@@ -183,16 +183,15 @@ const AppointmentsContent = () => {
         throw new Error('Failed to create or find client');
       }
 
-      // Convert staffId to number
-      const numericStaffId = parseInt(selectedSlot.staffId, 10);
-      const numericClientId = parseInt(clientId, 10);
+      const today = new Date().toISOString().split('T')[0];
 
       const newAppointment: Appointment = {
-        clientId: numericClientId.toString(),
-        staffId: numericStaffId.toString(),
+        clientId: clientId,
+        staffId: selectedSlot.staffId,
         service: newBooking.service,
         startTime: selectedSlot.time,
         endTime: endTimeString,
+        date: today,
         status: 'Scheduled',
         notes: '',
         price: newBooking.price,
@@ -249,7 +248,7 @@ const AppointmentsContent = () => {
   const getTodayStats = () => {
     const today = new Date().toISOString().split('T')[0];
     const todayAppointments = appointments.filter(apt => 
-      apt.startTime && apt.startTime.includes(today)
+      apt.date && apt.date === today
     );
     
     return {

@@ -1,13 +1,13 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { localCrmApi, Client, Appointment } from '../services/localCrmApi';
+import { supabaseApi, Client, Appointment } from '../services/supabaseApi';
 import { useToast } from './use-toast';
 
 // Client hooks
 export const useClients = (searchTerm?: string) => {
   return useQuery({
     queryKey: ['clients', searchTerm],
-    queryFn: () => localCrmApi.getClients(searchTerm),
+    queryFn: () => supabaseApi.getClients(searchTerm),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
@@ -15,7 +15,7 @@ export const useClients = (searchTerm?: string) => {
 export const useClient = (id: string) => {
   return useQuery({
     queryKey: ['client', id],
-    queryFn: () => localCrmApi.getClient(id),
+    queryFn: () => supabaseApi.getClient(id),
     enabled: !!id,
   });
 };
@@ -25,7 +25,7 @@ export const useCreateClient = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (client: Client) => localCrmApi.createClient(client),
+    mutationFn: (client: Client) => supabaseApi.createClient(client),
     onSuccess: async (createdClient) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       
@@ -51,7 +51,7 @@ export const useUpdateClient = () => {
 
   return useMutation({
     mutationFn: ({ id, client }: { id: string; client: Partial<Client> }) => 
-      localCrmApi.updateClient(id, client),
+      supabaseApi.updateClient(id, client),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast({
@@ -75,7 +75,7 @@ export const useDeleteClient = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (id: string) => localCrmApi.deleteClient(id),
+    mutationFn: (id: string) => supabaseApi.deleteClient(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast({
@@ -98,7 +98,7 @@ export const useDeleteClient = () => {
 export const useAppointments = (clientId?: string, staffId?: string) => {
   return useQuery({
     queryKey: ['appointments', clientId, staffId],
-    queryFn: () => localCrmApi.getAppointments(clientId, staffId),
+    queryFn: () => supabaseApi.getAppointments(clientId, staffId),
     staleTime: 2 * 60 * 1000, // 2 minutes for more frequent updates
   });
 };
@@ -108,7 +108,7 @@ export const useCreateAppointment = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (appointment: Appointment) => localCrmApi.createAppointment(appointment),
+    mutationFn: (appointment: Appointment) => supabaseApi.createAppointment(appointment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       toast({
@@ -133,7 +133,7 @@ export const useUpdateAppointment = () => {
 
   return useMutation({
     mutationFn: ({ id, appointment }: { id: string; appointment: Partial<Appointment> }) => 
-      localCrmApi.updateAppointment(id, appointment),
+      supabaseApi.updateAppointment(id, appointment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       toast({
@@ -157,7 +157,7 @@ export const useDeleteAppointment = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (id: string) => localCrmApi.deleteAppointment(id),
+    mutationFn: (id: string) => supabaseApi.deleteAppointment(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       toast({

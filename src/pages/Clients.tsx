@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Filter, Users, Mail, Phone, Edit, Trash, Loader2 } from "lucide-react";
 import { useClients, useCreateClient, useDeleteClient } from "@/hooks/useCrmData";
-import { Client } from "@/services/localCrmApi";
+import { Client } from "@/services/supabaseApi";
 
 const Clients = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -133,7 +133,7 @@ const Clients = () => {
                   <Label htmlFor="phone">Phone</Label>
                   <Input
                     id="phone"
-                    value={newClient.phone}
+                    value={newClient.phone || ""}
                     onChange={(e) => setNewClient({...newClient, phone: e.target.value})}
                     placeholder="Enter phone number"
                   />
@@ -155,15 +155,13 @@ const Clients = () => {
                 </div>
                 <div>
                   <Label htmlFor="assignedStaff">Assigned Staff</Label>
-                  <Select value={newClient.assignedStaff} onValueChange={(value) => setNewClient({...newClient, assignedStaff: value})}>
+                  <Select value={newClient.assignedStaff || ""} onValueChange={(value) => setNewClient({...newClient, assignedStaff: value})}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select staff member" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Emma Wilson">Emma Wilson</SelectItem>
-                      <SelectItem value="Sophia Davis">Sophia Davis</SelectItem>
-                      <SelectItem value="Olivia Brown">Olivia Brown</SelectItem>
-                      <SelectItem value="Isabella Miller">Isabella Miller</SelectItem>
+                      <SelectItem value="Sarah Johnson">Sarah Johnson</SelectItem>
+                      <SelectItem value="Michael Chen">Michael Chen</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -171,7 +169,7 @@ const Clients = () => {
                   <Label htmlFor="notes">Notes</Label>
                   <Textarea
                     id="notes"
-                    value={newClient.notes}
+                    value={newClient.notes || ""}
                     onChange={(e) => setNewClient({...newClient, notes: e.target.value})}
                     placeholder="Add any additional notes..."
                     rows={3}

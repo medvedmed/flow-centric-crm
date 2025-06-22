@@ -26,7 +26,7 @@ const ManagerSection = () => {
     try {
       await updateClient.mutateAsync({
         id: clientId,
-        client: { is_portal_enabled: !currentStatus }
+        client: { isPortalEnabled: !currentStatus }
       });
       toast({
         title: 'Success',

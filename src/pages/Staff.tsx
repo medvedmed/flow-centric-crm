@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, UserCheck, Mail, Phone, Calendar, Edit, Trash, Clock, DollarSign } from "lucide-react";
 import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff } from "@/hooks/useCrmData";
-import { Staff } from "@/services/supabaseApi";
+import type { Staff as StaffType } from "@/services/supabaseApi";
 
 const Staff = () => {
   const { data: staff = [], isLoading } = useStaff();
@@ -19,9 +18,9 @@ const Staff = () => {
   
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
+  const [editingStaff, setEditingStaff] = useState<StaffType | null>(null);
 
-  const [newStaff, setNewStaff] = useState<Partial<Staff>>({
+  const [newStaff, setNewStaff] = useState<Partial<StaffType>>({
     name: "",
     email: "",
     phone: "",
@@ -50,7 +49,7 @@ const Staff = () => {
       return;
     }
 
-    createStaffMutation.mutate(newStaff as Staff, {
+    createStaffMutation.mutate(newStaff as StaffType, {
       onSuccess: () => {
         setNewStaff({
           name: "",
@@ -402,7 +401,7 @@ const Staff = () => {
                           <Label htmlFor="editStatus">Status</Label>
                           <Select 
                             value={editingStaff.status} 
-                            onValueChange={(value) => setEditingStaff({...editingStaff, status: value as Staff['status']})}
+                            onValueChange={(value) => setEditingStaff({...editingStaff, status: value as StaffType['status']})}
                           >
                             <SelectTrigger>
                               <SelectValue />

@@ -1,6 +1,5 @@
 
 import { useState, useEffect, createContext, useContext } from 'react';
-import { useAuth } from '@/hooks/useAuth';
 
 interface StaffSession {
   staffId: string;
@@ -22,7 +21,6 @@ const StaffAuthContext = createContext<StaffAuthContextType | undefined>(undefin
 export const StaffAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [staffSession, setStaffSession] = useState<StaffSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
 
   useEffect(() => {
     // Check for staff session in localStorage
@@ -39,20 +37,12 @@ export const StaffAuthProvider = ({ children }: { children: React.ReactNode }) =
     setIsLoading(false);
   }, []);
 
-  // Clear staff session if regular user logs in
-  useEffect(() => {
-    if (user && staffSession) {
-      localStorage.removeItem('staff_session');
-      setStaffSession(null);
-    }
-  }, [user, staffSession]);
-
   const signOutStaff = () => {
     localStorage.removeItem('staff_session');
     setStaffSession(null);
   };
 
-  const isStaff = !!staffSession && !user;
+  const isStaff = !!staffSession;
 
   return (
     <StaffAuthContext.Provider value={{ 

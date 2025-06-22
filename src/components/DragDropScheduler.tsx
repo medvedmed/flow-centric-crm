@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -6,9 +5,10 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, User, DollarSign, Phone } from 'lucide-react';
+import { Clock, User, DollarSign, Phone, Plus } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Staff, Appointment } from '@/services/types';
+import { AddAppointmentDialog } from './AddAppointmentDialog';
 
 interface TimeSlot {
   time: string;
@@ -125,40 +125,90 @@ const AppointmentBlock: React.FC<{
   );
 };
 
-// Time Slot Component
+// Fresha-style Empty Time Slot Component with click-to-book
+const EmptyTimeSlot: React.FC<{
+  staffId: string;
+  staffName: string;
+  time: string;
+  selectedDate: Date;
+  isReadOnly?: boolean;
+}> = ({ staffId, staffName, time, selectedDate, isReadOnly = false }) => {
+  if (isReadOnly) {
+    return (
+      <div className="h-16 border-b border-gray-200 p-2 bg-gray-50/50">
+        <div className="text-xs text-gray-500 mb-1">{time}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-16 border-b border-gray-200 p-2 bg-gray-50/50">
+      <div className="text-xs text-gray-500 mb-1">{time}</div>
+      <AddAppointmentDialog
+        selectedDate={selectedDate}
+        selectedTime={time}
+        selectedStaffId={staffId}
+        trigger={
+          <div className="h-full cursor-pointer hover:bg-teal-50/50 transition-all duration-200 flex items-center justify-center group relative border border-transparent hover:border-teal-200 rounded">
+            <Plus className="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:text-teal-500" />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <span className="text-xs text-teal-600 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md shadow-sm border border-teal-200">
+                Click to book
+              </span>
+            </div>
+          </div>
+        }
+      />
+    </div>
+  );
+};
+
+// Update TimeSlot component to pass selectedDate
 const TimeSlot: React.FC<{
   timeSlot: TimeSlot;
   appointments: Appointment[];
   staffId: string;
+  staffName: string;
+  selectedDate: Date;
   isReadOnly?: boolean;
-}> = ({ timeSlot, appointments, staffId, isReadOnly = false }) => {
+}> = ({ timeSlot, appointments, staffId, staffName, selectedDate, isReadOnly = false }) => {
   const slotAppointments = appointments.filter(apt => 
     apt.staffId === staffId && apt.startTime === timeSlot.time
   );
 
   return (
-    <div className="min-h-[60px] border-b border-gray-200 p-2 bg-gray-50/50">
-      <div className="text-xs text-gray-500 mb-1">{timeSlot.time}</div>
+    <div className="min-h-[60px] border-b border-gray-200 relative">
       <SortableContext items={slotAppointments.map(apt => apt.id)} strategy={verticalListSortingStrategy}>
-        {slotAppointments.map(appointment => (
-          <AppointmentBlock 
-            key={appointment.id} 
-            appointment={appointment} 
+        {slotAppointments.length > 0 ? (
+          slotAppointments.map(appointment => (
+            <AppointmentBlock 
+              key={appointment.id} 
+              appointment={appointment} 
+              isReadOnly={isReadOnly}
+            />
+          ))
+        ) : (
+          <EmptyTimeSlot 
+            staffId={staffId} 
+            staffName={staffName}
+            time={timeSlot.time} 
+            selectedDate={selectedDate}
             isReadOnly={isReadOnly}
           />
-        ))}
+        )}
       </SortableContext>
     </div>
   );
 };
 
-// Staff Column Component
+// Update StaffColumn component to pass selectedDate
 const StaffColumn: React.FC<{
   staff: Staff;
   timeSlots: TimeSlot[];
   appointments: Appointment[];
+  selectedDate: Date;
   isReadOnly?: boolean;
-}> = ({ staff, timeSlots, appointments, isReadOnly = false }) => {
+}> = ({ staff, timeSlots, appointments, selectedDate, isReadOnly = false }) => {
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
@@ -199,6 +249,8 @@ const StaffColumn: React.FC<{
             timeSlot={timeSlot}
             appointments={appointments}
             staffId={staff.id}
+            staffName={staff.name}
+            selectedDate={selectedDate}
             isReadOnly={isReadOnly}
           />
         ))}
@@ -207,12 +259,13 @@ const StaffColumn: React.FC<{
   );
 };
 
-// Main Scheduler Component
+// Update main DragDropScheduler interface and component
 interface DragDropSchedulerProps {
   staff: Staff[];
   appointments: Appointment[];
   timeSlots: TimeSlot[];
   onAppointmentMove: (appointmentId: string, newStaffId: string, newTime: string) => void;
+  selectedDate: Date;
   isReadOnly?: boolean;
 }
 
@@ -221,6 +274,7 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
   appointments,
   timeSlots,
   onAppointmentMove,
+  selectedDate,
   isReadOnly = false,
 }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -276,6 +330,7 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
             staff={staffMember}
             timeSlots={timeSlots}
             appointments={appointments}
+            selectedDate={selectedDate}
             isReadOnly={true}
           />
         ))}
@@ -296,6 +351,7 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
             staff={staffMember}
             timeSlots={timeSlots}
             appointments={appointments}
+            selectedDate={selectedDate}
             isReadOnly={false}
           />
         ))}

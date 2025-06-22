@@ -1,12 +1,12 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Clock, Plus, Calendar } from 'lucide-react';
+import { Clock, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { useEnhancedSchedule } from '@/hooks/useEnhancedSchedule';
 import { usePermissions } from '@/hooks/usePermissions';
 import DragDropScheduler from './DragDropScheduler';
+import { AddAppointmentDialog } from './AddAppointmentDialog';
 
 interface AppointmentSchedulerProps {
   selectedDate: Date;
@@ -94,10 +94,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
             {isStaff ? 'My Schedule' : 'Schedule'} - {format(selectedDate, 'EEEE, MMMM dd, yyyy')}
           </CardTitle>
           {canCreateAppointments && !isStaff && (
-            <Button size="sm" className="gap-2 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700">
-              <Plus className="w-4 h-4" />
-              New Appointment
-            </Button>
+            <AddAppointmentDialog selectedDate={selectedDate} />
           )}
         </div>
         {isStaff && (
@@ -119,6 +116,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
               timeSlots={timeSlots}
               onAppointmentMove={onAppointmentMove}
               isReadOnly={isStaff} // Staff can only view, not edit
+              selectedDate={selectedDate}
             />
           )}
         </div>

@@ -1,19 +1,17 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
-import { CalendarIcon, Clock, User, Phone, Mail } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ClientSelector } from './ClientSelector';
 import { ServiceSelector } from './ServiceSelector';
-import { useStaff, useCreateAppointment } from '@/hooks/useCrmData';
+import { AppointmentClientSection } from './forms/AppointmentClientSection';
+import { AppointmentDateTimeSection } from './forms/AppointmentDateTimeSection';
+import { useStaff } from '@/hooks/staff/useStaffHooks';
+import { useCreateAppointment } from '@/hooks/appointments/useAppointmentHooks';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { timeUtils } from '@/utils/timeUtils';
 
 interface AppointmentFormProps {
   selectedDate?: Date;
@@ -47,21 +45,6 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
   const createAppointment = useCreateAppointment();
   const { toast } = useToast();
 
-  // Generate time slots
-  const generateTimeSlots = () => {
-    const slots = [];
-    for (let hour = 8; hour <= 20; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
-        if (hour === 20 && minute > 0) break;
-        const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        slots.push(time);
-      }
-    }
-    return slots;
-  };
-
-  const timeSlots = generateTimeSlots();
-
   const handleClientSelect = (clientId: string, clientName: string, clientPhone?: string) => {
     setFormData(prev => ({
       ...prev,
@@ -80,15 +63,6 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
     }));
   };
 
-  const calculateEndTime = (startTime: string, duration: number) => {
-    const [hours, minutes] = startTime.split(':').map(Number);
-    const startDate = new Date();
-    startDate.setHours(hours, minutes, 0, 0);
-    
-    const endDate = new Date(startDate.getTime() + duration * 60000);
-    return format(endDate, 'HH:mm');
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -101,9 +75,8 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
       return;
     }
 
-    const endTime = calculateEndTime(formData.startTime, formData.duration);
+    const endTime = timeUtils.calculateEndTime(formData.startTime, formData.duration);
 
-    // Create appointment data with only the fields needed for creation
     const appointmentData = {
       clientId: formData.clientId || undefined,
       clientName: formData.clientName,
@@ -137,52 +110,14 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Client Selection */}
-      <div className="space-y-2">
-        <Label>Client *</Label>
-        <ClientSelector
-          value={formData.clientId}
-          onValueChange={handleClientSelect}
-        />
-        {!formData.clientId && formData.clientName && (
-          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-800">
-              <User className="inline w-4 h-4 mr-1" />
-              Walk-in client: <strong>{formData.clientName}</strong>
-            </p>
-            {formData.clientPhone && (
-              <p className="text-sm text-blue-700 mt-1">
-                <Phone className="inline w-4 h-4 mr-1" />
-                {formData.clientPhone}
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Manual Client Info for Walk-ins */}
-      {!formData.clientId && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-          <div>
-            <Label htmlFor="walkInName">Walk-in Client Name *</Label>
-            <Input
-              id="walkInName"
-              value={formData.clientName}
-              onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))}
-              placeholder="Enter client name"
-            />
-          </div>
-          <div>
-            <Label htmlFor="walkInPhone">Phone Number</Label>
-            <Input
-              id="walkInPhone"
-              value={formData.clientPhone}
-              onChange={(e) => setFormData(prev => ({ ...prev, clientPhone: e.target.value }))}
-              placeholder="Enter phone number"
-            />
-          </div>
-        </div>
-      )}
+      <AppointmentClientSection
+        clientId={formData.clientId}
+        clientName={formData.clientName}
+        clientPhone={formData.clientPhone}
+        onClientSelect={handleClientSelect}
+        onClientNameChange={(name) => setFormData(prev => ({ ...prev, clientName: name }))}
+        onClientPhoneChange={(phone) => setFormData(prev => ({ ...prev, clientPhone: phone }))}
+      />
 
       {/* Service Selection */}
       <div className="space-y-2">
@@ -229,56 +164,12 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
         </Select>
       </div>
 
-      {/* Date and Time Selection */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Date *</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !formData.date && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {formData.date ? format(formData.date, "PPP") : "Pick a date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={formData.date}
-                onSelect={(date) => date && setFormData(prev => ({ ...prev, date }))}
-                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Time *</Label>
-          <Select value={formData.startTime} onValueChange={(value) =>
-            setFormData(prev => ({ ...prev, startTime: value }))
-          }>
-            <SelectTrigger>
-              <SelectValue placeholder="Select time" />
-            </SelectTrigger>
-            <SelectContent>
-              {timeSlots.map((time) => (
-                <SelectItem key={time} value={time}>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    {time}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      <AppointmentDateTimeSection
+        date={formData.date}
+        startTime={formData.startTime}
+        onDateChange={(date) => setFormData(prev => ({ ...prev, date }))}
+        onTimeChange={(time) => setFormData(prev => ({ ...prev, startTime: time }))}
+      />
 
       {/* Notes */}
       <div className="space-y-2">

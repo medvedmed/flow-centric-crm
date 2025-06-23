@@ -1,13 +1,11 @@
-
 import React, { useState } from 'react';
-import { useClients } from '@/hooks/useCrmData';
+import { useClients, useCreateClient } from '@/hooks/clients/useClientHooks';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Plus, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { useCreateClient } from '@/hooks/useCrmData';
 import { useToast } from '@/hooks/use-toast';
 
 interface ClientSelectorProps {

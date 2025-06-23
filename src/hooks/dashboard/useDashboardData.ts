@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/profile/useProfileHooks';
@@ -41,12 +42,12 @@ export const useDashboardStats = () => {
       const currentMonth = new Date().toISOString().slice(0, 7);
       const lastMonth = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 7);
 
-      // Get today's appointments with staff names - fix the relationship query
+      // Get today's appointments with staff names - use explicit foreign key syntax
       const { data: todayAppts, count: todayCount } = await supabase
         .from('appointments')
         .select(`
           *,
-          staff:staff_id(name)
+          staff!staff_id(name)
         `, { count: 'exact' })
         .eq('salon_id', user.id)
         .eq('date', today)

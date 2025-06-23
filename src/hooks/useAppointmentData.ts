@@ -8,12 +8,14 @@ import { useToast } from '@/hooks/use-toast';
 export const useAppointmentData = (date: string) => {
   const { toast } = useToast();
 
-  // Fetch staff data
+  // Fetch staff data with consistent query key
   const { data: staff = [], isLoading: staffLoading, error: staffError } = useQuery({
     queryKey: ['staff-data'],
     queryFn: async (): Promise<Staff[]> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
+
+      console.log('Fetching staff data for salon:', user.id);
 
       const { data, error } = await supabase
         .from('staff')
@@ -27,7 +29,9 @@ export const useAppointmentData = (date: string) => {
         throw error;
       }
       
-      return data?.map(staff => ({
+      console.log('Raw staff data:', data);
+      
+      const mappedStaff = data?.map(staff => ({
         id: staff.id,
         name: staff.name,
         email: staff.email,
@@ -53,18 +57,23 @@ export const useAppointmentData = (date: string) => {
         createdAt: staff.created_at,
         updatedAt: staff.updated_at
       })) || [];
+
+      console.log('Mapped staff data:', mappedStaff);
+      return mappedStaff;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
-  // Fetch appointments for the specific date
+  // Fetch appointments for the specific date with consistent query key
   const { data: appointments = [], isLoading: appointmentsLoading, error: appointmentsError } = useQuery({
     queryKey: ['appointments-data', date],
     queryFn: async (): Promise<Appointment[]> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      console.log('Fetching appointments for date:', date);
+      console.log('Fetching appointments for date:', date, 'salon:', user.id);
 
       const { data, error } = await supabase
         .from('appointments')
@@ -102,8 +111,10 @@ export const useAppointmentData = (date: string) => {
       console.log('Mapped appointments:', mappedAppointments);
       return mappedAppointments;
     },
-    staleTime: 1 * 60 * 1000, // 1 minute for appointments
+    staleTime: 30 * 1000, // 30 seconds for real-time feel
     refetchInterval: 30 * 1000, // Refetch every 30 seconds for real-time updates
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   // Show error messages

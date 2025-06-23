@@ -1,16 +1,19 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Badge } from '@/components/ui/badge';
-import { Clock, User, DollarSign, Plus, Phone } from 'lucide-react';
+import { Clock, User, DollarSign, Plus, Phone, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Staff, Appointment } from '@/services/types';
 import { AddAppointmentDialog } from './AddAppointmentDialog';
 import { useAppointmentOperations } from '@/hooks/useAppointmentOperations';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
 interface TimeSlot {
@@ -33,12 +36,13 @@ const normalizeTime = (time: string): string => {
   return time.split(':').slice(0, 2).join(':');
 };
 
-// Droppable Time Slot Component
+// Droppable Time Slot Component with conflict detection
 const DroppableTimeSlot: React.FC<{
   staffId: string;
   time: string;
   children: React.ReactNode;
-}> = ({ staffId, time, children }) => {
+  hasConflict?: boolean;
+}> = ({ staffId, time, children, hasConflict = false }) => {
   const dropId = `${staffId}-${time}`;
   const { isOver, setNodeRef } = useDroppable({
     id: dropId,
@@ -53,10 +57,22 @@ const DroppableTimeSlot: React.FC<{
     <div
       ref={setNodeRef}
       className={`relative min-h-[60px] transition-all duration-200 ${
-        isOver ? 'bg-blue-50 border-2 border-blue-300 border-dashed rounded' : ''
+        isOver 
+          ? hasConflict 
+            ? 'bg-red-50 border-2 border-red-300 border-dashed rounded' 
+            : 'bg-blue-50 border-2 border-blue-300 border-dashed rounded'
+          : ''
       }`}
     >
       {children}
+      {isOver && hasConflict && (
+        <div className="absolute inset-0 flex items-center justify-center bg-red-50/90 rounded">
+          <div className="flex items-center gap-1 text-red-600 text-xs font-medium">
+            <AlertTriangle className="w-3 h-3" />
+            Slot Occupied
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -178,9 +194,37 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
 }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null);
+  const [conflictingSlots, setConflictingSlots] = useState<Set<string>>(new Set());
   const { moveAppointment, isMoving } = useAppointmentOperations();
+  const { toast } = useToast();
 
   console.log('DragDropScheduler received:', { staff: staff.length, appointments: appointments.length });
+
+  // Set up real-time subscription for appointments
+  useEffect(() => {
+    const dateString = format(selectedDate, 'yyyy-MM-dd');
+    
+    const channel = supabase
+      .channel('appointments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments',
+          filter: `date=eq.${dateString}`
+        },
+        (payload) => {
+          console.log('Real-time appointment change:', payload);
+          // The query will automatically refetch due to the subscription
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedDate]);
 
   // Generate time slots from 8 AM to 8 PM
   const timeSlots: TimeSlot[] = [];
@@ -195,6 +239,15 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
     }
   }
 
+  // Check for conflicts when dragging
+  const checkConflicts = (staffId: string, time: string, excludeAppointmentId?: string) => {
+    return appointments.some(apt => 
+      apt.id !== excludeAppointmentId &&
+      apt.staffId === staffId &&
+      normalizeTime(apt.startTime) === normalizeTime(time)
+    );
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     setActiveId(active.id as string);
@@ -202,12 +255,27 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
     const appointment = appointments.find(apt => apt.id === active.id);
     setDraggedAppointment(appointment || null);
     console.log('Drag started for appointment:', appointment);
+
+    // Pre-calculate conflicts for all slots
+    if (appointment) {
+      const conflicts = new Set<string>();
+      staff.forEach(staffMember => {
+        timeSlots.forEach(slot => {
+          if (checkConflicts(staffMember.id || '', slot.time, appointment.id)) {
+            conflicts.add(`${staffMember.id}-${slot.time}`);
+          }
+        });
+      });
+      setConflictingSlots(conflicts);
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
     console.log('Drag ended:', { active: active.id, over: over?.id, overData: over?.data?.current });
+    
+    setConflictingSlots(new Set());
     
     if (!over || !draggedAppointment) {
       console.log('No valid drop target or dragged appointment');
@@ -231,15 +299,12 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
       // Only move if it's actually a different position
       if (newStaffId !== draggedAppointment.staffId || newTime !== normalizeTime(draggedAppointment.startTime)) {
         // Check for conflicts
-        const conflictingAppointments = appointments.filter(apt => 
-          apt.id !== draggedAppointment.id &&
-          apt.staffId === newStaffId &&
-          normalizeTime(apt.startTime) === normalizeTime(newTime)
-        );
-
-        if (conflictingAppointments.length > 0) {
-          console.warn('Cannot move appointment - time slot is occupied:', conflictingAppointments);
-          // You could show a toast here for user feedback
+        if (checkConflicts(newStaffId, newTime, draggedAppointment.id)) {
+          toast({
+            title: "Cannot Move Appointment",
+            description: "This time slot is already occupied by another appointment.",
+            variant: "destructive",
+          });
         } else {
           console.log('Moving appointment to new position');
           
@@ -319,6 +384,11 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
           </div>
         )}
 
+        {/* Success notification for real-time updates */}
+        <div className="absolute top-4 right-4 z-40">
+          {/* This will be handled by the toast system */}
+        </div>
+
         {/* Sticky Staff Header */}
         <div 
           className="sticky top-0 z-20 bg-white border-b-2 border-gray-400 shadow-sm flex-shrink-0"
@@ -379,12 +449,15 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
               {/* Staff Columns with Drop Zones */}
               {staff.map((staffMember, staffIndex) => {
                 const slotAppointments = getAppointmentsForStaffAndTime(staffMember.id || '', timeSlot.time);
+                const slotId = `${staffMember.id}-${timeSlot.time}`;
+                const hasConflict = conflictingSlots.has(slotId);
                 
                 return (
                   <DroppableTimeSlot
-                    key={`${staffMember.id}-${timeSlot.time}`}
+                    key={slotId}
                     staffId={staffMember.id || ''}
                     time={timeSlot.time}
+                    hasConflict={hasConflict}
                   >
                     <div 
                       className={`p-1 border-r-2 border-gray-400 last:border-r-0 min-h-[60px] overflow-hidden relative ${

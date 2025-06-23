@@ -4,22 +4,28 @@ import StaffDashboard from "@/components/StaffDashboard";
 import ReceptionistDashboard from "@/components/ReceptionistDashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar, Plus, ArrowUp, ArrowDown, DollarSign, Shield } from "lucide-react";
+import { Users, Calendar, Plus, ArrowUp, ArrowDown, DollarSign, Loader2 } from "lucide-react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/profile/useProfileHooks";
 import { useDashboardStats } from "@/hooks/dashboard/useDashboardData";
 import { AddAppointmentDialog } from "@/components/AddAppointmentDialog";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Dashboard = () => {
   const { userRole, roleLoading } = usePermissions();
   const { data: profile, isLoading: profileLoading } = useProfile();
-  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: stats, isLoading: statsLoading, error: statsError, refetch } = useDashboardStats();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   if (roleLoading || profileLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-6 w-6 animate-spin text-teal-500" />
+          <span className="text-gray-600">Loading dashboard...</span>
+        </div>
       </div>
     );
   }
@@ -52,20 +58,69 @@ const Dashboard = () => {
   };
 
   const handleNewAppointment = () => {
+    toast({
+      title: "Navigating",
+      description: "Opening appointment scheduler...",
+    });
     navigate('/appointments');
   };
 
   const handleAddClient = () => {
+    toast({
+      title: "Navigating",
+      description: "Opening client management...",
+    });
     navigate('/clients');
   };
 
   const handleViewSchedule = () => {
+    toast({
+      title: "Navigating",
+      description: "Opening appointment schedule...",
+    });
     navigate('/appointments');
   };
 
   const handleViewReports = () => {
+    toast({
+      title: "Navigating",
+      description: "Opening reports dashboard...",
+    });
     navigate('/reports');
   };
+
+  const handleRefreshData = () => {
+    toast({
+      title: "Refreshing",
+      description: "Updating dashboard data...",
+    });
+    refetch();
+  };
+
+  // Show error state if stats fail to load
+  if (statsError) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-500 to-cyan-600 bg-clip-text text-transparent">
+              {dashboardTitle}
+            </h1>
+            <p className="text-muted-foreground mt-1">Welcome back! Here's what's happening at your salon today.</p>
+          </div>
+        </div>
+
+        <Alert variant="destructive">
+          <AlertDescription>
+            Failed to load dashboard data. Please try refreshing the page.
+            <Button variant="outline" size="sm" onClick={handleRefreshData} className="ml-2">
+              Refresh
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   // Default to owner/manager dashboard
   return (
@@ -78,15 +133,24 @@ const Dashboard = () => {
           </h1>
           <p className="text-muted-foreground mt-1">Welcome back! Here's what's happening at your salon today.</p>
         </div>
-        <AddAppointmentDialog
-          selectedDate={new Date()}
-          trigger={
-            <Button className="bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700">
-              <Plus className="w-4 h-4 mr-2" />
-              New Appointment
-            </Button>
-          }
-        />
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleRefreshData} disabled={statsLoading}>
+            {statsLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              "Refresh"
+            )}
+          </Button>
+          <AddAppointmentDialog
+            selectedDate={new Date()}
+            trigger={
+              <Button className="bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700">
+                <Plus className="w-4 h-4 mr-2" />
+                New Appointment
+              </Button>
+            }
+          />
+        </div>
       </div>
 
       {/* Key Metrics - 3 Column Layout */}
@@ -193,39 +257,44 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Button 
               variant="outline" 
-              className="h-20 flex-col gap-2"
+              className="h-20 flex-col gap-2 hover:bg-teal-50 hover:border-teal-300"
               onClick={handleNewAppointment}
             >
-              <Plus className="w-6 h-6" />
+              <Plus className="w-6 h-6 text-teal-600" />
               <span>New Appointment</span>
             </Button>
             <Button 
               variant="outline" 
-              className="h-20 flex-col gap-2"
+              className="h-20 flex-col gap-2 hover:bg-cyan-50 hover:border-cyan-300"
               onClick={handleAddClient}
             >
-              <Users className="w-6 h-6" />
+              <Users className="w-6 h-6 text-cyan-600" />
               <span>Add Client</span>
             </Button>
             <Button 
               variant="outline" 
-              className="h-20 flex-col gap-2"
+              className="h-20 flex-col gap-2 hover:bg-blue-50 hover:border-blue-300"
               onClick={handleViewSchedule}
             >
-              <Calendar className="w-6 h-6" />
+              <Calendar className="w-6 h-6 text-blue-600" />
               <span>View Schedule</span>
             </Button>
             <Button 
               variant="outline" 
-              className="h-20 flex-col gap-2"
+              className="h-20 flex-col gap-2 hover:bg-green-50 hover:border-green-300"
               onClick={handleViewReports}
             >
-              <DollarSign className="w-6 h-6" />
+              <DollarSign className="w-6 h-6 text-green-600" />
               <span>View Reports</span>
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Real-time Status */}
+      <div className="text-xs text-gray-500 text-center">
+        Last updated: {new Date().toLocaleTimeString()} • Auto-refresh every 2 minutes
+      </div>
     </div>
   );
 };

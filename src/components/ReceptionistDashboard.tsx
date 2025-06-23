@@ -2,33 +2,84 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, Phone, Plus, Clock } from "lucide-react";
+import { Calendar, Users, Phone, Plus, Clock, Loader2, RefreshCw } from "lucide-react";
 import { useDashboardStats } from "@/hooks/dashboard/useDashboardData";
 import { useNavigate } from "react-router-dom";
 import { AddAppointmentDialog } from "./AddAppointmentDialog";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const ReceptionistDashboard = () => {
-  const { data: stats, isLoading } = useDashboardStats();
+  const { data: stats, isLoading, error, refetch } = useDashboardStats();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleCallClient = (phone?: string) => {
     if (phone) {
+      toast({
+        title: "Calling Client",
+        description: `Initiating call to ${phone}...`,
+      });
       window.open(`tel:${phone}`, '_self');
     }
   };
 
   const handleViewSchedule = () => {
+    toast({
+      title: "Navigating",
+      description: "Opening appointment scheduler...",
+    });
     navigate('/appointments');
   };
 
   const handleViewClients = () => {
+    toast({
+      title: "Navigating",
+      description: "Opening client directory...",
+    });
     navigate('/clients');
   };
+
+  const handleRefreshData = () => {
+    toast({
+      title: "Refreshing",
+      description: "Updating dashboard data...",
+    });
+    refetch();
+  };
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-500 to-cyan-600 bg-clip-text text-transparent">
+              Front Desk
+            </h1>
+            <p className="text-muted-foreground mt-1">Manage appointments and walk-ins for today</p>
+          </div>
+        </div>
+
+        <Alert variant="destructive">
+          <AlertDescription>
+            Failed to load dashboard data. Please try refreshing the page.
+            <Button variant="outline" size="sm" onClick={handleRefreshData} className="ml-2">
+              <RefreshCw className="w-4 h-4 mr-1" />
+              Refresh
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-6 w-6 animate-spin text-teal-500" />
+          <span className="text-gray-600">Loading front desk dashboard...</span>
+        </div>
       </div>
     );
   }
@@ -44,6 +95,13 @@ const ReceptionistDashboard = () => {
           <p className="text-muted-foreground mt-1">Manage appointments and walk-ins for today</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handleRefreshData} disabled={isLoading}>
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+          </Button>
           <Button variant="outline" onClick={handleViewClients}>
             <Phone className="w-4 h-4 mr-2" />
             View Clients
@@ -120,7 +178,7 @@ const ReceptionistDashboard = () => {
             <div className="space-y-3">
               {stats?.upcomingAppointments && stats.upcomingAppointments.length > 0 ? (
                 stats.upcomingAppointments.map((appointment) => (
-                  <div key={appointment.id} className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-teal-50 to-cyan-50">
+                  <div key={appointment.id} className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-teal-50 to-cyan-50 hover:from-teal-100 hover:to-cyan-100 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className="text-sm font-mono font-semibold text-teal-700 min-w-[50px]">
                         {appointment.time}
@@ -135,6 +193,7 @@ const ReceptionistDashboard = () => {
                         variant="ghost" 
                         size="sm"
                         onClick={() => handleCallClient(appointment.phone)}
+                        className="hover:bg-teal-100"
                       >
                         <Phone className="w-4 h-4" />
                       </Button>
@@ -142,7 +201,13 @@ const ReceptionistDashboard = () => {
                   </div>
                 ))
               ) : (
-                <p className="text-muted-foreground text-center py-4">No upcoming appointments</p>
+                <div className="text-center py-8">
+                  <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-muted-foreground">No upcoming appointments</p>
+                  <Button variant="outline" size="sm" onClick={handleViewSchedule} className="mt-2">
+                    View Schedule
+                  </Button>
+                </div>
               )}
             </div>
           </CardContent>
@@ -157,7 +222,7 @@ const ReceptionistDashboard = () => {
             <div className="space-y-3">
               {stats?.waitingList && stats.waitingList.length > 0 ? (
                 stats.waitingList.map((client, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-orange-50 to-orange-100">
+                  <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 transition-colors">
                     <div>
                       <p className="font-medium">{client.name}</p>
                       <p className="text-sm text-muted-foreground">{client.service}</p>
@@ -168,11 +233,28 @@ const ReceptionistDashboard = () => {
                   </div>
                 ))
               ) : (
-                <p className="text-muted-foreground text-center py-4">No clients waiting</p>
+                <div className="text-center py-8">
+                  <Users className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-muted-foreground">No clients waiting</p>
+                  <AddAppointmentDialog
+                    selectedDate={new Date()}
+                    trigger={
+                      <Button variant="outline" size="sm" className="mt-2">
+                        <Plus className="w-4 h-4 mr-1" />
+                        Add Walk-in
+                      </Button>
+                    }
+                  />
+                </div>
               )}
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Real-time Status */}
+      <div className="text-xs text-gray-500 text-center">
+        Last updated: {new Date().toLocaleTimeString()} • Auto-refresh every 2 minutes
       </div>
     </div>
   );

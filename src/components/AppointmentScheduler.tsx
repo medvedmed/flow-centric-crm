@@ -5,7 +5,7 @@ import { Clock, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { useEnhancedSchedule } from '@/hooks/useEnhancedSchedule';
 import { usePermissions } from '@/hooks/usePermissions';
-import DragDropScheduler from './DragDropScheduler';
+import EnhancedScheduler from './EnhancedScheduler';
 import { AddAppointmentDialog } from './AddAppointmentDialog';
 
 interface AppointmentSchedulerProps {
@@ -18,29 +18,16 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   onAppointmentMove
 }) => {
   const dateString = format(selectedDate, 'yyyy-MM-dd');
-  const { staff, appointments, isLoading, error } = useEnhancedSchedule(dateString);
+  const { staff, appointments, isLoading, error, refresh } = useEnhancedSchedule(dateString);
   const { hasPermissionSync, userRole } = usePermissions();
 
   const canCreateAppointments = hasPermissionSync('appointments', 'create');
   const isStaff = userRole === 'staff';
 
-  // Generate time slots from 8 AM to 8 PM in 15-minute intervals
-  const generateTimeSlots = () => {
-    const slots = [];
-    for (let hour = 8; hour <= 20; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
-        if (hour === 20 && minute > 0) break; // Stop at 8:00 PM
-        slots.push({
-          time: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-          hour,
-          minute
-        });
-      }
-    }
-    return slots;
+  const handleBookSlot = (slot: { staffId: string; time: string; staffName: string }) => {
+    console.log('Booking slot:', slot);
+    // This will be handled by the AddAppointmentDialog when integrated
   };
-
-  const timeSlots = generateTimeSlots();
 
   if (isLoading) {
     return (
@@ -110,13 +97,10 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
               <p className="text-sm mt-2">Please add staff members to view the schedule</p>
             </div>
           ) : (
-            <DragDropScheduler
-              staff={staff}
-              appointments={appointments}
-              timeSlots={timeSlots}
-              onAppointmentMove={onAppointmentMove}
-              isReadOnly={isStaff} // Staff can only view, not edit
-              selectedDate={selectedDate}
+            <EnhancedScheduler
+              date={dateString}
+              onBookSlot={handleBookSlot}
+              onAppointmentUpdate={refresh}
             />
           )}
         </div>

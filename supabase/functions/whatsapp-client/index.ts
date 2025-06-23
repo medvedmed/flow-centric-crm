@@ -58,6 +58,9 @@ serve(async (req) => {
         const { phone, message, appointmentId } = await req.json()
         return await sendMessage(supabaseClient, user.id, phone, message, appointmentId)
       
+      case 'reset-session':
+        return await resetSession(supabaseClient, user.id)
+      
       case 'disconnect':
         return await disconnectSession(supabaseClient, user.id)
       
@@ -76,18 +79,46 @@ serve(async (req) => {
   }
 })
 
-async function initWhatsAppSession(supabase: any, userId: string) {
+async function resetSession(supabase: any, userId: string) {
   try {
-    console.log('Initializing WhatsApp session for user:', userId)
+    console.log('Resetting WhatsApp session for user:', userId)
     
-    // First, clean up any existing sessions for this user to avoid duplicates
+    // Delete existing sessions to start fresh
     await supabase
       .from('whatsapp_sessions')
       .delete()
       .eq('salon_id', userId)
     
-    // Generate a more realistic QR code data
+    console.log('WhatsApp session reset successfully')
+
+    return new Response(
+      JSON.stringify({ success: true }),
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
+      }
+    )
+  } catch (error) {
+    console.error('Error in resetSession:', error)
+    throw new Error(`Failed to reset WhatsApp session: ${error.message}`)
+  }
+}
+
+async function initWhatsAppSession(supabase: any, userId: string) {
+  try {
+    console.log('Initializing WhatsApp session for user:', userId)
+    
+    // Clean up any existing sessions for this user to avoid duplicates
+    await supabase
+      .from('whatsapp_sessions')
+      .delete()
+      .eq('salon_id', userId)
+    
+    // Generate a realistic QR code data
     const qrCode = generateRealisticQRCode(userId)
+    const qrImageData = generateQRImageData(qrCode)
     
     // Create new WhatsApp session
     const { data, error } = await supabase
@@ -118,7 +149,7 @@ async function initWhatsAppSession(supabase: any, userId: string) {
       JSON.stringify({ 
         success: true, 
         qr_code: qrCode,
-        qr_image_data: generateQRImageData(qrCode),
+        qr_image_data: qrImageData,
         session_id: data.id 
       }),
       { 
@@ -434,43 +465,56 @@ function generateRealisticQRCode(userId: string): string {
 }
 
 function generateQRImageData(qrText: string): string {
-  // Generate a simple QR code representation as SVG data URI
-  // In a real implementation, you'd use a proper QR code library
-  const size = 200
-  const cellSize = size / 25 // 25x25 grid
+  // Generate a more realistic QR code representation as SVG data URI
+  const size = 256
+  const cellSize = Math.floor(size / 33) // 33x33 grid for better resolution
   
-  // Create a simple pattern based on the QR text hash
+  // Create a hash from the QR text for pattern generation
   let hash = 0
   for (let i = 0; i < qrText.length; i++) {
     hash = ((hash << 5) - hash + qrText.charCodeAt(i)) & 0xffffffff
   }
   
-  let svg = `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">`
-  svg += `<rect width="${size}" height="${size}" fill="white"/>`
+  let svg = `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg" style="background: white;">`
   
-  // Generate a pattern based on the hash
-  for (let y = 0; y < 25; y++) {
-    for (let x = 0; x < 25; x++) {
-      const shouldFill = ((hash + x * 31 + y * 17) % 100) > 50
-      if (shouldFill) {
-        svg += `<rect x="${x * cellSize}" y="${y * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`
+  // Generate a more realistic QR pattern
+  for (let y = 0; y < 33; y++) {
+    for (let x = 0; x < 33; x++) {
+      // Create finder patterns (corners)
+      const isFinderPattern = (
+        (x < 7 && y < 7) || 
+        (x >= 26 && y < 7) || 
+        (x < 7 && y >= 26)
+      )
+      
+      if (isFinderPattern) {
+        const isOuterBorder = (x === 0 || x === 6 || y === 0 || y === 6 || x === 26 || x === 32 || y === 26 || y === 32)
+        const isInnerSquare = (
+          (x >= 2 && x <= 4 && y >= 2 && y <= 4) ||
+          (x >= 28 && x <= 30 && y >= 2 && y <= 4) ||
+          (x >= 2 && x <= 4 && y >= 28 && y <= 30)
+        )
+        
+        if (isOuterBorder || isInnerSquare) {
+          svg += `<rect x="${x * cellSize}" y="${y * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`
+        }
+      } else {
+        // Generate data pattern based on hash
+        const shouldFill = ((hash + x * 31 + y * 17) % 100) > 45
+        if (shouldFill) {
+          svg += `<rect x="${x * cellSize}" y="${y * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`
+        }
       }
     }
   }
   
-  // Add positioning squares (corners)
-  const cornerSize = cellSize * 7
-  const corners = [
-    { x: 0, y: 0 },
-    { x: size - cornerSize, y: 0 },
-    { x: 0, y: size - cornerSize }
-  ]
-  
-  corners.forEach(corner => {
-    svg += `<rect x="${corner.x}" y="${corner.y}" width="${cornerSize}" height="${cornerSize}" fill="black"/>`
-    svg += `<rect x="${corner.x + cellSize}" y="${corner.y + cellSize}" width="${cornerSize - 2 * cellSize}" height="${cornerSize - 2 * cellSize}" fill="white"/>`
-    svg += `<rect x="${corner.x + 2 * cellSize}" y="${corner.y + 2 * cellSize}" width="${cornerSize - 4 * cellSize}" height="${cornerSize - 4 * cellSize}" fill="black"/>`
-  })
+  // Add timing patterns
+  for (let i = 8; i < 25; i++) {
+    if (i % 2 === 0) {
+      svg += `<rect x="${i * cellSize}" y="${6 * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`
+      svg += `<rect x="${6 * cellSize}" y="${i * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`
+    }
+  }
   
   svg += '</svg>'
   

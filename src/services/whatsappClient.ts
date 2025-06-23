@@ -5,8 +5,9 @@ export interface WhatsAppSessionData {
   salon_id: string;
   phone_number?: string;
   is_connected: boolean;
-  connection_state: 'disconnected' | 'connecting' | 'waiting_for_scan' | 'connected';
+  connection_state: 'disconnected' | 'connecting' | 'waiting_for_scan' | 'connected' | 'qr_expired';
   qr_code?: string;
+  qr_image_data?: string;
   last_connected_at?: string;
   last_seen?: string;
   device_info?: any;
@@ -56,12 +57,12 @@ class WhatsAppClientService {
     return response.json();
   }
 
-  async initializeSession(): Promise<{ success: boolean; qr_code: string; session_id: string }> {
+  async initializeSession(): Promise<{ success: boolean; qr_code: string; qr_image_data: string; session_id: string }> {
     console.log('Initializing WhatsApp session...');
     return this.makeRequest('init-session');
   }
 
-  async getQRCode(): Promise<{ qr_code?: string; connection_state: string }> {
+  async getQRCode(): Promise<{ qr_code?: string; qr_image_data?: string; connection_state: string }> {
     return this.makeRequest('get-qr');
   }
 
@@ -77,6 +78,11 @@ class WhatsAppClientService {
   async disconnect(): Promise<{ success: boolean }> {
     console.log('Disconnecting WhatsApp session...');
     return this.makeRequest('disconnect');
+  }
+
+  async resetSession(): Promise<{ success: boolean }> {
+    console.log('Resetting WhatsApp session...');
+    return this.makeRequest('reset-session');
   }
 
   async getSession(): Promise<WhatsAppSessionData | null> {

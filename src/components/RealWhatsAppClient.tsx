@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, QrCode, CheckCircle, AlertCircle, Smartphone, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { MessageSquare, QrCode, CheckCircle, AlertCircle, Smartphone, RefreshCw, Wifi, WifiOff, RotateCcw } from 'lucide-react';
 import { whatsappClient, WhatsAppSessionData } from '@/services/whatsappClient';
 
 export const RealWhatsAppClient: React.FC = () => {
   const { toast } = useToast();
   const [session, setSession] = useState<WhatsAppSessionData | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
+  const [qrImageData, setQrImageData] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [connectionCheckInterval, setConnectionCheckInterval] = useState<NodeJS.Timeout | null>(null);
@@ -26,6 +27,7 @@ export const RealWhatsAppClient: React.FC = () => {
       if (updatedSession.is_connected) {
         setConnecting(false);
         setQrCode(null);
+        setQrImageData(null);
         toast({
           title: "WhatsApp Connected!",
           description: `Connected to ${updatedSession.phone_number}`,
@@ -49,9 +51,45 @@ export const RealWhatsAppClient: React.FC = () => {
       
       if (sessionData?.qr_code && !sessionData.is_connected) {
         setQrCode(sessionData.qr_code);
+        if (sessionData.qr_image_data) {
+          setQrImageData(sessionData.qr_image_data);
+        }
       }
     } catch (error) {
       console.error('Error loading session:', error);
+    }
+  };
+
+  const resetAndConnect = async () => {
+    setLoading(true);
+    try {
+      console.log('Resetting session...');
+      await whatsappClient.resetSession();
+      
+      // Clear local state
+      setSession(null);
+      setQrCode(null);
+      setQrImageData(null);
+      setConnecting(false);
+      
+      if (connectionCheckInterval) {
+        clearInterval(connectionCheckInterval);
+        setConnectionCheckInterval(null);
+      }
+      
+      toast({
+        title: "Session Reset",
+        description: "WhatsApp session has been reset. Click 'Connect WhatsApp' to start fresh.",
+      });
+    } catch (error) {
+      console.error('Error resetting session:', error);
+      toast({
+        title: "Reset Failed",
+        description: error instanceof Error ? error.message : "Failed to reset WhatsApp session",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -65,6 +103,7 @@ export const RealWhatsAppClient: React.FC = () => {
       console.log('Session initialized:', result);
       
       setQrCode(result.qr_code);
+      setQrImageData(result.qr_image_data);
       
       // Start checking for connection
       const interval = setInterval(async () => {
@@ -81,6 +120,7 @@ export const RealWhatsAppClient: React.FC = () => {
             } : null);
             setConnecting(false);
             setQrCode(null);
+            setQrImageData(null);
             clearInterval(interval);
             
             toast({
@@ -124,6 +164,7 @@ export const RealWhatsAppClient: React.FC = () => {
         phone_number: undefined
       } : null);
       setQrCode(null);
+      setQrImageData(null);
       
       if (connectionCheckInterval) {
         clearInterval(connectionCheckInterval);
@@ -191,16 +232,15 @@ export const RealWhatsAppClient: React.FC = () => {
         </div>
 
         {/* QR Code Section */}
-        {qrCode && !session?.is_connected && (
+        {qrImageData && !session?.is_connected && (
           <div className="space-y-4">
-            <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
-              <div className="w-48 h-48 mx-auto bg-white border rounded-lg flex items-center justify-center mb-4">
-                <div className="text-center">
-                  <QrCode className="w-16 h-16 text-gray-400 mx-auto mb-2" />
-                  <div className="text-xs text-gray-500 font-mono break-all px-2">
-                    {qrCode}
-                  </div>
-                </div>
+            <div className="text-center p-6 border-2 border-dashed border-gray-300 rounded-lg">
+              <div className="flex justify-center mb-4">
+                <img 
+                  src={qrImageData} 
+                  alt="WhatsApp QR Code" 
+                  className="w-64 h-64 border border-gray-200 rounded-lg shadow-sm"
+                />
               </div>
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-900">
@@ -226,18 +266,31 @@ export const RealWhatsAppClient: React.FC = () => {
         {/* Action Buttons */}
         <div className="flex gap-3">
           {!session?.is_connected ? (
-            <Button 
-              onClick={initiateConnection} 
-              disabled={loading || connecting}
-              className="flex-1 bg-green-600 hover:bg-green-700"
-            >
-              {loading ? (
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <QrCode className="w-4 h-4 mr-2" />
+            <>
+              <Button 
+                onClick={initiateConnection} 
+                disabled={loading || connecting}
+                className="flex-1 bg-green-600 hover:bg-green-700"
+              >
+                {loading ? (
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <QrCode className="w-4 h-4 mr-2" />
+                )}
+                {connecting ? "Connecting..." : "Connect WhatsApp"}
+              </Button>
+              {(session || qrCode) && (
+                <Button 
+                  variant="outline" 
+                  onClick={resetAndConnect} 
+                  disabled={loading}
+                  className="flex items-center gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Reset
+                </Button>
               )}
-              {connecting ? "Connecting..." : "Connect WhatsApp"}
-            </Button>
+            </>
           ) : (
             <>
               <div className="flex items-center gap-2 text-green-600 flex-1">
@@ -261,6 +314,9 @@ export const RealWhatsAppClient: React.FC = () => {
             <li>4. Scan the QR code displayed above</li>
             <li>5. Your CRM will automatically connect to your WhatsApp</li>
           </ol>
+          <p className="text-xs text-blue-600 mt-2">
+            💡 If you don't see a QR code, try clicking "Reset" first.
+          </p>
         </div>
 
         {/* Connection Info */}

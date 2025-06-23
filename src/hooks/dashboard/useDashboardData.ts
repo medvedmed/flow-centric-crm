@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/profile/useProfileHooks';
@@ -42,12 +41,12 @@ export const useDashboardStats = () => {
       const currentMonth = new Date().toISOString().slice(0, 7);
       const lastMonth = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 7);
 
-      // Get today's appointments with staff names
+      // Get today's appointments with staff names - fix the relationship query
       const { data: todayAppts, count: todayCount } = await supabase
         .from('appointments')
         .select(`
           *,
-          staff!inner(name)
+          staff:staff_id(name)
         `, { count: 'exact' })
         .eq('salon_id', user.id)
         .eq('date', today)
@@ -119,10 +118,10 @@ export const useDashboardStats = () => {
         .eq('date', today)
         .eq('status', 'No Show');
 
+      // Calculate growth percentages
       const currentMonthRevenue = currentMonthAppts?.reduce((sum, apt) => sum + (Number(apt.price) || 0), 0) || 0;
       const lastMonthRevenue = lastMonthAppts?.reduce((sum, apt) => sum + (Number(apt.price) || 0), 0) || 0;
 
-      // Calculate growth percentages
       const appointmentGrowth = yesterdayCount ? ((todayCount || 0) - yesterdayCount) / yesterdayCount * 100 : 0;
       const clientGrowth = lastMonthClientsCount ? ((totalClientsCount || 0) - lastMonthClientsCount) / lastMonthClientsCount * 100 : 0;
       const revenueGrowth = lastMonthRevenue ? (currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue * 100 : 0;

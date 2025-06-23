@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface WhatsAppSessionData {
@@ -28,8 +27,8 @@ class WhatsAppClientService {
   private baseUrl: string;
 
   constructor() {
-    // Use the edge function URL
-    this.baseUrl = `${supabase.supabaseUrl}/functions/v1/whatsapp-client`;
+    // Use the correct Supabase URL
+    this.baseUrl = `https://mqojlcooxwmdrygmoczi.supabase.co/functions/v1/whatsapp-client`;
   }
 
   private async makeRequest(action: string, data?: any) {

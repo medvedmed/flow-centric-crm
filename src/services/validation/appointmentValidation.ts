@@ -120,13 +120,15 @@ export class AppointmentValidator {
       warnings.push('Price is unusually high (over $1000)');
     }
 
-    // Client validation
-    if (data.clientPhone && !this.isValidPhoneNumber(data.clientPhone)) {
-      errors.push({
-        field: 'clientPhone',
-        message: 'Please enter a valid phone number',
-        code: 'INVALID_PHONE'
-      });
+    // Enhanced phone validation - only validate if phone is provided and this is a walk-in client
+    if (data.clientPhone && data.clientPhone.trim() && !data.clientId) {
+      if (!this.isValidPhoneNumber(data.clientPhone)) {
+        errors.push({
+          field: 'clientPhone',
+          message: 'Please enter a valid phone number (e.g., (555) 123-4567, 555-123-4567, or 5551234567)',
+          code: 'INVALID_PHONE'
+        });
+      }
     }
 
     return {
@@ -137,10 +139,19 @@ export class AppointmentValidator {
   }
 
   static isValidPhoneNumber(phone: string): boolean {
-    // Basic phone validation - can be enhanced based on requirements
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-    const cleanPhone = phone.replace(/[\s\-\(\)\.]/g, '');
-    return phoneRegex.test(cleanPhone) && cleanPhone.length >= 10;
+    if (!phone || !phone.trim()) {
+      return true; // Empty phone is valid
+    }
+
+    // Remove all non-digit characters for validation
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    // Accept phone numbers with 10-15 digits
+    if (cleanPhone.length >= 10 && cleanPhone.length <= 15) {
+      return true;
+    }
+
+    return false;
   }
 
   static validateTimeSlot(startTime: string, duration: number, existingAppointments: any[] = []): ValidationResult {

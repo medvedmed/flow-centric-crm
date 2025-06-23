@@ -2,7 +2,7 @@
 import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { User, Phone } from 'lucide-react';
+import { User, Phone, CheckCircle } from 'lucide-react';
 import { ClientSelector } from '../ClientSelector';
 
 interface AppointmentClientSectionProps {
@@ -31,6 +31,23 @@ export const AppointmentClientSection: React.FC<AppointmentClientSectionProps> =
           value={clientId}
           onValueChange={onClientSelect}
         />
+        {clientId && clientName && (
+          <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+            <p className="text-sm text-green-800">
+              <CheckCircle className="inline w-4 h-4 mr-1" />
+              Selected client: <strong>{clientName}</strong>
+            </p>
+            {clientPhone && (
+              <p className="text-sm text-green-700 mt-1">
+                <Phone className="inline w-4 h-4 mr-1" />
+                {clientPhone}
+              </p>
+            )}
+            <p className="text-xs text-green-600 mt-1">
+              Phone number is optional for existing clients
+            </p>
+          </div>
+        )}
         {!clientId && clientName && (
           <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
             <p className="text-sm text-blue-800">
@@ -60,13 +77,16 @@ export const AppointmentClientSection: React.FC<AppointmentClientSectionProps> =
             />
           </div>
           <div>
-            <Label htmlFor="walkInPhone">Phone Number</Label>
+            <Label htmlFor="walkInPhone">Phone Number (Optional)</Label>
             <Input
               id="walkInPhone"
               value={clientPhone}
               onChange={(e) => onClientPhoneChange(e.target.value)}
-              placeholder="Enter phone number"
+              placeholder="(555) 123-4567 or 555-123-4567"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Accepts formats: (555) 123-4567, 555-123-4567, 5551234567
+            </p>
           </div>
         </div>
       )}

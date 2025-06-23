@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -46,53 +46,92 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
   });
 
   const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [isClientDataLoading, setIsClientDataLoading] = useState(false);
 
   const { data: staff = [] } = useStaff();
   const createAppointment = useCreateAppointment();
   const { toast } = useToast();
 
+  // Debounced validation to prevent it from running too eagerly
+  const debouncedValidation = useCallback(
+    (data = formData) => {
+      // Skip validation if client data is still loading
+      if (isClientDataLoading) return;
+      
+      // Add a small delay to ensure client data has settled
+      const timeoutId = setTimeout(() => {
+        const result = AppointmentValidator.validateAppointment({
+          clientId: data.clientId,
+          clientName: data.clientName,
+          clientPhone: data.clientPhone,
+          staffId: data.staffId,
+          service: data.service,
+          date: data.date,
+          startTime: data.startTime,
+          duration: data.duration,
+          price: data.price
+        });
+        
+        setValidation(result);
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    },
+    [formData, isClientDataLoading]
+  );
+
+  // Run validation when form data changes, but with debouncing
+  useEffect(() => {
+    const cleanup = debouncedValidation();
+    return cleanup;
+  }, [debouncedValidation]);
+
   const handleClientSelect = (clientId: string, clientName: string, clientPhone?: string) => {
-    setFormData(prev => ({
-      ...prev,
+    setIsClientDataLoading(true);
+    
+    const updatedData = {
+      ...formData,
       clientId,
       clientName,
       clientPhone: clientPhone || ''
-    }));
-    validateForm({ ...formData, clientId, clientName, clientPhone: clientPhone || '' });
+    };
+    
+    setFormData(updatedData);
+    
+    // Allow client data to settle before validation
+    setTimeout(() => {
+      setIsClientDataLoading(false);
+    }, 100);
   };
 
   const handleServiceSelect = (service: string, price: number, duration: number) => {
-    setFormData(prev => ({
-      ...prev,
+    const updatedData = {
+      ...formData,
       service,
       price,
       duration
-    }));
-    validateForm({ ...formData, service, price, duration });
-  };
-
-  const validateForm = (data = formData) => {
-    const result = AppointmentValidator.validateAppointment({
-      clientId: data.clientId,
-      clientName: data.clientName,
-      clientPhone: data.clientPhone,
-      staffId: data.staffId,
-      service: data.service,
-      date: data.date,
-      startTime: data.startTime,
-      duration: data.duration,
-      price: data.price
-    });
-    
-    setValidation(result);
-    return result;
+    };
+    setFormData(updatedData);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const validationResult = validateForm();
+    // Force validation before submit
+    const validationResult = AppointmentValidator.validateAppointment({
+      clientId: formData.clientId,
+      clientName: formData.clientName,
+      clientPhone: formData.clientPhone,
+      staffId: formData.staffId,
+      service: formData.service,
+      date: formData.date,
+      startTime: formData.startTime,
+      duration: formData.duration,
+      price: formData.price
+    });
+
     if (!validationResult.isValid) {
+      setValidation(validationResult);
       toast({
         title: "Validation Error",
         description: "Please fix the errors before submitting",
@@ -139,8 +178,18 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Validation Feedback */}
-      {validation && !validation.isValid && (
+      {/* Loading indicator for client data */}
+      {isClientDataLoading && (
+        <Alert>
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>
+            Loading client information...
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Validation Feedback - only show if not loading */}
+      {!isClientDataLoading && validation && !validation.isValid && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
@@ -153,7 +202,7 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
         </Alert>
       )}
 
-      {validation && validation.warnings.length > 0 && (
+      {!isClientDataLoading && validation && validation.warnings.length > 0 && (
         <Alert>
           <CheckCircle className="h-4 w-4" />
           <AlertDescription>
@@ -173,11 +222,9 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
         onClientSelect={handleClientSelect}
         onClientNameChange={(name) => {
           setFormData(prev => ({ ...prev, clientName: name }));
-          validateForm({ ...formData, clientName: name });
         }}
         onClientPhoneChange={(phone) => {
           setFormData(prev => ({ ...prev, clientPhone: phone }));
-          validateForm({ ...formData, clientPhone: phone });
         }}
       />
 
@@ -201,7 +248,6 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
         <Label>Staff Member *</Label>
         <Select value={formData.staffId} onValueChange={(value) => {
           setFormData(prev => ({ ...prev, staffId: value }));
-          validateForm({ ...formData, staffId: value });
         }}>
           <SelectTrigger>
             <SelectValue placeholder="Select staff member" />
@@ -232,11 +278,9 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
         startTime={formData.startTime}
         onDateChange={(date) => {
           setFormData(prev => ({ ...prev, date }));
-          validateForm({ ...formData, date });
         }}
         onTimeChange={(time) => {
           setFormData(prev => ({ ...prev, startTime: time }));
-          validateForm({ ...formData, startTime: time });
         }}
       />
 
@@ -256,7 +300,7 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
       <div className="flex gap-3 pt-4">
         <Button
           type="submit"
-          disabled={createAppointment.isPending || (validation && !validation.isValid)}
+          disabled={createAppointment.isPending || (validation && !validation.isValid) || isClientDataLoading}
           className="flex-1"
         >
           {createAppointment.isPending ? "Booking..." : "Book Appointment"}

@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -12,6 +11,7 @@ interface WhatsAppSession {
   salon_id: string
   session_data: any
   qr_code?: string
+  qr_image_data?: string
   connection_state: string
   phone_number?: string
   is_connected: boolean
@@ -120,12 +120,13 @@ async function initWhatsAppSession(supabase: any, userId: string) {
     const qrCode = generateRealisticQRCode(userId)
     const qrImageData = generateQRImageData(qrCode)
     
-    // Create new WhatsApp session
+    // Create new WhatsApp session with QR image data
     const { data, error } = await supabase
       .from('whatsapp_sessions')
       .insert({
         salon_id: userId,
         qr_code: qrCode,
+        qr_image_data: qrImageData,
         connection_state: 'waiting_for_scan',
         is_connected: false,
         session_data: { 
@@ -169,7 +170,7 @@ async function getQRCode(supabase: any, userId: string) {
   try {
     const { data, error } = await supabase
       .from('whatsapp_sessions')
-      .select('qr_code, connection_state, session_data')
+      .select('qr_code, qr_image_data, connection_state, session_data')
       .eq('salon_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -186,10 +187,13 @@ async function getQRCode(supabase: any, userId: string) {
       if (new Date() > expiresAt) {
         // QR code expired, generate a new one
         const newQrCode = generateRealisticQRCode(userId)
+        const newQrImageData = generateQRImageData(newQrCode)
+        
         await supabase
           .from('whatsapp_sessions')
           .update({
             qr_code: newQrCode,
+            qr_image_data: newQrImageData,
             session_data: {
               ...data.session_data,
               qr_expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString()
@@ -201,7 +205,7 @@ async function getQRCode(supabase: any, userId: string) {
         return new Response(
           JSON.stringify({ 
             qr_code: newQrCode,
-            qr_image_data: generateQRImageData(newQrCode),
+            qr_image_data: newQrImageData,
             connection_state: data?.connection_state || 'disconnected'
           }),
           { 
@@ -217,7 +221,7 @@ async function getQRCode(supabase: any, userId: string) {
     return new Response(
       JSON.stringify({ 
         qr_code: data?.qr_code,
-        qr_image_data: data?.qr_code ? generateQRImageData(data.qr_code) : null,
+        qr_image_data: data?.qr_image_data,
         connection_state: data?.connection_state || 'disconnected'
       }),
       { 
@@ -429,6 +433,7 @@ async function disconnectSession(supabase: any, userId: string) {
         is_connected: false,
         connection_state: 'disconnected',
         qr_code: null,
+        qr_image_data: null,
         phone_number: null,
         session_data: null,
         updated_at: new Date().toISOString()
@@ -465,9 +470,12 @@ function generateRealisticQRCode(userId: string): string {
 }
 
 function generateQRImageData(qrText: string): string {
-  // Generate a more realistic QR code representation as SVG data URI
-  const size = 256
-  const cellSize = Math.floor(size / 33) // 33x33 grid for better resolution
+  // Generate a high-quality QR code as SVG data URI with proper sizing
+  const size = 300
+  const cellSize = 6 // Fixed cell size for better control
+  const gridSize = 45 // 45x45 grid for high resolution
+  const padding = 30 // Padding around the QR code
+  const totalSize = size + (padding * 2)
   
   // Create a hash from the QR text for pattern generation
   let hash = 0
@@ -475,44 +483,78 @@ function generateQRImageData(qrText: string): string {
     hash = ((hash << 5) - hash + qrText.charCodeAt(i)) & 0xffffffff
   }
   
-  let svg = `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg" style="background: white;">`
+  let svg = `<svg width="${totalSize}" height="${totalSize}" xmlns="http://www.w3.org/2000/svg" style="background: white; border: 1px solid #e0e0e0;">`
+  
+  // Add padding background
+  svg += `<rect x="0" y="0" width="${totalSize}" height="${totalSize}" fill="white"/>`
   
   // Generate a more realistic QR pattern
-  for (let y = 0; y < 33; y++) {
-    for (let x = 0; x < 33; x++) {
-      // Create finder patterns (corners)
-      const isFinderPattern = (
-        (x < 7 && y < 7) || 
-        (x >= 26 && y < 7) || 
-        (x < 7 && y >= 26)
-      )
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      // Create finder patterns (corners) - larger and more defined
+      const isTopLeftFinder = (x < 9 && y < 9)
+      const isTopRightFinder = (x >= 36 && y < 9)
+      const isBottomLeftFinder = (x < 9 && y >= 36)
       
-      if (isFinderPattern) {
-        const isOuterBorder = (x === 0 || x === 6 || y === 0 || y === 6 || x === 26 || x === 32 || y === 26 || y === 32)
-        const isInnerSquare = (
-          (x >= 2 && x <= 4 && y >= 2 && y <= 4) ||
-          (x >= 28 && x <= 30 && y >= 2 && y <= 4) ||
-          (x >= 2 && x <= 4 && y >= 28 && y <= 30)
-        )
+      if (isTopLeftFinder || isTopRightFinder || isBottomLeftFinder) {
+        // Finder pattern logic
+        const localX = isTopRightFinder ? x - 36 : x
+        const localY = isBottomLeftFinder ? y - 36 : y
         
-        if (isOuterBorder || isInnerSquare) {
-          svg += `<rect x="${x * cellSize}" y="${y * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`
+        const isOuterBorder = (localX === 0 || localX === 8 || localY === 0 || localY === 8)
+        const isInnerSquare = (localX >= 2 && localX <= 6 && localY >= 2 && localY <= 6)
+        const isCenterSquare = (localX >= 3 && localX <= 5 && localY >= 3 && localY <= 5)
+        
+        if (isOuterBorder || isCenterSquare) {
+          const svgX = padding + (x * cellSize)
+          const svgY = padding + (y * cellSize)
+          svg += `<rect x="${svgX}" y="${svgY}" width="${cellSize}" height="${cellSize}" fill="black"/>`
         }
       } else {
-        // Generate data pattern based on hash
-        const shouldFill = ((hash + x * 31 + y * 17) % 100) > 45
-        if (shouldFill) {
-          svg += `<rect x="${x * cellSize}" y="${y * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`
+        // Generate data pattern based on hash with better distribution
+        const patternHash = (hash + x * 31 + y * 17 + x * y * 7) & 0xffffffff
+        const shouldFill = (patternHash % 100) > 45 // Adjusted threshold for better pattern
+        
+        // Add some structure for timing patterns
+        if ((x === 6 && y > 8 && y < 36) || (y === 6 && x > 8 && x < 36)) {
+          if ((x + y) % 2 === 0) {
+            const svgX = padding + (x * cellSize)
+            const svgY = padding + (y * cellSize)
+            svg += `<rect x="${svgX}" y="${svgY}" width="${cellSize}" height="${cellSize}" fill="black"/>`
+          }
+        } else if (shouldFill) {
+          const svgX = padding + (x * cellSize)
+          const svgY = padding + (y * cellSize)
+          svg += `<rect x="${svgX}" y="${svgY}" width="${cellSize}" height="${cellSize}" fill="black"/>`
         }
       }
     }
   }
   
-  // Add timing patterns
-  for (let i = 8; i < 25; i++) {
-    if (i % 2 === 0) {
-      svg += `<rect x="${i * cellSize}" y="${6 * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`
-      svg += `<rect x="${6 * cellSize}" y="${i * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`
+  // Add alignment patterns
+  const alignmentPositions = [20, 24, 28]
+  for (const centerX of alignmentPositions) {
+    for (const centerY of alignmentPositions) {
+      // Skip if overlapping with finder patterns
+      if ((centerX < 15 && centerY < 15) || 
+          (centerX > 30 && centerY < 15) || 
+          (centerX < 15 && centerY > 30)) continue
+      
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const x = centerX + dx
+          const y = centerY + dy
+          if (x >= 0 && x < gridSize && y >= 0 && y < gridSize) {
+            const isEdge = Math.abs(dx) === 2 || Math.abs(dy) === 2
+            const isCenter = dx === 0 && dy === 0
+            if (isEdge || isCenter) {
+              const svgX = padding + (x * cellSize)
+              const svgY = padding + (y * cellSize)
+              svg += `<rect x="${svgX}" y="${svgY}" width="${cellSize}" height="${cellSize}" fill="black"/>`
+            }
+          }
+        }
+      }
     }
   }
   

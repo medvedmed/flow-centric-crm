@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, QrCode, CheckCircle, AlertCircle, Smartphone, RefreshCw, Wifi, WifiOff, RotateCcw } from 'lucide-react';
+import { MessageSquare, QrCode, CheckCircle, AlertCircle, Smartphone, RefreshCw, Wifi, WifiOff, RotateCcw, Download, ZoomIn } from 'lucide-react';
 import { whatsappClient, WhatsAppSessionData } from '@/services/whatsappClient';
 
 export const RealWhatsAppClient: React.FC = () => {
@@ -15,6 +15,8 @@ export const RealWhatsAppClient: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [connectionCheckInterval, setConnectionCheckInterval] = useState<NodeJS.Timeout | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [showZoomedQR, setShowZoomedQR] = useState(false);
 
   useEffect(() => {
     loadSession();
@@ -91,6 +93,45 @@ export const RealWhatsAppClient: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const refreshQRCode = async () => {
+    setQrLoading(true);
+    try {
+      const result = await whatsappClient.getQRCode();
+      setQrCode(result.qr_code || null);
+      setQrImageData(result.qr_image_data || null);
+      
+      toast({
+        title: "QR Code Refreshed",
+        description: "A new QR code has been generated",
+      });
+    } catch (error) {
+      console.error('Error refreshing QR code:', error);
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh QR code",
+        variant: "destructive",
+      });
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  const downloadQRCode = () => {
+    if (!qrImageData) return;
+    
+    const link = document.createElement('a');
+    link.href = qrImageData;
+    link.download = 'whatsapp-qr-code.svg';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "QR Code Downloaded",
+      description: "QR code saved to your downloads folder",
+    });
   };
 
   const initiateConnection = async () => {
@@ -234,15 +275,25 @@ export const RealWhatsAppClient: React.FC = () => {
         {/* QR Code Section */}
         {qrImageData && !session?.is_connected && (
           <div className="space-y-4">
-            <div className="text-center p-6 border-2 border-dashed border-gray-300 rounded-lg">
+            <div className="text-center p-6 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
               <div className="flex justify-center mb-4">
-                <img 
-                  src={qrImageData} 
-                  alt="WhatsApp QR Code" 
-                  className="w-64 h-64 border border-gray-200 rounded-lg shadow-sm"
-                />
+                <div className="relative">
+                  <img 
+                    src={qrImageData} 
+                    alt="WhatsApp QR Code" 
+                    className="w-72 h-72 border-2 border-gray-200 rounded-lg shadow-lg bg-white cursor-pointer hover:shadow-xl transition-shadow"
+                    onClick={() => setShowZoomedQR(true)}
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                  {qrLoading && (
+                    <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg">
+                      <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="space-y-2">
+              
+              <div className="space-y-3">
                 <p className="text-sm font-medium text-gray-900">
                   Scan this QR code with WhatsApp
                 </p>
@@ -250,7 +301,40 @@ export const RealWhatsAppClient: React.FC = () => {
                   <Smartphone className="w-3 h-3" />
                   <span>Open WhatsApp → Settings → Linked Devices → Link a Device</span>
                 </div>
+                
+                {/* QR Code Actions */}
+                <div className="flex justify-center gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={refreshQRCode}
+                    disabled={qrLoading}
+                    className="flex items-center gap-1"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${qrLoading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={downloadQRCode}
+                    className="flex items-center gap-1"
+                  >
+                    <Download className="w-3 h-3" />
+                    Download
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowZoomedQR(true)}
+                    className="flex items-center gap-1"
+                  >
+                    <ZoomIn className="w-3 h-3" />
+                    Zoom
+                  </Button>
+                </div>
               </div>
+              
               {connecting && (
                 <div className="mt-4">
                   <div className="flex items-center justify-center gap-2 text-blue-600">
@@ -259,6 +343,32 @@ export const RealWhatsAppClient: React.FC = () => {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Zoomed QR Code Modal */}
+        {showZoomedQR && qrImageData && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={() => setShowZoomedQR(false)}>
+            <div className="relative bg-white p-8 rounded-lg max-w-2xl max-h-[90vh] overflow-auto">
+              <button
+                onClick={() => setShowZoomedQR(false)}
+                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-xl font-bold"
+              >
+                ×
+              </button>
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-4">WhatsApp QR Code</h3>
+                <img 
+                  src={qrImageData} 
+                  alt="WhatsApp QR Code - Zoomed" 
+                  className="w-96 h-96 border border-gray-200 rounded-lg shadow-lg bg-white mx-auto"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+                <p className="text-sm text-gray-600 mt-4">
+                  Click outside this modal to close
+                </p>
+              </div>
             </div>
           </div>
         )}
@@ -315,7 +425,7 @@ export const RealWhatsAppClient: React.FC = () => {
             <li>5. Your CRM will automatically connect to your WhatsApp</li>
           </ol>
           <p className="text-xs text-blue-600 mt-2">
-            💡 If you don't see a QR code, try clicking "Reset" first.
+            💡 If the QR code appears broken, try clicking "Refresh" or "Reset".
           </p>
         </div>
 

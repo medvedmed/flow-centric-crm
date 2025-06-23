@@ -773,6 +773,7 @@ export type Database = {
           last_seen: string | null
           phone_number: string | null
           qr_code: string | null
+          qr_image_data: string | null
           salon_id: string
           server_token: string | null
           session_data: Json | null
@@ -792,6 +793,7 @@ export type Database = {
           last_seen?: string | null
           phone_number?: string | null
           qr_code?: string | null
+          qr_image_data?: string | null
           salon_id: string
           server_token?: string | null
           session_data?: Json | null
@@ -811,6 +813,7 @@ export type Database = {
           last_seen?: string | null
           phone_number?: string | null
           qr_code?: string | null
+          qr_image_data?: string | null
           salon_id?: string
           server_token?: string | null
           session_data?: Json | null

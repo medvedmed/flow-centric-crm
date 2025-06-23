@@ -43,12 +43,12 @@ export const useDashboardStats = () => {
       const lastMonth = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 7);
 
       try {
-        // Get today's appointments with staff names - use explicit foreign key syntax
+        // Get today's appointments with staff names - use explicit foreign key syntax to avoid ambiguity
         const { data: todayAppts, count: todayCount, error: todayError } = await supabase
           .from('appointments')
           .select(`
             *,
-            staff!staff_id(name)
+            staff!appointments_staff_id_fkey(name)
           `, { count: 'exact' })
           .eq('salon_id', user.id)
           .eq('date', today)

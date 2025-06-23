@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings as SettingsIcon, Building, Shield, MessageSquare, Bell, Users, Calendar, UserCog, AlertCircle, BarChart3, Zap, Loader2 } from "lucide-react";
+import { Settings as SettingsIcon, Building, Shield, MessageSquare, Bell, Users, Calendar, UserCog, AlertCircle, BarChart3, Zap, Loader2, Database } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAdminSetup } from "@/hooks/useAdminSetup";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,6 +14,7 @@ import { StaffScheduleSection } from "@/components/StaffScheduleSection";
 import ManagerSection from "@/components/ManagerSection";
 import { NotificationPreferences } from "@/components/NotificationPreferences";
 import { BusinessAnalytics } from "@/components/BusinessAnalytics";
+import { DatabaseDebugPanel } from "@/components/DatabaseDebugPanel";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 
@@ -113,7 +114,7 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="salon" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-8">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-9">
           <TabsTrigger value="salon" className="flex items-center gap-2">
             <Building className="w-4 h-4" />
             <span className="hidden sm:inline">Salon</span>
@@ -145,6 +146,10 @@ const Settings = () => {
           <TabsTrigger value="notifications" className="flex items-center gap-2">
             <Bell className="w-4 h-4" />
             <span className="hidden sm:inline">Notifications</span>
+          </TabsTrigger>
+          <TabsTrigger value="debug" className="flex items-center gap-2">
+            <Database className="w-4 h-4" />
+            <span className="hidden sm:inline">Debug</span>
           </TabsTrigger>
         </TabsList>
 
@@ -240,6 +245,10 @@ const Settings = () => {
 
         <TabsContent value="notifications" className="space-y-6">
           <NotificationPreferences />
+        </TabsContent>
+
+        <TabsContent value="debug" className="space-y-6">
+          <DatabaseDebugPanel />
         </TabsContent>
       </Tabs>
     </div>

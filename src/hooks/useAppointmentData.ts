@@ -9,9 +9,9 @@ import { format } from 'date-fns';
 export const useAppointmentData = (date: string) => {
   const { toast } = useToast();
 
-  // Fetch staff data with consistent query key that matches real-time updates
+  // Fetch staff data with better error handling
   const { data: staff = [], isLoading: staffLoading, error: staffError } = useQuery({
-    queryKey: ['staff'], // Align with useRealTimeUpdates
+    queryKey: ['staff'],
     queryFn: async (): Promise<Staff[]> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -30,7 +30,7 @@ export const useAppointmentData = (date: string) => {
         throw error;
       }
       
-      console.log('Raw staff data:', data);
+      console.log('Staff query returned:', data?.length || 0, 'records');
       
       const mappedStaff = data?.map(staff => ({
         id: staff.id,
@@ -59,22 +59,31 @@ export const useAppointmentData = (date: string) => {
         updatedAt: staff.updated_at
       })) || [];
 
-      console.log('Mapped staff data:', mappedStaff);
+      console.log('Processed staff data:', mappedStaff.length, 'staff members');
       return mappedStaff;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // Reduce to 30 seconds for more real-time feel
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
-  // Fetch appointments for the specific date with consistent query key that matches real-time updates
+  // Fetch appointments with better filtering and error handling
   const { data: appointments = [], isLoading: appointmentsLoading, error: appointmentsError } = useQuery({
-    queryKey: ['appointments', date], // Align with useRealTimeUpdates
+    queryKey: ['appointments', date],
     queryFn: async (): Promise<Appointment[]> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
       console.log('Fetching appointments for date:', date, 'salon:', user.id);
+
+      // First, let's check what data exists
+      const { data: allAppointments } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('salon_id', user.id);
+      
+      console.log('Total appointments in database:', allAppointments?.length || 0);
+      console.log('Sample appointments:', allAppointments?.slice(0, 3));
 
       const { data, error } = await supabase
         .from('appointments')
@@ -88,7 +97,7 @@ export const useAppointmentData = (date: string) => {
         throw error;
       }
       
-      console.log('Raw appointments data for date', date, ':', data);
+      console.log('Appointments for date', date, ':', data?.length || 0, 'found');
       
       const mappedAppointments = data?.map(appointment => ({
         id: appointment.id,
@@ -109,38 +118,30 @@ export const useAppointmentData = (date: string) => {
         updatedAt: appointment.updated_at
       })) || [];
 
-      console.log('Mapped appointments for date', date, ':', mappedAppointments);
-      console.log('Appointment details:', mappedAppointments.map(apt => ({
-        id: apt.id,
-        clientName: apt.clientName,
-        staffId: apt.staffId,
-        startTime: apt.startTime,
-        date: apt.date
-      })));
-      
+      console.log('Final processed appointments:', mappedAppointments.length);
       return mappedAppointments;
     },
-    staleTime: 30 * 1000, // 30 seconds for real-time feel
-    refetchInterval: 30 * 1000, // Refetch every 30 seconds for real-time updates
+    staleTime: 15 * 1000, // 15 seconds for more real-time updates
+    refetchInterval: 30 * 1000,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
-  // Show error messages
+  // Enhanced error handling with user feedback
   useEffect(() => {
     if (staffError) {
       console.error('Staff loading error:', staffError);
       toast({
-        title: "Error Loading Staff",
-        description: "Unable to load staff data. Please refresh the page.",
+        title: "Staff Data Error",
+        description: `Failed to load staff: ${staffError.message}`,
         variant: "destructive",
       });
     }
     if (appointmentsError) {
       console.error('Appointments loading error:', appointmentsError);
       toast({
-        title: "Error Loading Appointments",
-        description: "Unable to load appointment data. Please refresh the page.",
+        title: "Appointments Data Error", 
+        description: `Failed to load appointments: ${appointmentsError.message}`,
         variant: "destructive",
       });
     }

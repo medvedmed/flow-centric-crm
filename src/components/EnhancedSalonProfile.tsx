@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { profileApi } from '@/services/api/profileApi';
-import { Building, Save, MapPin, Phone, Mail, Clock, Globe, Users } from 'lucide-react';
+import { Building, Save, MapPin, Phone, Mail, Clock, Globe, Users, Loader2 } from 'lucide-react';
 
 interface EnhancedSalonData {
   salonName: string;
@@ -29,6 +29,7 @@ interface EnhancedSalonData {
 export const EnhancedSalonProfile: React.FC = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [salonData, setSalonData] = useState<EnhancedSalonData>({
     salonName: '',
     phone: '',
@@ -53,7 +54,10 @@ export const EnhancedSalonProfile: React.FC = () => {
 
   const loadProfile = async () => {
     try {
+      console.log('Loading profile data...');
       const profile = await profileApi.getProfile();
+      console.log('Profile loaded:', profile);
+      
       if (profile) {
         setSalonData({
           salonName: profile.salon_name || '',
@@ -69,32 +73,42 @@ export const EnhancedSalonProfile: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading profile:', error);
+      toast({
+        title: "Profile Load Error",
+        description: error instanceof Error ? error.message : "Failed to load profile",
+        variant: "destructive",
+      });
+    } finally {
+      setInitialLoading(false);
     }
   };
 
   const handleSave = async () => {
     setLoading(true);
     try {
+      console.log('Saving salon profile data:', salonData);
+      
       await profileApi.updateProfile({
         salon_name: salonData.salonName,
         phone: salonData.phone,
-        ...(salonData.address && { address: salonData.address }),
-        ...(salonData.description && { description: salonData.description }),
-        ...(salonData.openingHours && { opening_hours: salonData.openingHours }),
-        ...(salonData.closingHours && { closing_hours: salonData.closingHours }),
-        ...(salonData.workingDays && { working_days: salonData.workingDays }),
-        ...(salonData.website && { website: salonData.website }),
-        ...(salonData.socialMedia && { social_media: salonData.socialMedia })
+        address: salonData.address,
+        description: salonData.description,
+        opening_hours: salonData.openingHours,
+        closing_hours: salonData.closingHours,
+        working_days: salonData.workingDays,
+        website: salonData.website,
+        social_media: salonData.socialMedia
       } as any);
       
       toast({
-        title: "Success",
+        title: "Success!",
         description: "Salon profile updated successfully!",
       });
     } catch (error) {
+      console.error('Profile update error:', error);
       toast({
-        title: "Error",
-        description: "Failed to update salon profile",
+        title: "Save Error",
+        description: error instanceof Error ? error.message : "Failed to update salon profile",
         variant: "destructive",
       });
     } finally {
@@ -120,6 +134,17 @@ export const EnhancedSalonProfile: React.FC = () => {
       }
     }));
   };
+
+  if (initialLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <Loader2 className="w-6 h-6 animate-spin mx-auto mb-4" />
+          <p>Loading salon profile...</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -269,8 +294,17 @@ export const EnhancedSalonProfile: React.FC = () => {
         </div>
 
         <Button onClick={handleSave} disabled={loading} className="w-full md:w-auto">
-          <Save className="w-4 h-4 mr-2" />
-          {loading ? "Saving..." : "Save Complete Profile"}
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4 mr-2" />
+              Save Complete Profile
+            </>
+          )}
         </Button>
       </CardContent>
     </Card>

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
@@ -8,13 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, User, DollarSign, Plus, Phone, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Staff, Appointment } from '@/services/types';
 import { AddAppointmentDialog } from './AddAppointmentDialog';
 import { useAppointmentOperations } from '@/hooks/useAppointmentOperations';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
 
 interface TimeSlot {
   time: string;
@@ -200,32 +197,6 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
 
   console.log('DragDropScheduler received:', { staff: staff.length, appointments: appointments.length });
 
-  // Set up real-time subscription for appointments
-  useEffect(() => {
-    const dateString = format(selectedDate, 'yyyy-MM-dd');
-    
-    const channel = supabase
-      .channel('appointments-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'appointments',
-          filter: `date=eq.${dateString}`
-        },
-        (payload) => {
-          console.log('Real-time appointment change:', payload);
-          // The query will automatically refetch due to the subscription
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [selectedDate]);
-
   // Generate time slots from 8 AM to 8 PM
   const timeSlots: TimeSlot[] = [];
   for (let hour = 8; hour < 20; hour++) {
@@ -383,11 +354,6 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
             </div>
           </div>
         )}
-
-        {/* Success notification for real-time updates */}
-        <div className="absolute top-4 right-4 z-40">
-          {/* This will be handled by the toast system */}
-        </div>
 
         {/* Sticky Staff Header */}
         <div 

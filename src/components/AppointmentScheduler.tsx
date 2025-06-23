@@ -5,6 +5,7 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 import { useAppointmentData } from '@/hooks/useAppointmentData';
 import { useAuth } from '@/hooks/useAuth';
 import DragDropScheduler from './DragDropScheduler';
+import { AppointmentErrorBoundary } from './AppointmentErrorBoundary';
 import { format } from 'date-fns';
 
 interface AppointmentSchedulerProps {
@@ -84,12 +85,14 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   }
 
   return (
-    <DragDropScheduler
-      staff={staff}
-      appointments={appointments}
-      selectedDate={selectedDate}
-      onAppointmentMove={handleAppointmentMove}
-      onRefresh={handleRefresh}
-    />
+    <AppointmentErrorBoundary>
+      <DragDropScheduler
+        staff={staff}
+        appointments={appointments}
+        selectedDate={selectedDate}
+        onAppointmentMove={handleAppointmentMove}
+        onRefresh={handleRefresh}
+      />
+    </AppointmentErrorBoundary>
   );
 };

@@ -8,9 +8,9 @@ import { useToast } from '@/hooks/use-toast';
 export const useAppointmentData = (date: string) => {
   const { toast } = useToast();
 
-  // Fetch staff data with consistent query key
+  // Fetch staff data with consistent query key that matches real-time updates
   const { data: staff = [], isLoading: staffLoading, error: staffError } = useQuery({
-    queryKey: ['staff-data'],
+    queryKey: ['staff'], // Align with useRealTimeUpdates
     queryFn: async (): Promise<Staff[]> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -66,9 +66,9 @@ export const useAppointmentData = (date: string) => {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
-  // Fetch appointments for the specific date with consistent query key
+  // Fetch appointments for the specific date with consistent query key that matches real-time updates
   const { data: appointments = [], isLoading: appointmentsLoading, error: appointmentsError } = useQuery({
-    queryKey: ['appointments-data', date],
+    queryKey: ['appointments', date], // Align with useRealTimeUpdates
     queryFn: async (): Promise<Appointment[]> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');

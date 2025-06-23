@@ -8,7 +8,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, User, DollarSign, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Appointment {
   id: string;
@@ -64,12 +63,11 @@ const statusColors = {
   "cancelled": "#ef4444",
 };
 
-// Fresha-style Appointment Block Component
+// Enhanced Appointment Block Component
 const AppointmentBlock: React.FC<{
   appointment: Appointment;
   isDragging?: boolean;
 }> = ({ appointment, isDragging = false }) => {
-  const { isRTL } = useLanguage();
   const {
     attributes,
     listeners,
@@ -86,7 +84,7 @@ const AppointmentBlock: React.FC<{
     transition,
     opacity: isDragging || isSortableDragging ? 0.6 : 1,
     borderLeftColor: bgColor,
-    minHeight: `${Math.max(appointment.duration / 15 * 16, 48)}px`
+    minHeight: `${Math.max(appointment.duration / 15 * 16, 56)}px`
   };
 
   return (
@@ -95,26 +93,26 @@ const AppointmentBlock: React.FC<{
       style={combinedStyle}
       {...attributes}
       {...listeners}
-      className={`fresha-appointment cursor-grab active:cursor-grabbing absolute inset-x-1 z-10 ${isDragging ? 'z-50' : ''}`}
+      className={`fresha-appointment cursor-grab active:cursor-grabbing absolute inset-x-2 z-10 ${isDragging ? 'z-50' : ''}`}
     >
       <div className="fresha-appointment-content">
-        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className="flex items-center gap-2">
           <Clock className="w-3 h-3 text-gray-500" />
           <span className="fresha-time">
             {appointment.startTime} - {appointment.endTime}
           </span>
         </div>
         
-        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className="flex items-center gap-2">
           <User className="w-3 h-3 text-gray-600" />
           <span className="fresha-client">{appointment.clientName}</span>
         </div>
         
         <div className="fresha-service">{appointment.service}</div>
         
-        <div className={`flex items-center justify-between mt-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className="flex items-center justify-between mt-1">
           <span className="text-xs text-gray-400">{appointment.clientPhone}</span>
-          <div className={`flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className="flex items-center gap-1">
             <DollarSign className="w-3 h-3 text-purple-600" />
             <span className="fresha-price">{appointment.price}</span>
           </div>
@@ -124,14 +122,13 @@ const AppointmentBlock: React.FC<{
   );
 };
 
-// Fresha-style Empty Time Slot Component
+// Enhanced Empty Time Slot Component
 const EmptyTimeSlot: React.FC<{
   staffId: string;
   staffName: string;
   time: string;
   onBookSlot: (slot: BookingSlot) => void;
 }> = ({ staffId, staffName, time, onBookSlot }) => {
-  const { t, isRTL } = useLanguage();
   
   const handleClick = () => {
     onBookSlot({ staffId, time, staffName });
@@ -144,15 +141,15 @@ const EmptyTimeSlot: React.FC<{
     >
       <Plus className="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:text-purple-500" />
       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-        <span className={`text-xs text-purple-600 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md shadow-sm border border-purple-200 ${isRTL ? 'font-arabic' : ''}`}>
-          {t('click_to_book_slot')}
+        <span className="text-xs text-purple-600 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md shadow-sm border border-purple-200">
+          Click to book
         </span>
       </div>
     </div>
   );
 };
 
-// Fresha-style Grid Cell Component
+// Enhanced Grid Cell Component
 const GridCell: React.FC<{
   timeSlot: TimeSlot;
   staff: Staff;
@@ -183,7 +180,7 @@ const GridCell: React.FC<{
   );
 };
 
-// Main Unified Scheduler Component with Fresha styling
+// Main Unified Scheduler Component with dynamic grid
 interface UnifiedSchedulerProps {
   staff: Staff[];
   appointments: Appointment[];
@@ -199,7 +196,6 @@ const UnifiedScheduler: React.FC<UnifiedSchedulerProps> = ({
   onAppointmentMove,
   onBookSlot,
 }) => {
-  const { t, isRTL } = useLanguage();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null);
 
@@ -237,37 +233,48 @@ const UnifiedScheduler: React.FC<UnifiedSchedulerProps> = ({
     setDraggedAppointment(null);
   };
 
+  // Create dynamic grid template
+  const gridTemplate = `220px repeat(${staff.length}, 1fr)`;
+
   return (
     <DndContext
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="fresha-grid fresha-fade-in">
-        {/* Fresha-style Header */}
-        <div className={`grid grid-cols-[180px_1fr_1fr] fresha-header ${isRTL ? 'text-right' : ''}`}>
-          <div className="fresha-time-column p-5">
-            <h3 className={`font-semibold text-gray-800 text-base ${isRTL ? 'font-arabic' : ''}`}>
-              {t('time')}
+      <div className="fresha-grid fresha-fade-in w-full">
+        {/* Professional Header */}
+        <div 
+          className="fresha-header grid"
+          style={{ gridTemplateColumns: gridTemplate }}
+        >
+          <div className="fresha-time-column p-6">
+            <h3 className="font-semibold text-gray-800 text-lg">
+              Time
             </h3>
           </div>
           {staff.map((staffMember, index) => (
             <div 
               key={staffMember.id} 
-              className={`p-5 ${index % 2 === 0 ? 'bg-white/40' : 'bg-purple-50/30'}`}
+              className={`p-6 border-r border-gray-200/40 last:border-r-0 ${
+                index % 2 === 0 ? 'bg-white/60' : 'bg-purple-50/40'
+              }`}
             >
-              <div className={`flex items-center gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div className="flex items-center gap-4">
                 <img
                   src={staffMember.image}
                   alt={staffMember.name}
-                  className="w-11 h-11 rounded-full border-2 border-purple-200/60 shadow-sm"
+                  className="w-14 h-14 rounded-full border-3 border-purple-200/60 shadow-md"
                 />
-                <div className={isRTL ? 'text-right' : ''}>
-                  <h3 className={`font-semibold text-gray-800 text-base ${isRTL ? 'font-arabic' : ''}`}>
+                <div>
+                  <h3 className="font-semibold text-gray-800 text-lg">
                     {staffMember.name}
                   </h3>
-                  <p className={`text-sm text-gray-600 ${isRTL ? 'font-arabic' : ''}`}>
-                    {staffMember.rating}⭐ • {staffMember.efficiency}% • {staffMember.specialties.join(", ")}
+                  <p className="text-sm text-gray-600 mt-1">
+                    {staffMember.rating}⭐ • {staffMember.efficiency}% efficiency
+                  </p>
+                  <p className="text-xs text-purple-600 mt-1">
+                    {staffMember.specialties.join(", ")}
                   </p>
                 </div>
               </div>
@@ -275,16 +282,17 @@ const UnifiedScheduler: React.FC<UnifiedSchedulerProps> = ({
           ))}
         </div>
 
-        {/* Fresha-style Time Grid */}
+        {/* Professional Time Grid */}
         <div className="max-h-[600px] overflow-y-auto">
           {timeSlots.map(timeSlot => (
             <div 
               key={timeSlot.time} 
-              className="grid grid-cols-[180px_1fr_1fr] hover:bg-purple-50/20 transition-colors duration-150"
+              className="grid hover:bg-purple-50/20 transition-colors duration-150"
+              style={{ gridTemplateColumns: gridTemplate }}
             >
               {/* Time Label */}
-              <div className={`fresha-time-column p-3 flex items-center ${isRTL ? 'justify-end' : ''}`}>
-                <span className={`text-sm font-medium text-gray-700 ${isRTL ? 'font-arabic' : ''}`}>
+              <div className="fresha-time-column p-4 flex items-center border-r border-gray-200/40">
+                <span className="text-base font-medium text-gray-700">
                   {timeSlot.time}
                 </span>
               </div>
@@ -293,7 +301,9 @@ const UnifiedScheduler: React.FC<UnifiedSchedulerProps> = ({
               {staff.map((staffMember, index) => (
                 <div 
                   key={`${staffMember.id}-${timeSlot.time}`}
-                  className={`fresha-staff-column ${index % 2 === 0 ? 'bg-white/20' : 'bg-purple-50/10'}`}
+                  className={`fresha-staff-column border-r border-gray-200/30 last:border-r-0 ${
+                    index % 2 === 0 ? 'bg-white/30' : 'bg-purple-50/20'
+                  }`}
                 >
                   <GridCell
                     timeSlot={timeSlot}

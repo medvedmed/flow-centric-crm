@@ -33,7 +33,7 @@ const Appointments = () => {
   }
 
   return (
-    <div className="space-y-6 h-full">
+    <div className="space-y-6 h-full max-w-none">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -42,10 +42,10 @@ const Appointments = () => {
         <p className="text-muted-foreground mt-1">Manage your salon appointments with drag-and-drop scheduling.</p>
       </div>
 
-      {/* Main Layout: 70% Scheduler + 30% Calendar */}
-      <div className="grid grid-cols-1 lg:grid-cols-10 gap-6 h-full min-h-[700px]">
-        {/* Appointment Scheduler - 70% width */}
-        <div className="lg:col-span-7">
+      {/* Full Width Layout: 75% Scheduler + 25% Calendar */}
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 h-full min-h-[700px]">
+        {/* Appointment Scheduler - 75% width on large screens */}
+        <div className="xl:col-span-3">
           <ProtectedComponent area="appointments" action="view">
             <AppointmentScheduler
               selectedDate={selectedDate}
@@ -54,8 +54,8 @@ const Appointments = () => {
           </ProtectedComponent>
         </div>
 
-        {/* Mini Calendar - 30% width */}
-        <div className="lg:col-span-3">
+        {/* Mini Calendar - 25% width on large screens */}
+        <div className="xl:col-span-1">
           <MiniCalendar
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}

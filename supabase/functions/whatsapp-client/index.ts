@@ -81,7 +81,7 @@ async function initWhatsAppSession(supabase: any, userId: string) {
     // Generate a unique QR code for this session
     const qrCode = generateQRCode(userId)
     
-    // Create or update WhatsApp session
+    // Create or update WhatsApp session - use ORDER BY and LIMIT to get the most recent one
     const { data, error } = await supabase
       .from('whatsapp_sessions')
       .upsert({
@@ -91,11 +91,18 @@ async function initWhatsAppSession(supabase: any, userId: string) {
         is_connected: false,
         session_data: { initialized_at: new Date().toISOString() },
         updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'salon_id'
       })
       .select()
+      .order('updated_at', { ascending: false })
+      .limit(1)
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('Database error in initWhatsAppSession:', error)
+      throw error
+    }
 
     return new Response(
       JSON.stringify({ 
@@ -111,6 +118,7 @@ async function initWhatsAppSession(supabase: any, userId: string) {
       }
     )
   } catch (error) {
+    console.error('Error in initWhatsAppSession:', error)
     throw new Error(`Failed to initialize WhatsApp session: ${error.message}`)
   }
 }
@@ -121,9 +129,14 @@ async function getQRCode(supabase: any, userId: string) {
       .from('whatsapp_sessions')
       .select('qr_code, connection_state')
       .eq('salon_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
       .single()
 
-    if (error) throw error
+    if (error && error.code !== 'PGRST116') {
+      console.error('Database error in getQRCode:', error)
+      throw error
+    }
 
     return new Response(
       JSON.stringify({ 
@@ -138,6 +151,7 @@ async function getQRCode(supabase: any, userId: string) {
       }
     )
   } catch (error) {
+    console.error('Error in getQRCode:', error)
     throw new Error(`Failed to get QR code: ${error.message}`)
   }
 }
@@ -148,16 +162,38 @@ async function checkConnection(supabase: any, userId: string) {
       .from('whatsapp_sessions')
       .select('*')
       .eq('salon_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
       .single()
 
-    if (error) throw error
+    if (error && error.code !== 'PGRST116') {
+      console.error('Database error in checkConnection:', error)
+      throw error
+    }
+
+    // If no session exists, return disconnected state
+    if (!data) {
+      return new Response(
+        JSON.stringify({ 
+          is_connected: false,
+          connection_state: 'disconnected',
+          phone_number: null
+        }),
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
+      )
+    }
 
     // Simulate connection check - in real implementation, this would check actual WhatsApp Web connection
-    let connectionState = data?.connection_state || 'disconnected'
-    let isConnected = data?.is_connected || false
-    let phoneNumber = data?.phone_number
+    let connectionState = data.connection_state || 'disconnected'
+    let isConnected = data.is_connected || false
+    let phoneNumber = data.phone_number
 
-    // Mock connection establishment after QR scan
+    // Mock connection establishment after QR scan (30% chance when waiting for scan)
     if (connectionState === 'waiting_for_scan' && Math.random() > 0.7) {
       connectionState = 'connected'
       isConnected = true
@@ -190,6 +226,7 @@ async function checkConnection(supabase: any, userId: string) {
       }
     )
   } catch (error) {
+    console.error('Error in checkConnection:', error)
     throw new Error(`Failed to check connection: ${error.message}`)
   }
 }
@@ -201,6 +238,8 @@ async function sendMessage(supabase: any, userId: string, phone: string, message
       .from('whatsapp_sessions')
       .select('is_connected, phone_number')
       .eq('salon_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
       .single()
 
     if (!session?.is_connected) {
@@ -261,6 +300,7 @@ async function sendMessage(supabase: any, userId: string, phone: string, message
       throw new Error('Failed to send WhatsApp message')
     }
   } catch (error) {
+    console.error('Error in sendMessage:', error)
     throw new Error(`Send message failed: ${error.message}`)
   }
 }
@@ -291,6 +331,7 @@ async function disconnectSession(supabase: any, userId: string) {
       }
     )
   } catch (error) {
+    console.error('Error in disconnectSession:', error)
     throw new Error(`Failed to disconnect: ${error.message}`)
   }
 }

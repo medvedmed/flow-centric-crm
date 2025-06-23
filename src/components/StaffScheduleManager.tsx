@@ -5,18 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { Staff } from '@/services/types';
 import StaffAvailability from './StaffAvailability';
 import StaffCalendarView from './StaffCalendarView';
 import { Calendar, Clock, Users, Settings, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-
-interface Staff {
-  id: string;
-  name: string;
-  email?: string;
-  imageUrl?: string;
-  specialties: string[];
-}
 
 const StaffScheduleManager = () => {
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
@@ -30,7 +23,7 @@ const StaffScheduleManager = () => {
 
       const { data, error } = await supabase
         .from('staff')
-        .select('id, name, email, image_url, specialties')
+        .select('*')
         .eq('salon_id', user.id)
         .eq('status', 'active')
         .order('name');
@@ -41,8 +34,27 @@ const StaffScheduleManager = () => {
         id: member.id,
         name: member.name,
         email: member.email,
+        phone: member.phone,
+        specialties: member.specialties || [],
+        workingHoursStart: member.working_hours_start,
+        workingHoursEnd: member.working_hours_end,
+        workingDays: member.working_days || [],
+        breakStart: member.break_start,
+        breakEnd: member.break_end,
+        efficiency: member.efficiency || 100,
+        rating: member.rating || 5.0,
         imageUrl: member.image_url,
-        specialties: member.specialties || []
+        hourlyRate: member.hourly_rate || 0,
+        commissionRate: member.commission_rate || 35,
+        status: member.status as Staff['status'],
+        notes: member.notes,
+        hireDate: member.hire_date,
+        salonId: member.salon_id,
+        staffCode: member.staff_code,
+        staffLoginId: member.staff_login_id,
+        staffLoginPassword: member.staff_login_password,
+        createdAt: member.created_at,
+        updatedAt: member.updated_at
       })) || [];
     },
     staleTime: 5 * 60 * 1000,
@@ -155,7 +167,13 @@ const StaffScheduleManager = () => {
         <TabsContent value="calendar" className="space-y-4">
           {staff.length > 0 ? (
             <StaffCalendarView
-              staff={staff}
+              staff={staff.map(s => ({
+                id: s.id,
+                name: s.name,
+                email: s.email,
+                imageUrl: s.imageUrl,
+                specialties: s.specialties || []
+              }))}
               events={appointments}
               onAddEvent={handleAddEvent}
             />
@@ -224,7 +242,6 @@ const StaffScheduleManager = () => {
 
         <TabsContent value="management" className="space-y-4">
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Real-time stats based on actual data */}
             <Card>
               <CardHeader>
                 <CardTitle>Staff Statistics</CardTitle>
@@ -247,7 +264,6 @@ const StaffScheduleManager = () => {
               </CardContent>
             </Card>
 
-            {/* Quick Actions */}
             <Card>
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>

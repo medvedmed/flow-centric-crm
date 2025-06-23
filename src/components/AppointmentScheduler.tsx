@@ -36,8 +36,8 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
   if (isLoading) {
     return (
-      <div className="w-full h-full bg-white rounded-xl shadow-lg border border-gray-200/60">
-        <div className="p-6 border-b border-gray-200/60 bg-gradient-to-r from-white to-gray-50/50">
+      <div className="w-full h-full bg-white">
+        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-white to-gray-50">
           <div className="flex items-center gap-2">
             <Clock className="w-5 h-5 text-purple-600" />
             <h2 className="text-xl font-semibold text-gray-800">
@@ -57,8 +57,8 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
   if (error) {
     return (
-      <div className="w-full h-full bg-white rounded-xl shadow-lg border border-gray-200/60">
-        <div className="p-6 border-b border-gray-200/60 bg-gradient-to-r from-white to-gray-50/50">
+      <div className="w-full h-full bg-white">
+        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-white to-gray-50">
           <div className="flex items-center gap-2">
             <Clock className="w-5 h-5 text-purple-600" />
             <h2 className="text-xl font-semibold text-gray-800">
@@ -81,8 +81,8 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   }
 
   return (
-    <div className="w-full h-full bg-white rounded-xl shadow-lg border border-gray-200/60 overflow-hidden">
-      <div className="p-6 border-b border-gray-200/60 bg-gradient-to-r from-white to-gray-50/50">
+    <div className="w-full h-full bg-white overflow-hidden flex flex-col">
+      <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-gradient-to-r from-white to-gray-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Clock className="w-5 h-5 text-purple-600" />
@@ -99,7 +99,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         )}
       </div>
       
-      <div className="p-6 h-[calc(100%-100px)] overflow-hidden">
+      <div className="flex-1 overflow-hidden">
         <DragDropScheduler
           staff={staff}
           appointments={appointments}

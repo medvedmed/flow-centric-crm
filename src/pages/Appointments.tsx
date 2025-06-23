@@ -33,34 +33,33 @@ const Appointments = () => {
   }
 
   return (
-    <div className="space-y-6 h-full max-w-none">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          Appointments
-        </h1>
-        <p className="text-muted-foreground mt-1">Manage your salon appointments with drag-and-drop scheduling.</p>
+    <div className="flex flex-col h-screen overflow-hidden">
+      {/* Compact Header */}
+      <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Appointments
+            </h1>
+            <p className="text-sm text-muted-foreground">Manage your salon appointments with drag-and-drop scheduling.</p>
+          </div>
+          <div className="w-80">
+            <MiniCalendar
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Full Width Layout: 75% Scheduler + 25% Calendar */}
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 h-full min-h-[700px]">
-        {/* Appointment Scheduler - 75% width on large screens */}
-        <div className="xl:col-span-3">
-          <ProtectedComponent area="appointments" action="view">
-            <AppointmentScheduler
-              selectedDate={selectedDate}
-              onAppointmentMove={handleAppointmentMove}
-            />
-          </ProtectedComponent>
-        </div>
-
-        {/* Mini Calendar - 25% width on large screens */}
-        <div className="xl:col-span-1">
-          <MiniCalendar
+      {/* Full Height Scheduler */}
+      <div className="flex-1 overflow-hidden">
+        <ProtectedComponent area="appointments" action="view">
+          <AppointmentScheduler
             selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
+            onAppointmentMove={handleAppointmentMove}
           />
-        </div>
+        </ProtectedComponent>
       </div>
     </div>
   );

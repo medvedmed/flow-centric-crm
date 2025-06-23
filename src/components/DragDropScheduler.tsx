@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -68,34 +67,34 @@ const AppointmentBlock: React.FC<{
       style={style}
       {...attributes}
       {...listeners}
-      className={`cursor-grab active:cursor-grabbing w-full rounded-lg border-l-4 p-2 mb-1 shadow-sm hover:shadow-md transition-all duration-200 ${
+      className={`cursor-grab active:cursor-grabbing w-full rounded-lg border-l-4 p-2 mb-1 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
         statusColors[appointment.status as keyof typeof statusColors] || statusColors.Scheduled
       } ${isDragging ? 'z-50' : ''}`}
     >
-      <div className="space-y-1">
+      <div className="space-y-1 overflow-hidden">
         {/* Time and Status Row */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            <span className="text-xs font-semibold">
+          <div className="flex items-center gap-1 min-w-0 flex-1">
+            <Clock className="w-3 h-3 flex-shrink-0" />
+            <span className="text-xs font-semibold truncate">
               {normalizeTime(appointment.startTime)}-{normalizeTime(appointment.endTime)}
             </span>
           </div>
-          <Badge variant="secondary" className="text-xs px-1 py-0">
+          <Badge variant="secondary" className="text-xs px-1 py-0 flex-shrink-0">
             {appointment.status}
           </Badge>
         </div>
         
         {/* Client Name */}
-        <div className="flex items-center gap-1">
-          <User className="w-3 h-3 text-gray-600" />
+        <div className="flex items-center gap-1 min-w-0">
+          <User className="w-3 h-3 text-gray-600 flex-shrink-0" />
           <p className="font-medium text-sm truncate">{appointment.clientName}</p>
         </div>
         
         {/* Service and Price Row */}
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-gray-700 truncate flex-1 mr-2">{appointment.service}</p>
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between min-w-0">
+          <p className="text-xs text-gray-700 truncate flex-1">{appointment.service}</p>
+          <div className="flex items-center gap-1 flex-shrink-0 ml-2">
             <DollarSign className="w-3 h-3 text-green-600" />
             <span className="text-xs font-medium text-green-600">${appointment.price}</span>
           </div>
@@ -103,8 +102,8 @@ const AppointmentBlock: React.FC<{
 
         {/* Phone if available */}
         {appointment.clientPhone && (
-          <div className="flex items-center gap-1">
-            <Phone className="w-3 h-3 text-gray-500" />
+          <div className="flex items-center gap-1 min-w-0">
+            <Phone className="w-3 h-3 text-gray-500 flex-shrink-0" />
             <span className="text-xs text-gray-500 truncate">{appointment.clientPhone}</span>
           </div>
         )}
@@ -227,19 +226,15 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
 
   if (staff.length === 0) {
     return (
-      <Card className="w-full h-full">
-        <CardHeader>
-          <CardTitle>No Staff Available</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <p className="text-gray-500 text-center mb-4">
-            Add staff members to start scheduling appointments.
-          </p>
-          <Button onClick={onRefresh} variant="outline">
-            Refresh Data
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-gray-50">
+        <h3 className="text-xl font-semibold text-gray-800 mb-2">No Staff Available</h3>
+        <p className="text-gray-600 text-center mb-4">
+          Add staff members to start scheduling appointments.
+        </p>
+        <Button onClick={onRefresh} variant="outline">
+          Refresh Data
+        </Button>
+      </div>
     );
   }
 
@@ -249,17 +244,17 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="w-full h-full bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+      <div className="w-full h-full bg-white overflow-hidden flex flex-col">
         {/* Sticky Header with Staff Columns */}
         <div 
-          className="sticky top-0 z-10 bg-white border-b-2 border-gray-200 shadow-sm"
+          className="sticky top-0 z-10 bg-white border-b-2 border-gray-300 shadow-sm flex-shrink-0"
           style={{ 
             display: 'grid',
-            gridTemplateColumns: `120px repeat(${staff.length}, 1fr)` 
+            gridTemplateColumns: `140px repeat(${staff.length}, 1fr)` 
           }}
         >
           {/* Time Column Header */}
-          <div className="p-4 border-r border-gray-300 bg-gray-50 flex items-center justify-center">
+          <div className="p-4 border-r-2 border-gray-300 bg-gray-100 flex items-center justify-center">
             <h3 className="font-bold text-gray-800 text-sm">TIME</h3>
           </div>
           
@@ -267,17 +262,17 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
           {staff.map((staffMember, index) => (
             <div 
               key={staffMember.id} 
-              className={`p-3 border-r border-gray-300 last:border-r-0 bg-gradient-to-b from-gray-50 to-white`}
+              className="p-3 border-r-2 border-gray-300 last:border-r-0 bg-gradient-to-b from-gray-50 to-white overflow-hidden"
             >
               <div className="flex flex-col items-center gap-2">
-                <Avatar className="w-8 h-8">
+                <Avatar className="w-8 h-8 flex-shrink-0">
                   <AvatarImage src={staffMember.imageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${staffMember.name}`} />
                   <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-500 text-white text-xs">
                     {getInitials(staffMember.name)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="text-center">
-                  <h3 className="font-semibold text-gray-800 text-sm truncate max-w-full">{staffMember.name}</h3>
+                <div className="text-center w-full overflow-hidden">
+                  <h3 className="font-semibold text-gray-800 text-sm truncate">{staffMember.name}</h3>
                   <div className="flex items-center justify-center gap-1 text-xs text-gray-600">
                     <span>{staffMember.rating || 5.0}⭐</span>
                     <span>•</span>
@@ -290,21 +285,21 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
         </div>
 
         {/* Scrollable Time Grid */}
-        <div className="h-[calc(100vh-280px)] overflow-y-auto">
+        <div className="flex-1 overflow-y-auto">
           {timeSlots.map((timeSlot, timeIndex) => (
             <div 
               key={timeSlot.time} 
-              className={`border-b border-gray-100 hover:bg-gray-50/30 transition-colors ${
+              className={`border-b border-gray-200 hover:bg-gray-50/30 transition-colors ${
                 timeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'
               }`}
               style={{ 
                 display: 'grid',
-                gridTemplateColumns: `120px repeat(${staff.length}, 1fr)`,
+                gridTemplateColumns: `140px repeat(${staff.length}, 1fr)`,
                 minHeight: '64px'
               }}
             >
               {/* Time Label */}
-              <div className="p-3 border-r border-gray-300 bg-gray-50/80 flex items-center justify-center sticky left-0 z-5">
+              <div className="p-3 border-r-2 border-gray-300 bg-gray-100 flex items-center justify-center sticky left-0 z-5">
                 <span className="text-sm font-semibold text-gray-800">{timeSlot.time}</span>
               </div>
               
@@ -315,18 +310,21 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
                 return (
                   <div 
                     key={`${staffMember.id}-${timeSlot.time}`}
-                    className={`p-1 border-r border-gray-300 last:border-r-0 min-h-[64px] ${
+                    className={`p-2 border-r-2 border-gray-300 last:border-r-0 min-h-[64px] overflow-hidden ${
                       staffIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
                     }`}
+                    style={{ maxWidth: '100%' }}
                   >
                     <SortableContext 
                       items={slotAppointments.map(apt => apt.id)} 
                       strategy={verticalListSortingStrategy}
                     >
                       {slotAppointments.length > 0 ? (
-                        slotAppointments.map(appointment => (
-                          <AppointmentBlock key={appointment.id} appointment={appointment} />
-                        ))
+                        <div className="w-full overflow-hidden">
+                          {slotAppointments.map(appointment => (
+                            <AppointmentBlock key={appointment.id} appointment={appointment} />
+                          ))}
+                        </div>
                       ) : (
                         <EmptyTimeSlot 
                           staffId={staffMember.id || ''} 

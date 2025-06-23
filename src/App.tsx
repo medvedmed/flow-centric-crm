@@ -10,6 +10,7 @@ import AppHeader from "@/components/AppHeader"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { AuthProvider } from "@/hooks/useAuth"
 import { StaffAuthProvider } from "@/hooks/useStaffAuth"
+import { LanguageProvider } from "@/contexts/LanguageContext"
 import Index from "./pages/Index"
 import Dashboard from "./pages/Dashboard"
 import Appointments from "./pages/Appointments"
@@ -31,42 +32,44 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <StaffAuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/invite/:token" element={<InviteAccept />} />
-                <Route path="/*" element={
-                  <ProtectedRoute>
-                    <SidebarProvider>
-                      <div className="min-h-screen flex w-full">
-                        <AppSidebar />
-                        <div className="flex-1 flex flex-col">
-                          <AppHeader />
-                          <main className="flex-1 p-6">
-                            <Routes>
-                              <Route path="/dashboard" element={<Dashboard />} />
-                              <Route path="/appointments" element={<Appointments />} />
-                              <Route path="/clients" element={<Clients />} />
-                              <Route path="/services" element={<Services />} />
-                              <Route path="/staff" element={<Staff />} />
-                              <Route path="/inventory" element={<Inventory />} />
-                              <Route path="/reports" element={<Reports />} />
-                              <Route path="/settings" element={<Settings />} />
-                              <Route path="/help" element={<Help />} />
-                              <Route path="*" element={<NotFound />} />
-                            </Routes>
-                          </main>
+          <LanguageProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/invite/:token" element={<InviteAccept />} />
+                  <Route path="/*" element={
+                    <ProtectedRoute>
+                      <SidebarProvider>
+                        <div className="min-h-screen flex w-full">
+                          <AppSidebar />
+                          <div className="flex-1 flex flex-col">
+                            <AppHeader />
+                            <main className="flex-1 p-6">
+                              <Routes>
+                                <Route path="/dashboard" element={<Dashboard />} />
+                                <Route path="/appointments" element={<Appointments />} />
+                                <Route path="/clients" element={<Clients />} />
+                                <Route path="/services" element={<Services />} />
+                                <Route path="/staff" element={<Staff />} />
+                                <Route path="/inventory" element={<Inventory />} />
+                                <Route path="/reports" element={<Reports />} />
+                                <Route path="/settings" element={<Settings />} />
+                                <Route path="/help" element={<Help />} />
+                                <Route path="*" element={<NotFound />} />
+                              </Routes>
+                            </main>
+                          </div>
                         </div>
-                      </div>
-                    </SidebarProvider>
-                  </ProtectedRoute>
-                } />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
+                      </SidebarProvider>
+                    </ProtectedRoute>
+                  } />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </LanguageProvider>
         </StaffAuthProvider>
       </AuthProvider>
     </QueryClientProvider>

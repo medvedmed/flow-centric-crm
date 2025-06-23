@@ -26,6 +26,13 @@ interface DragDropSchedulerProps {
   onRefresh?: () => void;
 }
 
+// Utility function to normalize time format for comparison
+const normalizeTime = (time: string): string => {
+  if (!time) return '';
+  // Remove seconds if present (e.g., "08:00:00" -> "08:00")
+  return time.split(':').slice(0, 2).join(':');
+};
+
 // Enhanced Appointment Block Component with larger size and more info
 const AppointmentBlock: React.FC<{
   appointment: Appointment;
@@ -72,7 +79,7 @@ const AppointmentBlock: React.FC<{
           <div className="flex items-center gap-1">
             <Clock className="w-3 h-3" />
             <span className="text-sm font-medium">
-              {appointment.startTime} - {appointment.endTime}
+              {normalizeTime(appointment.startTime)} - {normalizeTime(appointment.endTime)}
             </span>
           </div>
           <Badge variant="secondary" className="text-xs">
@@ -147,6 +154,13 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null);
 
+  // Debug logging
+  console.log('DragDropScheduler Debug Info:');
+  console.log('Staff count:', staff.length);
+  console.log('Appointments count:', appointments.length);
+  console.log('Appointments data:', appointments);
+  console.log('Staff data:', staff);
+
   // Generate time slots from 8 AM to 8 PM
   const timeSlots: TimeSlot[] = [];
   for (let hour = 8; hour < 20; hour++) {
@@ -191,9 +205,29 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
   };
 
   const getAppointmentsForStaffAndTime = (staffId: string, time: string) => {
-    return appointments.filter(apt => 
-      apt.staffId === staffId && apt.startTime === time
-    );
+    const normalizedTime = normalizeTime(time);
+    const matchingAppointments = appointments.filter(apt => {
+      const normalizedStartTime = normalizeTime(apt.startTime);
+      const matches = apt.staffId === staffId && normalizedStartTime === normalizedTime;
+      
+      // Debug logging for time comparison
+      console.log(`Comparing appointment ${apt.id}:`, {
+        appointmentStaffId: apt.staffId,
+        targetStaffId: staffId,
+        appointmentStartTime: apt.startTime,
+        normalizedAppointmentTime: normalizedStartTime,
+        targetTime: time,
+        normalizedTargetTime: normalizedTime,
+        staffMatch: apt.staffId === staffId,
+        timeMatch: normalizedStartTime === normalizedTime,
+        overallMatch: matches
+      });
+      
+      return matches;
+    });
+    
+    console.log(`Found ${matchingAppointments.length} appointments for staff ${staffId} at time ${time}`);
+    return matchingAppointments;
   };
 
   const getInitials = (name: string) => {

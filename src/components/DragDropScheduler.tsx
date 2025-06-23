@@ -1,11 +1,13 @@
+
 import React, { useState } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, User, DollarSign, Phone, Plus } from 'lucide-react';
+import { Clock, User, DollarSign, Plus, Phone } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Staff, Appointment } from '@/services/types';
 import { AddAppointmentDialog } from './AddAppointmentDialog';
@@ -16,31 +18,19 @@ interface TimeSlot {
   minute: number;
 }
 
-const serviceColors = {
-  "Haircut & Style": { bg: "#10b981", text: "#ffffff" },
-  "Hair Coloring": { bg: "#8b5cf6", text: "#ffffff" },
-  "Manicure": { bg: "#f59e0b", text: "#ffffff" },
-  "Pedicure": { bg: "#ef4444", text: "#ffffff" },
-  "Facial": { bg: "#06b6d4", text: "#ffffff" },
-  "Massage": { bg: "#ec4899", text: "#ffffff" },
-  "Beard Trim": { bg: "#059669", text: "#ffffff" },
-  "Eyebrow": { bg: "#7c3aed", text: "#ffffff" },
-};
+interface DragDropSchedulerProps {
+  staff: Staff[];
+  appointments: Appointment[];
+  selectedDate: Date;
+  onAppointmentMove?: (appointmentId: string, newStaffId: string, newTime: string) => void;
+  onRefresh?: () => void;
+}
 
-const statusColors = {
-  "Scheduled": { bg: "#10b981", text: "#ffffff" },
-  "In Progress": { bg: "#3b82f6", text: "#ffffff" },
-  "Completed": { bg: "#6b7280", text: "#ffffff" },
-  "Cancelled": { bg: "#ef4444", text: "#ffffff" },
-  "No Show": { bg: "#f59e0b", text: "#ffffff" },
-};
-
-// Draggable Appointment Block Component
+// Enhanced Appointment Block Component with larger size and more info
 const AppointmentBlock: React.FC<{
   appointment: Appointment;
   isDragging?: boolean;
-  isReadOnly?: boolean;
-}> = ({ appointment, isDragging = false, isReadOnly = false }) => {
+}> = ({ appointment, isDragging = false }) => {
   const {
     attributes,
     listeners,
@@ -48,241 +38,129 @@ const AppointmentBlock: React.FC<{
     transform,
     transition,
     isDragging: isSortableDragging,
-  } = useSortable({ 
-    id: appointment.id,
-    disabled: isReadOnly 
-  });
+  } = useSortable({ id: appointment.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging || isSortableDragging ? 0.5 : 1,
+    opacity: isDragging || isSortableDragging ? 0.6 : 1,
+    minHeight: '80px', // Larger blocks for better visibility
   };
 
-  const colors = serviceColors[appointment.service as keyof typeof serviceColors] || 
-                 statusColors[appointment.status as keyof typeof statusColors] || 
-                 { bg: '#10b981', text: '#ffffff' };
+  const statusColors = {
+    'Scheduled': 'bg-blue-50 border-blue-200 text-blue-800',
+    'Confirmed': 'bg-green-50 border-green-200 text-green-800', 
+    'In Progress': 'bg-purple-50 border-purple-200 text-purple-800',
+    'Completed': 'bg-gray-50 border-gray-200 text-gray-800',
+    'Cancelled': 'bg-red-50 border-red-200 text-red-800',
+    'No Show': 'bg-orange-50 border-orange-200 text-orange-800'
+  };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...(!isReadOnly ? listeners : {})}
-      className={`mb-2 ${!isReadOnly ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} ${isDragging ? 'z-50' : ''}`}
+      {...listeners}
+      className={`cursor-grab active:cursor-grabbing rounded-lg border-2 p-3 mb-2 shadow-sm hover:shadow-md transition-shadow ${
+        statusColors[appointment.status as keyof typeof statusColors] || statusColors.Scheduled
+      } ${isDragging ? 'z-50' : ''}`}
     >
-      <Card 
-        className="border-0 shadow-lg hover:shadow-xl transition-all duration-300"
-        style={{ 
-          backgroundColor: colors?.bg || '#10b981',
-          borderLeft: `4px solid ${colors?.bg || '#10b981'}`,
-          minHeight: `${Math.max((appointment.duration || 60) / 15 * 20, 60)}px`
-        }}
-      >
-        <CardContent className="p-3 text-white">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              <span className="font-semibold text-sm">
-                {appointment.startTime} - {appointment.endTime}
-              </span>
-            </div>
-            <Badge 
-              className="text-xs"
-              style={{ 
-                backgroundColor: 'rgba(255,255,255,0.2)', 
-                color: colors?.text || '#ffffff' 
-              }}
-            >
-              {appointment.status}
-            </Badge>
+      <div className="space-y-2">
+        {/* Time and Status */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            <span className="text-sm font-medium">
+              {appointment.startTime} - {appointment.endTime}
+            </span>
           </div>
-          
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <User className="w-3 h-3" />
-              <span className="font-medium text-sm">{appointment.clientName}</span>
-            </div>
-            
-            <div className="text-xs opacity-90">{appointment.service}</div>
-            
-            <div className="flex items-center justify-between mt-2">
-              {appointment.clientPhone && (
-                <div className="flex items-center gap-1">
-                  <Phone className="w-3 h-3" />
-                  <span className="text-xs opacity-75">{appointment.clientPhone}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-1">
-                <DollarSign className="w-3 h-3" />
-                <span className="font-bold text-sm">${appointment.price}</span>
+          <Badge variant="secondary" className="text-xs">
+            {appointment.status}
+          </Badge>
+        </div>
+        
+        {/* Client Info */}
+        <div className="flex items-center gap-2">
+          <User className="w-4 h-4 text-gray-600" />
+          <div className="flex-1">
+            <p className="font-medium text-sm">{appointment.clientName}</p>
+            {appointment.clientPhone && (
+              <div className="flex items-center gap-1 text-xs text-gray-500">
+                <Phone className="w-3 h-3" />
+                <span>{appointment.clientPhone}</span>
               </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Service and Price */}
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-gray-700">{appointment.service}</p>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500">{appointment.duration}min</span>
+            <div className="flex items-center gap-1">
+              <DollarSign className="w-3 h-3 text-green-600" />
+              <span className="text-sm font-medium text-green-600">${appointment.price}</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Notes if any */}
+        {appointment.notes && (
+          <p className="text-xs text-gray-500 truncate">{appointment.notes}</p>
+        )}
+      </div>
     </div>
   );
 };
 
-// Fresha-style Empty Time Slot Component with click-to-book
+// Empty Time Slot Component
 const EmptyTimeSlot: React.FC<{
   staffId: string;
-  staffName: string;
   time: string;
   selectedDate: Date;
-  isReadOnly?: boolean;
-}> = ({ staffId, staffName, time, selectedDate, isReadOnly = false }) => {
-  if (isReadOnly) {
-    return (
-      <div className="h-16 border-b border-gray-200 p-2 bg-gray-50/50">
-        <div className="text-xs text-gray-500 mb-1">{time}</div>
-      </div>
-    );
-  }
-
+}> = ({ staffId, time, selectedDate }) => {
   return (
-    <div className="h-16 border-b border-gray-200 p-2 bg-gray-50/50">
-      <div className="text-xs text-gray-500 mb-1">{time}</div>
+    <div className="h-20 border border-dashed border-gray-200 rounded-lg flex items-center justify-center hover:bg-gray-50 transition-colors">
       <AddAppointmentDialog
         selectedDate={selectedDate}
         selectedTime={time}
         selectedStaffId={staffId}
         trigger={
-          <div className="h-full cursor-pointer hover:bg-teal-50/50 transition-all duration-200 flex items-center justify-center group relative border border-transparent hover:border-teal-200 rounded">
-            <Plus className="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:text-teal-500" />
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              <span className="text-xs text-teal-600 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md shadow-sm border border-teal-200">
-                Click to book
-              </span>
-            </div>
-          </div>
+          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
+            <Plus className="w-4 h-4 text-gray-400" />
+          </Button>
         }
       />
     </div>
   );
 };
 
-// Update TimeSlot component to pass selectedDate
-const TimeSlot: React.FC<{
-  timeSlot: TimeSlot;
-  appointments: Appointment[];
-  staffId: string;
-  staffName: string;
-  selectedDate: Date;
-  isReadOnly?: boolean;
-}> = ({ timeSlot, appointments, staffId, staffName, selectedDate, isReadOnly = false }) => {
-  const slotAppointments = appointments.filter(apt => 
-    apt.staffId === staffId && apt.startTime === timeSlot.time
-  );
-
-  return (
-    <div className="min-h-[60px] border-b border-gray-200 relative">
-      <SortableContext items={slotAppointments.map(apt => apt.id)} strategy={verticalListSortingStrategy}>
-        {slotAppointments.length > 0 ? (
-          slotAppointments.map(appointment => (
-            <AppointmentBlock 
-              key={appointment.id} 
-              appointment={appointment} 
-              isReadOnly={isReadOnly}
-            />
-          ))
-        ) : (
-          <EmptyTimeSlot 
-            staffId={staffId} 
-            staffName={staffName}
-            time={timeSlot.time} 
-            selectedDate={selectedDate}
-            isReadOnly={isReadOnly}
-          />
-        )}
-      </SortableContext>
-    </div>
-  );
-};
-
-// Update StaffColumn component to pass selectedDate
-const StaffColumn: React.FC<{
-  staff: Staff;
-  timeSlots: TimeSlot[];
-  appointments: Appointment[];
-  selectedDate: Date;
-  isReadOnly?: boolean;
-}> = ({ staff, timeSlots, appointments, selectedDate, isReadOnly = false }) => {
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
-  return (
-    <div className="min-w-[280px] bg-white rounded-lg border border-gray-200 shadow-sm">
-      {/* Staff Header */}
-      <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-teal-50 to-emerald-50">
-        <div className="flex items-center gap-3">
-          <Avatar className="w-10 h-10 ring-2 ring-teal-200">
-            <AvatarImage src={staff.imageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${staff.name}`} />
-            <AvatarFallback className="bg-gradient-to-br from-teal-400 to-cyan-500 text-white font-semibold">
-              {getInitials(staff.name)}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h3 className="font-semibold text-gray-800">{staff.name}</h3>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>{staff.rating || 5.0}⭐</span>
-              <span>•</span>
-              <span>{staff.efficiency || 100}% efficiency</span>
-            </div>
-            {staff.specialties && staff.specialties.length > 0 && (
-              <p className="text-xs text-gray-500 mt-1">
-                {staff.specialties.slice(0, 2).join(', ')}
-                {staff.specialties.length > 2 && '...'}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Time Slots */}
-      <div className="max-h-[600px] overflow-y-auto">
-        {timeSlots.map(timeSlot => (
-          <TimeSlot
-            key={`${staff.id}-${timeSlot.time}`}
-            timeSlot={timeSlot}
-            appointments={appointments}
-            staffId={staff.id}
-            staffName={staff.name}
-            selectedDate={selectedDate}
-            isReadOnly={isReadOnly}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Update main DragDropScheduler interface and component
-interface DragDropSchedulerProps {
-  staff: Staff[];
-  appointments: Appointment[];
-  timeSlots: TimeSlot[];
-  onAppointmentMove: (appointmentId: string, newStaffId: string, newTime: string) => void;
-  selectedDate: Date;
-  isReadOnly?: boolean;
-}
-
 const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
   staff,
   appointments,
-  timeSlots,
-  onAppointmentMove,
   selectedDate,
-  isReadOnly = false,
+  onAppointmentMove,
+  onRefresh
 }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null);
 
+  // Generate time slots from 8 AM to 8 PM
+  const timeSlots: TimeSlot[] = [];
+  for (let hour = 8; hour < 20; hour++) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      timeSlots.push({
+        time: timeString,
+        hour,
+        minute
+      });
+    }
+  }
+
   const handleDragStart = (event: DragStartEvent) => {
-    if (isReadOnly) return;
-    
     const { active } = event;
     setActiveId(active.id as string);
     
@@ -291,8 +169,6 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    if (isReadOnly) return;
-    
     const { active, over } = event;
     
     if (!over || !draggedAppointment) {
@@ -301,18 +177,12 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
       return;
     }
 
-    // Parse the drop target to determine new staff and time
-    const overId = over.id as string;
-    
-    // If dropped on another appointment, find its position
-    if (overId !== active.id) {
-      const targetAppointment = appointments.find(apt => apt.id === overId);
-      if (targetAppointment) {
-        onAppointmentMove(
-          active.id as string,
-          targetAppointment.staffId,
-          targetAppointment.startTime
-        );
+    // Handle drop logic here
+    if (onAppointmentMove) {
+      // Extract staff ID and time from the drop target
+      const dropData = (over.data?.current as any) || {};
+      if (dropData.staffId && dropData.time) {
+        onAppointmentMove(active.id as string, dropData.staffId, dropData.time);
       }
     }
 
@@ -320,21 +190,31 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
     setDraggedAppointment(null);
   };
 
-  if (isReadOnly) {
-    // Read-only version without drag and drop
+  const getAppointmentsForStaffAndTime = (staffId: string, time: string) => {
+    return appointments.filter(apt => 
+      apt.staffId === staffId && apt.startTime === time
+    );
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  if (staff.length === 0) {
     return (
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {staff.map(staffMember => (
-          <StaffColumn
-            key={staffMember.id}
-            staff={staffMember}
-            timeSlots={timeSlots}
-            appointments={appointments}
-            selectedDate={selectedDate}
-            isReadOnly={true}
-          />
-        ))}
-      </div>
+      <Card className="w-full h-full">
+        <CardHeader>
+          <CardTitle>No Staff Available</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <p className="text-gray-500 text-center mb-4">
+            Add staff members to start scheduling appointments.
+          </p>
+          <Button onClick={onRefresh} variant="outline">
+            Refresh Data
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -344,22 +224,94 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {staff.map(staffMember => (
-          <StaffColumn
-            key={staffMember.id}
-            staff={staffMember}
-            timeSlots={timeSlots}
-            appointments={appointments}
-            selectedDate={selectedDate}
-            isReadOnly={false}
-          />
-        ))}
+      <div className="w-full bg-white rounded-lg border border-gray-200 overflow-hidden">
+        {/* Header with Staff Columns */}
+        <div className="grid border-b border-gray-200 bg-gray-50" style={{ 
+          gridTemplateColumns: `140px repeat(${staff.length}, 1fr)` 
+        }}>
+          <div className="p-4 border-r border-gray-200">
+            <h3 className="font-semibold text-gray-800">Time</h3>
+          </div>
+          {staff.map((staffMember, index) => (
+            <div 
+              key={staffMember.id} 
+              className={`p-4 border-r border-gray-200 last:border-r-0 ${
+                index % 2 === 0 ? 'bg-gray-50' : 'bg-white'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Avatar className="w-10 h-10">
+                  <AvatarImage src={staffMember.imageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${staffMember.name}`} />
+                  <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-500 text-white text-sm">
+                    {getInitials(staffMember.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-800 truncate">{staffMember.name}</h3>
+                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <span>{staffMember.rating || 5.0}⭐</span>
+                    <span>•</span>
+                    <span>{staffMember.efficiency || 100}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Time Grid */}
+        <div className="max-h-[600px] overflow-y-auto">
+          {timeSlots.map(timeSlot => (
+            <div 
+              key={timeSlot.time} 
+              className="grid border-b border-gray-100 hover:bg-gray-50 transition-colors"
+              style={{ gridTemplateColumns: `140px repeat(${staff.length}, 1fr)` }}
+            >
+              {/* Time Label */}
+              <div className="p-3 border-r border-gray-100 flex items-center bg-gray-50">
+                <span className="text-sm font-medium text-gray-700">{timeSlot.time}</span>
+              </div>
+              
+              {/* Staff Columns */}
+              {staff.map((staffMember, index) => {
+                const slotAppointments = getAppointmentsForStaffAndTime(staffMember.id || '', timeSlot.time);
+                
+                return (
+                  <div 
+                    key={`${staffMember.id}-${timeSlot.time}`}
+                    className={`p-2 border-r border-gray-100 last:border-r-0 min-h-[80px] ${
+                      index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
+                    }`}
+                  >
+                    <SortableContext 
+                      items={slotAppointments.map(apt => apt.id)} 
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {slotAppointments.length > 0 ? (
+                        slotAppointments.map(appointment => (
+                          <AppointmentBlock key={appointment.id} appointment={appointment} />
+                        ))
+                      ) : (
+                        <EmptyTimeSlot 
+                          staffId={staffMember.id || ''} 
+                          time={timeSlot.time} 
+                          selectedDate={selectedDate}
+                        />
+                      )}
+                    </SortableContext>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
 
       <DragOverlay>
         {activeId && draggedAppointment ? (
-          <AppointmentBlock appointment={draggedAppointment} isDragging />
+          <div className="transform rotate-2 scale-105">
+            <AppointmentBlock appointment={draggedAppointment} isDragging />
+          </div>
         ) : null}
       </DragOverlay>
     </DndContext>

@@ -5,9 +5,9 @@ import { Clock, Calendar, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAppointmentData } from '@/hooks/useAppointmentData';
 import { usePermissions } from '@/hooks/usePermissions';
-import SimpleScheduler from './SimpleScheduler';
 import { AddAppointmentDialog } from './AddAppointmentDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import DragDropScheduler from './DragDropScheduler';
 
 interface AppointmentSchedulerProps {
   selectedDate: Date;
@@ -29,6 +29,11 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     window.location.reload();
   };
 
+  const handleAppointmentMove = (appointmentId: string, newStaffId: string, newTime: string) => {
+    console.log('Moving appointment:', { appointmentId, newStaffId, newTime });
+    onAppointmentMove(appointmentId, newStaffId, newTime);
+  };
+
   if (isLoading) {
     return (
       <div className="w-full h-full bg-white rounded-xl shadow-lg border border-gray-200/60">
@@ -43,11 +48,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         <div className="p-8">
           <div className="animate-pulse space-y-4">
             <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-96 bg-gray-200 rounded"></div>
-              ))}
-            </div>
+            <div className="h-96 bg-gray-200 rounded"></div>
           </div>
         </div>
       </div>
@@ -98,11 +99,12 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         )}
       </div>
       
-      <div className="p-6 h-[calc(100%-80px)] overflow-auto">
-        <SimpleScheduler
+      <div className="p-6 h-[calc(100%-100px)] overflow-hidden">
+        <DragDropScheduler
           staff={staff}
           appointments={appointments}
           selectedDate={selectedDate}
+          onAppointmentMove={handleAppointmentMove}
           onRefresh={handleRefresh}
         />
       </div>

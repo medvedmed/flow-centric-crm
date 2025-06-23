@@ -8,27 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Clock, Plus, Trash, Calendar } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-
-interface StaffAvailability {
-  id: string;
-  staffId: string;
-  dayOfWeek: string;
-  startTime: string;
-  endTime: string;
-  breakStart?: string;
-  breakEnd?: string;
-  isAvailable: boolean;
-}
-
-interface TimeOffRequest {
-  id: string;
-  staffId: string;
-  startDate: string;
-  endDate: string;
-  reason: string;
-  status: 'pending' | 'approved' | 'denied';
-  requestedAt: string;
-}
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { availabilityApi } from '@/services/api/availabilityApi';
 
 interface StaffAvailabilityProps {
   staffId: string;
@@ -36,30 +19,17 @@ interface StaffAvailabilityProps {
 }
 
 const StaffAvailability: React.FC<StaffAvailabilityProps> = ({ staffId, staffName }) => {
-  const [availability, setAvailability] = useState<StaffAvailability[]>([
-    {
-      id: '1',
-      staffId,
-      dayOfWeek: 'Monday',
-      startTime: '09:00',
-      endTime: '17:00',
-      breakStart: '12:00',
-      breakEnd: '13:00',
-      isAvailable: true
-    }
-  ]);
-
-  const [timeOffRequests, setTimeOffRequests] = useState<TimeOffRequest[]>([]);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isAddingAvailability, setIsAddingAvailability] = useState(false);
   const [isRequestingTimeOff, setIsRequestingTimeOff] = useState(false);
 
   const [newAvailability, setNewAvailability] = useState({
-    dayOfWeek: '',
+    date: '',
     startTime: '09:00',
     endTime: '17:00',
-    breakStart: '12:00',
-    breakEnd: '13:00',
-    isAvailable: true
+    isAvailable: true,
+    reason: ''
   });
 
   const [newTimeOff, setNewTimeOff] = useState({
@@ -68,101 +38,214 @@ const StaffAvailability: React.FC<StaffAvailabilityProps> = ({ staffId, staffNam
     reason: ''
   });
 
-  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  // Fetch staff availability
+  const { data: availability = [], isLoading: availabilityLoading } = useQuery({
+    queryKey: ['staff-availability', staffId],
+    queryFn: () => availabilityApi.getStaffAvailability(staffId),
+    enabled: !!staffId,
+  });
+
+  // Fetch time off requests
+  const { data: timeOffRequests = [], isLoading: timeOffLoading } = useQuery({
+    queryKey: ['time-off-requests', staffId],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('time_off_requests')
+        .select('*')
+        .eq('staff_id', staffId)
+        .order('start_date', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!staffId,
+  });
+
+  // Create availability mutation
+  const createAvailabilityMutation = useMutation({
+    mutationFn: (availability: any) => availabilityApi.createStaffAvailability(availability),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff-availability', staffId] });
+      toast({
+        title: "Success",
+        description: "Staff availability updated successfully.",
+      });
+      setNewAvailability({
+        date: '',
+        startTime: '09:00',
+        endTime: '17:00',
+        isAvailable: true,
+        reason: ''
+      });
+      setIsAddingAvailability(false);
+    },
+    onError: (error) => {
+      console.error('Error creating availability:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update staff availability.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Create time off request mutation
+  const createTimeOffMutation = useMutation({
+    mutationFn: async (request: any) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('time_off_requests')
+        .insert({
+          staff_id: staffId,
+          salon_id: user.id,
+          start_date: request.startDate,
+          end_date: request.endDate,
+          reason: request.reason,
+          status: 'pending'
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['time-off-requests', staffId] });
+      toast({
+        title: "Success",
+        description: "Time off request submitted successfully.",
+      });
+      setNewTimeOff({
+        startDate: '',
+        endDate: '',
+        reason: ''
+      });
+      setIsRequestingTimeOff(false);
+    },
+    onError: (error) => {
+      console.error('Error creating time off request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit time off request.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Delete availability mutation
+  const deleteAvailabilityMutation = useMutation({
+    mutationFn: (id: string) => availabilityApi.deleteStaffAvailability(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff-availability', staffId] });
+      toast({
+        title: "Success",
+        description: "Availability record deleted successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error('Error deleting availability:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete availability record.",
+        variant: "destructive",
+      });
+    }
+  });
 
   const handleAddAvailability = () => {
-    if (!newAvailability.dayOfWeek) return;
+    if (!newAvailability.date) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a date.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    const newEntry: StaffAvailability = {
-      id: Date.now().toString(),
+    createAvailabilityMutation.mutate({
       staffId,
-      ...newAvailability
-    };
-
-    setAvailability([...availability, newEntry]);
-    setNewAvailability({
-      dayOfWeek: '',
-      startTime: '09:00',
-      endTime: '17:00',
-      breakStart: '12:00',
-      breakEnd: '13:00',
-      isAvailable: true
+      date: newAvailability.date,
+      startTime: newAvailability.startTime,
+      endTime: newAvailability.endTime,
+      isAvailable: newAvailability.isAvailable,
+      reason: newAvailability.reason,
+      salonId: '', // Will be set by the API
+      id: '',
+      createdAt: '',
+      updatedAt: ''
     });
-    setIsAddingAvailability(false);
   };
 
   const handleRequestTimeOff = () => {
-    if (!newTimeOff.startDate || !newTimeOff.endDate || !newTimeOff.reason) return;
+    if (!newTimeOff.startDate || !newTimeOff.endDate || !newTimeOff.reason) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all fields.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    const request: TimeOffRequest = {
-      id: Date.now().toString(),
-      staffId,
-      ...newTimeOff,
-      status: 'pending',
-      requestedAt: new Date().toISOString()
-    };
-
-    setTimeOffRequests([...timeOffRequests, request]);
-    setNewTimeOff({
-      startDate: '',
-      endDate: '',
-      reason: ''
-    });
-    setIsRequestingTimeOff(false);
+    createTimeOffMutation.mutate(newTimeOff);
   };
 
   const removeAvailability = (id: string) => {
-    setAvailability(availability.filter(a => a.id !== id));
-  };
-
-  const toggleAvailability = (id: string) => {
-    setAvailability(availability.map(a => 
-      a.id === id ? { ...a, isAvailable: !a.isAvailable } : a
-    ));
+    deleteAvailabilityMutation.mutate(id);
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved': return 'bg-green-100 text-green-800';
-      case 'denied': return 'bg-red-100 text-red-800';
+      case 'rejected': return 'bg-red-100 text-red-800';
       default: return 'bg-yellow-100 text-yellow-800';
     }
   };
 
+  if (availabilityLoading || timeOffLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-96 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Weekly Availability */}
+      {/* Staff Availability */}
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-2">
               <Clock className="w-5 h-5" />
-              Weekly Availability - {staffName}
+              Staff Availability - {staffName}
             </CardTitle>
             <Dialog open={isAddingAvailability} onOpenChange={setIsAddingAvailability}>
               <DialogTrigger asChild>
                 <Button size="sm">
                   <Plus className="w-4 h-4 mr-2" />
-                  Add Schedule
+                  Add Availability
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Add Availability</DialogTitle>
+                  <DialogTitle>Add Staff Availability</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label>Day of Week</Label>
-                    <Select onValueChange={(value) => setNewAvailability({...newAvailability, dayOfWeek: value})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select day" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {daysOfWeek.map(day => (
-                          <SelectItem key={day} value={day}>{day}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label>Date</Label>
+                    <Input
+                      type="date"
+                      value={newAvailability.date}
+                      onChange={(e) => setNewAvailability({...newAvailability, date: e.target.value})}
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -182,26 +265,32 @@ const StaffAvailability: React.FC<StaffAvailabilityProps> = ({ staffId, staffNam
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Break Start</Label>
-                      <Input
-                        type="time"
-                        value={newAvailability.breakStart}
-                        onChange={(e) => setNewAvailability({...newAvailability, breakStart: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <Label>Break End</Label>
-                      <Input
-                        type="time"
-                        value={newAvailability.breakEnd}
-                        onChange={(e) => setNewAvailability({...newAvailability, breakEnd: e.target.value})}
-                      />
-                    </div>
+                  <div>
+                    <Label>Available</Label>
+                    <Select onValueChange={(value) => setNewAvailability({...newAvailability, isAvailable: value === 'true'})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select availability" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true">Available</SelectItem>
+                        <SelectItem value="false">Not Available</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <Button onClick={handleAddAvailability} className="w-full">
-                    Add Availability
+                  <div>
+                    <Label>Reason (optional)</Label>
+                    <Input
+                      value={newAvailability.reason}
+                      onChange={(e) => setNewAvailability({...newAvailability, reason: e.target.value})}
+                      placeholder="Meeting, break, training..."
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleAddAvailability} 
+                    className="w-full"
+                    disabled={createAvailabilityMutation.isPending}
+                  >
+                    {createAvailabilityMutation.isPending ? 'Adding...' : 'Add Availability'}
                   </Button>
                 </div>
               </DialogContent>
@@ -210,39 +299,34 @@ const StaffAvailability: React.FC<StaffAvailabilityProps> = ({ staffId, staffNam
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {daysOfWeek.map(day => {
-              const dayAvailability = availability.filter(a => a.dayOfWeek === day);
-              return (
-                <div key={day} className="flex items-center justify-between p-3 border rounded-lg">
+            {availability.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">No availability records found. Add some to get started.</p>
+            ) : (
+              availability.map(avail => (
+                <div key={avail.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-4">
-                    <span className="font-medium w-20">{day}</span>
-                    {dayAvailability.length === 0 ? (
-                      <Badge variant="secondary">Not Available</Badge>
-                    ) : (
-                      dayAvailability.map(avail => (
-                        <div key={avail.id} className="flex items-center gap-2">
-                          <Badge 
-                            variant={avail.isAvailable ? "default" : "secondary"}
-                            className="cursor-pointer"
-                            onClick={() => toggleAvailability(avail.id)}
-                          >
-                            {avail.startTime} - {avail.endTime}
-                            {avail.breakStart && ` (Break: ${avail.breakStart}-${avail.breakEnd})`}
-                          </Badge>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => removeAvailability(avail.id)}
-                          >
-                            <Trash className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      ))
+                    <span className="font-medium">{avail.date}</span>
+                    <Badge variant={avail.isAvailable ? "default" : "secondary"}>
+                      {avail.startTime} - {avail.endTime}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {avail.isAvailable ? 'Available' : 'Not Available'}
+                    </span>
+                    {avail.reason && (
+                      <span className="text-xs text-muted-foreground">({avail.reason})</span>
                     )}
                   </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => removeAvailability(avail.id)}
+                    disabled={deleteAvailabilityMutation.isPending}
+                  >
+                    <Trash className="w-3 h-3" />
+                  </Button>
                 </div>
-              );
-            })}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
@@ -293,8 +377,12 @@ const StaffAvailability: React.FC<StaffAvailabilityProps> = ({ staffId, staffNam
                       placeholder="Vacation, sick leave, personal..."
                     />
                   </div>
-                  <Button onClick={handleRequestTimeOff} className="w-full">
-                    Submit Request
+                  <Button 
+                    onClick={handleRequestTimeOff} 
+                    className="w-full"
+                    disabled={createTimeOffMutation.isPending}
+                  >
+                    {createTimeOffMutation.isPending ? 'Submitting...' : 'Submit Request'}
                   </Button>
                 </div>
               </DialogContent>
@@ -311,10 +399,10 @@ const StaffAvailability: React.FC<StaffAvailabilityProps> = ({ staffId, staffNam
                   <div>
                     <p className="font-medium">{request.reason}</p>
                     <p className="text-sm text-muted-foreground">
-                      {request.startDate} to {request.endDate}
+                      {request.start_date} to {request.end_date}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Requested: {new Date(request.requestedAt).toLocaleDateString()}
+                      Requested: {new Date(request.requested_at || request.created_at).toLocaleDateString()}
                     </p>
                   </div>
                   <Badge className={getStatusColor(request.status)}>

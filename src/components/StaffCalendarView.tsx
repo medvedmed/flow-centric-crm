@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,9 +28,25 @@ interface CalendarEvent {
 }
 
 interface StaffCalendarViewProps {
-  staff: Staff[];
-  events: CalendarEvent[];
-  onAddEvent?: (event: Omit<CalendarEvent, 'id'>) => void;
+  staff: {
+    id: string;
+    name: string;
+    email?: string;
+    imageUrl?: string;
+    specialties: string[];
+  }[];
+  events: {
+    id: string;
+    staffId: string;
+    title: string;
+    start: string;
+    end: string;
+    type: 'appointment' | 'break' | 'timeoff' | 'blocked';
+    clientName?: string;
+    service?: string;
+    color?: string;
+  }[];
+  onAddEvent?: (event: any) => void;
 }
 
 const StaffCalendarView: React.FC<StaffCalendarViewProps> = ({ 
@@ -110,7 +125,7 @@ const StaffCalendarView: React.FC<StaffCalendarViewProps> = ({
     if (!selectedStaff || !newBlock.title || !newBlock.start || !newBlock.end) return;
 
     const dateStr = currentDate.toISOString().split('T')[0];
-    const event: Omit<CalendarEvent, 'id'> = {
+    const event = {
       staffId: selectedStaff,
       title: newBlock.title,
       start: `${dateStr}T${newBlock.start}:00`,

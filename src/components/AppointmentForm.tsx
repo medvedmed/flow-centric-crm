@@ -103,8 +103,9 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
     const endTime = calculateEndTime(formData.startTime, formData.duration);
 
+    // Create appointment data with only the fields needed for creation
     const appointmentData = {
-      clientId: formData.clientId || null,
+      clientId: formData.clientId || undefined,
       clientName: formData.clientName,
       clientPhone: formData.clientPhone,
       staffId: formData.staffId,

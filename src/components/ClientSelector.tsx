@@ -42,8 +42,27 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
     if (!newClient.name || !newClient.email) return;
 
     try {
-      const createdClient = await createClient.mutateAsync(newClient);
-      onValueChange(createdClient.id, createdClient.name, createdClient.phone);
+      // Create client data with required fields
+      const clientData = {
+        name: newClient.name,
+        email: newClient.email,
+        phone: newClient.phone,
+        status: 'New' as const, // Required field
+        // Optional fields with defaults
+        assignedStaff: null,
+        notes: null,
+        tags: null,
+        totalSpent: 0,
+        visits: 0,
+        preferredStylist: null,
+        lastVisit: null,
+        clientId: null,
+        clientPassword: null,
+        isPortalEnabled: false
+      };
+
+      const createdClient = await createClient.mutateAsync(clientData);
+      onValueChange(createdClient.id, createdClient.name, createdClient.phone || undefined);
       setIsAddingNew(false);
       setNewClient({ name: '', email: '', phone: '' });
       toast({
@@ -66,7 +85,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
           <Select value={value} onValueChange={(clientId) => {
             const client = clients.find(c => c.id === clientId);
             if (client) {
-              onValueChange(clientId, client.name, client.phone);
+              onValueChange(clientId, client.name, client.phone || undefined);
             }
           }}>
             <SelectTrigger>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -346,10 +345,6 @@ const EnhancedScheduler: React.FC<EnhancedSchedulerProps> = ({
             description: result.error || "Unknown error occurred",
             variant: "destructive",
           });
-          
-          if (result.conflicts) {
-            console.log('Move conflicts:', result.conflicts);
-          }
         }
       }
     }

@@ -3,55 +3,126 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useStaff } from '@/hooks/useCrmData';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import StaffAvailability from './StaffAvailability';
 import StaffCalendarView from './StaffCalendarView';
-import { Calendar, Clock, Users, Settings } from 'lucide-react';
+import { Calendar, Clock, Users, Settings, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-// Mock data for calendar events
-const mockEvents = [
-  {
-    id: '1',
-    staffId: '550e8400-e29b-41d4-a716-446655440001',
-    title: 'Haircut - John Doe',
-    start: '2024-01-15T10:00:00',
-    end: '2024-01-15T11:00:00',
-    type: 'appointment' as const,
-    clientName: 'John Doe',
-    service: 'Haircut'
-  },
-  {
-    id: '2',
-    staffId: '550e8400-e29b-41d4-a716-446655440001',
-    title: 'Lunch Break',
-    start: '2024-01-15T12:00:00',
-    end: '2024-01-15T13:00:00',
-    type: 'break' as const
-  }
-];
+interface Staff {
+  id: string;
+  name: string;
+  email?: string;
+  imageUrl?: string;
+  specialties: string[];
+}
 
 const StaffScheduleManager = () => {
-  const { data: staff = [], isLoading } = useStaff();
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
-  const [events, setEvents] = useState(mockEvents);
+
+  // Fetch real staff data
+  const { data: staff = [], isLoading, error } = useQuery({
+    queryKey: ['staff-schedule-manager'],
+    queryFn: async (): Promise<Staff[]> => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('staff')
+        .select('id, name, email, image_url, specialties')
+        .eq('salon_id', user.id)
+        .eq('status', 'active')
+        .order('name');
+      
+      if (error) throw error;
+      
+      return data?.map(member => ({
+        id: member.id,
+        name: member.name,
+        email: member.email,
+        imageUrl: member.image_url,
+        specialties: member.specialties || []
+      })) || [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch real appointments for calendar
+  const { data: appointments = [] } = useQuery({
+    queryKey: ['staff-appointments'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('salon_id', user.id)
+        .gte('date', today)
+        .order('date')
+        .order('start_time');
+      
+      if (error) throw error;
+      
+      return data?.map(apt => ({
+        id: apt.id,
+        staffId: apt.staff_id,
+        title: `${apt.service} - ${apt.client_name}`,
+        start: `${apt.date}T${apt.start_time}`,
+        end: `${apt.date}T${apt.end_time}`,
+        type: 'appointment' as const,
+        clientName: apt.client_name,
+        service: apt.service
+      })) || [];
+    },
+    staleTime: 2 * 60 * 1000,
+  });
 
   const handleAddEvent = (newEvent: any) => {
-    const event = {
-      id: Date.now().toString(),
-      ...newEvent
-    };
-    setEvents([...events, event]);
+    console.log('Adding new event:', newEvent);
+    // This would integrate with appointment creation
   };
 
-  const transformedStaff = staff.map(member => ({
-    id: member.id || '',
-    name: member.name,
-    image: member.imageUrl || `https://images.unsplash.com/photo-1494790108755-2616b612b494?w=400&h=400&fit=crop&crop=face`,
-    specialties: member.specialties || []
-  }));
-
   if (isLoading) {
-    return <div className="flex justify-center items-center h-64">Loading staff schedule...</div>;
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-500 to-cyan-600 bg-clip-text text-transparent">
+              Staff Schedule Management
+            </h1>
+            <p className="text-muted-foreground mt-1">Loading staff data...</p>
+          </div>
+        </div>
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-96 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-500 to-cyan-600 bg-clip-text text-transparent">
+              Staff Schedule Management
+            </h1>
+            <p className="text-muted-foreground mt-1">Error loading staff data</p>
+          </div>
+        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Unable to load staff schedule data. Please refresh the page or contact support.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
   }
 
   return (
@@ -82,11 +153,23 @@ const StaffScheduleManager = () => {
         </TabsList>
 
         <TabsContent value="calendar" className="space-y-4">
-          <StaffCalendarView
-            staff={transformedStaff}
-            events={events}
-            onAddEvent={handleAddEvent}
-          />
+          {staff.length > 0 ? (
+            <StaffCalendarView
+              staff={staff}
+              events={appointments}
+              onAddEvent={handleAddEvent}
+            />
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Users className="w-16 h-16 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-600 mb-2">No Staff Members</h3>
+                <p className="text-gray-500 text-center">
+                  Add staff members to manage their schedules and availability.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="availability" className="space-y-4">
@@ -108,7 +191,7 @@ const StaffScheduleManager = () => {
                   >
                     <option value="">Choose a staff member</option>
                     {staff.map(member => (
-                      <option key={member.id} value={member.id || ''}>
+                      <option key={member.id} value={member.id}>
                         {member.name}
                       </option>
                     ))}
@@ -122,9 +205,16 @@ const StaffScheduleManager = () => {
                   />
                 )}
 
-                {!selectedStaffId && (
+                {!selectedStaffId && staff.length > 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     Please select a staff member to manage their availability.
+                  </div>
+                )}
+
+                {staff.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No staff members found. Please add staff members first.</p>
                   </div>
                 )}
               </div>
@@ -134,80 +224,24 @@ const StaffScheduleManager = () => {
 
         <TabsContent value="management" className="space-y-4">
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Time Off Approval */}
+            {/* Real-time stats based on actual data */}
             <Card>
               <CardHeader>
-                <CardTitle>Pending Time Off Requests</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium">Sarah Johnson - Vacation</p>
-                      <p className="text-sm text-muted-foreground">Jan 20-25, 2024</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline">Deny</Button>
-                      <Button size="sm">Approve</Button>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium">Michael Chen - Sick Leave</p>
-                      <p className="text-sm text-muted-foreground">Jan 18, 2024</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline">Deny</Button>
-                      <Button size="sm">Approve</Button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Schedule Conflicts */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Schedule Conflicts</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="p-3 border border-orange-200 bg-orange-50 rounded-lg">
-                    <p className="font-medium text-orange-800">Double Booking Alert</p>
-                    <p className="text-sm text-orange-600">Sarah Johnson has overlapping appointments on Jan 22 at 2:00 PM</p>
-                    <Button size="sm" variant="outline" className="mt-2">Resolve</Button>
-                  </div>
-                  <div className="p-3 border border-yellow-200 bg-yellow-50 rounded-lg">
-                    <p className="font-medium text-yellow-800">Availability Conflict</p>
-                    <p className="text-sm text-yellow-600">Michael Chen scheduled outside working hours on Jan 23</p>
-                    <Button size="sm" variant="outline" className="mt-2">Review</Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Schedule Statistics</CardTitle>
+                <CardTitle>Staff Statistics</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span>Average Utilization</span>
-                    <span className="font-medium">78%</span>
+                    <span>Total Staff Members</span>
+                    <span className="font-medium">{staff.length}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Pending Time Off</span>
-                    <span className="font-medium">3 requests</span>
+                    <span>Active Today</span>
+                    <span className="font-medium">{staff.length}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Schedule Conflicts</span>
-                    <span className="font-medium text-orange-600">2 conflicts</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Staff On Duty Today</span>
-                    <span className="font-medium">{staff.filter(s => s.status === 'active').length}</span>
+                    <span>Total Appointments</span>
+                    <span className="font-medium">{appointments.length}</span>
                   </div>
                 </div>
               </CardContent>
@@ -222,11 +256,11 @@ const StaffScheduleManager = () => {
                 <div className="space-y-2">
                   <Button className="w-full justify-start" variant="outline">
                     <Clock className="w-4 h-4 mr-2" />
-                    Bulk Schedule Update
+                    View Today's Schedule
                   </Button>
                   <Button className="w-full justify-start" variant="outline">
                     <Users className="w-4 h-4 mr-2" />
-                    Copy Schedule Template
+                    Manage Staff Availability
                   </Button>
                   <Button className="w-full justify-start" variant="outline">
                     <Settings className="w-4 h-4 mr-2" />

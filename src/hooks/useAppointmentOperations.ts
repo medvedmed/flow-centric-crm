@@ -78,14 +78,14 @@ export const useAppointmentOperations = () => {
       console.log('Optimistic update starting...');
       
       // Cancel any outgoing refetches for appointments
-      await queryClient.cancelQueries({ queryKey: ['appointments-data'] });
+      await queryClient.cancelQueries({ queryKey: ['appointments'] });
 
       // Snapshot the previous value
-      const previousData = queryClient.getQueryData(['appointments-data']);
+      const previousData = queryClient.getQueryData(['appointments']);
 
       // Optimistically update all appointment queries
       queryClient.setQueriesData(
-        { queryKey: ['appointments-data'] },
+        { queryKey: ['appointments'] },
         (oldData: any) => {
           if (!oldData || !Array.isArray(oldData)) return oldData;
           
@@ -112,7 +112,7 @@ export const useAppointmentOperations = () => {
       
       // Rollback on error
       if (context?.previousData) {
-        queryClient.setQueriesData(['appointments-data'], context.previousData);
+        queryClient.setQueriesData({ queryKey: ['appointments'] }, context.previousData);
       }
       
       toast({
@@ -131,7 +131,7 @@ export const useAppointmentOperations = () => {
     },
     onSettled: () => {
       // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: ['appointments-data'] });
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
   });
@@ -141,13 +141,26 @@ export const useAppointmentOperations = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Map camelCase properties to snake_case for database
+      const dbAppointmentData = {
+        client_id: appointmentData.clientId,
+        client_name: appointmentData.clientName || '',
+        client_phone: appointmentData.clientPhone,
+        service: appointmentData.service || '',
+        start_time: appointmentData.startTime || '',
+        end_time: appointmentData.endTime || '',
+        date: appointmentData.date || '',
+        price: appointmentData.price,
+        duration: appointmentData.duration,
+        staff_id: appointmentData.staffId,
+        notes: appointmentData.notes,
+        salon_id: user.id,
+        status: appointmentData.status || 'Scheduled'
+      };
+
       const { data, error } = await supabase
         .from('appointments')
-        .insert({
-          ...appointmentData,
-          salon_id: user.id,
-          status: appointmentData.status || 'Scheduled'
-        })
+        .insert(dbAppointmentData)
         .select()
         .single();
 
@@ -155,7 +168,7 @@ export const useAppointmentOperations = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['appointments-data'] });
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       toast({
         title: "Appointment Created",

@@ -33,7 +33,7 @@ const normalizeTime = (time: string): string => {
   return time.split(':').slice(0, 2).join(':');
 };
 
-// Enhanced Appointment Block Component with larger size and more info
+// Compact Appointment Block Component optimized for single-sheet layout
 const AppointmentBlock: React.FC<{
   appointment: Appointment;
   isDragging?: boolean;
@@ -51,16 +51,15 @@ const AppointmentBlock: React.FC<{
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging || isSortableDragging ? 0.6 : 1,
-    minHeight: '80px', // Larger blocks for better visibility
   };
 
   const statusColors = {
-    'Scheduled': 'bg-blue-50 border-blue-200 text-blue-800',
-    'Confirmed': 'bg-green-50 border-green-200 text-green-800', 
-    'In Progress': 'bg-purple-50 border-purple-200 text-purple-800',
-    'Completed': 'bg-gray-50 border-gray-200 text-gray-800',
-    'Cancelled': 'bg-red-50 border-red-200 text-red-800',
-    'No Show': 'bg-orange-50 border-orange-200 text-orange-800'
+    'Scheduled': 'bg-blue-50 border-l-blue-400 text-blue-900',
+    'Confirmed': 'bg-green-50 border-l-green-400 text-green-900', 
+    'In Progress': 'bg-purple-50 border-l-purple-400 text-purple-900',
+    'Completed': 'bg-gray-50 border-l-gray-400 text-gray-900',
+    'Cancelled': 'bg-red-50 border-l-red-400 text-red-900',
+    'No Show': 'bg-orange-50 border-l-orange-400 text-orange-900'
   };
 
   return (
@@ -69,53 +68,45 @@ const AppointmentBlock: React.FC<{
       style={style}
       {...attributes}
       {...listeners}
-      className={`cursor-grab active:cursor-grabbing rounded-lg border-2 p-3 mb-2 shadow-sm hover:shadow-md transition-shadow ${
+      className={`cursor-grab active:cursor-grabbing w-full rounded-lg border-l-4 p-2 mb-1 shadow-sm hover:shadow-md transition-all duration-200 ${
         statusColors[appointment.status as keyof typeof statusColors] || statusColors.Scheduled
       } ${isDragging ? 'z-50' : ''}`}
     >
-      <div className="space-y-2">
-        {/* Time and Status */}
+      <div className="space-y-1">
+        {/* Time and Status Row */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            <span className="text-sm font-medium">
-              {normalizeTime(appointment.startTime)} - {normalizeTime(appointment.endTime)}
+            <span className="text-xs font-semibold">
+              {normalizeTime(appointment.startTime)}-{normalizeTime(appointment.endTime)}
             </span>
           </div>
-          <Badge variant="secondary" className="text-xs">
+          <Badge variant="secondary" className="text-xs px-1 py-0">
             {appointment.status}
           </Badge>
         </div>
         
-        {/* Client Info */}
-        <div className="flex items-center gap-2">
-          <User className="w-4 h-4 text-gray-600" />
-          <div className="flex-1">
-            <p className="font-medium text-sm">{appointment.clientName}</p>
-            {appointment.clientPhone && (
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <Phone className="w-3 h-3" />
-                <span>{appointment.clientPhone}</span>
-              </div>
-            )}
-          </div>
+        {/* Client Name */}
+        <div className="flex items-center gap-1">
+          <User className="w-3 h-3 text-gray-600" />
+          <p className="font-medium text-sm truncate">{appointment.clientName}</p>
         </div>
         
-        {/* Service and Price */}
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-gray-700">{appointment.service}</p>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500">{appointment.duration}min</span>
-            <div className="flex items-center gap-1">
-              <DollarSign className="w-3 h-3 text-green-600" />
-              <span className="text-sm font-medium text-green-600">${appointment.price}</span>
-            </div>
+        {/* Service and Price Row */}
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-gray-700 truncate flex-1 mr-2">{appointment.service}</p>
+          <div className="flex items-center gap-1">
+            <DollarSign className="w-3 h-3 text-green-600" />
+            <span className="text-xs font-medium text-green-600">${appointment.price}</span>
           </div>
         </div>
 
-        {/* Notes if any */}
-        {appointment.notes && (
-          <p className="text-xs text-gray-500 truncate">{appointment.notes}</p>
+        {/* Phone if available */}
+        {appointment.clientPhone && (
+          <div className="flex items-center gap-1">
+            <Phone className="w-3 h-3 text-gray-500" />
+            <span className="text-xs text-gray-500 truncate">{appointment.clientPhone}</span>
+          </div>
         )}
       </div>
     </div>
@@ -129,14 +120,14 @@ const EmptyTimeSlot: React.FC<{
   selectedDate: Date;
 }> = ({ staffId, time, selectedDate }) => {
   return (
-    <div className="h-20 border border-dashed border-gray-200 rounded-lg flex items-center justify-center hover:bg-gray-50 transition-colors">
+    <div className="h-16 w-full flex items-center justify-center hover:bg-gray-50/50 transition-colors rounded">
       <AddAppointmentDialog
         selectedDate={selectedDate}
         selectedTime={time}
         selectedStaffId={staffId}
         trigger={
-          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
-            <Plus className="w-4 h-4 text-gray-400" />
+          <Button size="sm" variant="ghost" className="h-6 w-6 p-0 hover:bg-gray-200/60">
+            <Plus className="w-3 h-3 text-gray-400" />
           </Button>
         }
       />
@@ -258,31 +249,36 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="w-full bg-white rounded-lg border border-gray-200 overflow-hidden">
-        {/* Header with Staff Columns */}
-        <div className="grid border-b border-gray-200 bg-gray-50" style={{ 
-          gridTemplateColumns: `140px repeat(${staff.length}, 1fr)` 
-        }}>
-          <div className="p-4 border-r border-gray-200">
-            <h3 className="font-semibold text-gray-800">Time</h3>
+      <div className="w-full h-full bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+        {/* Sticky Header with Staff Columns */}
+        <div 
+          className="sticky top-0 z-10 bg-white border-b-2 border-gray-200 shadow-sm"
+          style={{ 
+            display: 'grid',
+            gridTemplateColumns: `120px repeat(${staff.length}, 1fr)` 
+          }}
+        >
+          {/* Time Column Header */}
+          <div className="p-4 border-r border-gray-300 bg-gray-50 flex items-center justify-center">
+            <h3 className="font-bold text-gray-800 text-sm">TIME</h3>
           </div>
+          
+          {/* Staff Headers */}
           {staff.map((staffMember, index) => (
             <div 
               key={staffMember.id} 
-              className={`p-4 border-r border-gray-200 last:border-r-0 ${
-                index % 2 === 0 ? 'bg-gray-50' : 'bg-white'
-              }`}
+              className={`p-3 border-r border-gray-300 last:border-r-0 bg-gradient-to-b from-gray-50 to-white`}
             >
-              <div className="flex items-center gap-3">
-                <Avatar className="w-10 h-10">
+              <div className="flex flex-col items-center gap-2">
+                <Avatar className="w-8 h-8">
                   <AvatarImage src={staffMember.imageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${staffMember.name}`} />
-                  <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-500 text-white text-sm">
+                  <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-500 text-white text-xs">
                     {getInitials(staffMember.name)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-800 truncate">{staffMember.name}</h3>
-                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                <div className="text-center">
+                  <h3 className="font-semibold text-gray-800 text-sm truncate max-w-full">{staffMember.name}</h3>
+                  <div className="flex items-center justify-center gap-1 text-xs text-gray-600">
                     <span>{staffMember.rating || 5.0}⭐</span>
                     <span>•</span>
                     <span>{staffMember.efficiency || 100}%</span>
@@ -293,28 +289,34 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
           ))}
         </div>
 
-        {/* Time Grid */}
-        <div className="max-h-[600px] overflow-y-auto">
-          {timeSlots.map(timeSlot => (
+        {/* Scrollable Time Grid */}
+        <div className="h-[calc(100vh-280px)] overflow-y-auto">
+          {timeSlots.map((timeSlot, timeIndex) => (
             <div 
               key={timeSlot.time} 
-              className="grid border-b border-gray-100 hover:bg-gray-50 transition-colors"
-              style={{ gridTemplateColumns: `140px repeat(${staff.length}, 1fr)` }}
+              className={`border-b border-gray-100 hover:bg-gray-50/30 transition-colors ${
+                timeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'
+              }`}
+              style={{ 
+                display: 'grid',
+                gridTemplateColumns: `120px repeat(${staff.length}, 1fr)`,
+                minHeight: '64px'
+              }}
             >
               {/* Time Label */}
-              <div className="p-3 border-r border-gray-100 flex items-center bg-gray-50">
-                <span className="text-sm font-medium text-gray-700">{timeSlot.time}</span>
+              <div className="p-3 border-r border-gray-300 bg-gray-50/80 flex items-center justify-center sticky left-0 z-5">
+                <span className="text-sm font-semibold text-gray-800">{timeSlot.time}</span>
               </div>
               
               {/* Staff Columns */}
-              {staff.map((staffMember, index) => {
+              {staff.map((staffMember, staffIndex) => {
                 const slotAppointments = getAppointmentsForStaffAndTime(staffMember.id || '', timeSlot.time);
                 
                 return (
                   <div 
                     key={`${staffMember.id}-${timeSlot.time}`}
-                    className={`p-2 border-r border-gray-100 last:border-r-0 min-h-[80px] ${
-                      index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
+                    className={`p-1 border-r border-gray-300 last:border-r-0 min-h-[64px] ${
+                      staffIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
                     }`}
                   >
                     <SortableContext 

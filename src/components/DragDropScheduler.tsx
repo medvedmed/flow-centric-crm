@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Staff, Appointment } from '@/services/types';
 import { AddAppointmentDialog } from './AddAppointmentDialog';
+import { useAppointmentOperations } from '@/hooks/useAppointmentOperations';
 import { format } from 'date-fns';
 
 interface TimeSlot {
@@ -32,7 +33,35 @@ const normalizeTime = (time: string): string => {
   return time.split(':').slice(0, 2).join(':');
 };
 
-// Compact Appointment Block Component
+// Droppable Time Slot Component
+const DroppableTimeSlot: React.FC<{
+  staffId: string;
+  time: string;
+  children: React.ReactNode;
+}> = ({ staffId, time, children }) => {
+  const dropId = `${staffId}-${time}`;
+  const { isOver, setNodeRef } = useDroppable({
+    id: dropId,
+    data: {
+      staffId,
+      time,
+      type: 'timeSlot'
+    }
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`relative h-16 transition-colors ${
+        isOver ? 'bg-blue-50 border-2 border-blue-300 border-dashed' : ''
+      }`}
+    >
+      {children}
+    </div>
+  );
+};
+
+// Enhanced Appointment Block Component
 const AppointmentBlock: React.FC<{
   appointment: Appointment;
   isDragging?: boolean;
@@ -44,12 +73,18 @@ const AppointmentBlock: React.FC<{
     transform,
     transition,
     isDragging: isSortableDragging,
-  } = useSortable({ id: appointment.id });
+  } = useSortable({ 
+    id: appointment.id,
+    data: {
+      appointment,
+      type: 'appointment'
+    }
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging || isSortableDragging ? 0.6 : 1,
+    opacity: isDragging || isSortableDragging ? 0.8 : 1,
   };
 
   const statusColors = {
@@ -69,7 +104,7 @@ const AppointmentBlock: React.FC<{
       {...listeners}
       className={`cursor-grab active:cursor-grabbing w-full rounded-md border-l-4 p-2 mb-1 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
         statusColors[appointment.status as keyof typeof statusColors] || statusColors.Scheduled
-      } ${isDragging ? 'z-50' : ''}`}
+      } ${isDragging ? 'z-50 rotate-2 scale-105' : ''}`}
     >
       <div className="space-y-1 overflow-hidden">
         {/* Time and Status Row */}
@@ -143,6 +178,7 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
 }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null);
+  const { moveAppointment, isMoving } = useAppointmentOperations();
 
   // Generate time slots from 8 AM to 8 PM
   const timeSlots: TimeSlot[] = [];
@@ -174,11 +210,38 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
       return;
     }
 
-    // Handle drop logic here
-    if (onAppointmentMove) {
-      const dropData = (over.data?.current as any) || {};
-      if (dropData.staffId && dropData.time) {
-        onAppointmentMove(active.id as string, dropData.staffId, dropData.time);
+    const overId = over.id as string;
+    const overData = over.data?.current;
+
+    // Check if we're dropping on a time slot
+    if (overData?.type === 'timeSlot' && overData?.staffId && overData?.time) {
+      const { staffId: newStaffId, time: newTime } = overData;
+      
+      // Only move if it's actually a different position
+      if (newStaffId !== draggedAppointment.staffId || newTime !== normalizeTime(draggedAppointment.startTime)) {
+        // Check for conflicts
+        const conflictingAppointments = appointments.filter(apt => 
+          apt.id !== draggedAppointment.id &&
+          apt.staffId === newStaffId &&
+          normalizeTime(apt.startTime) === normalizeTime(newTime)
+        );
+
+        if (conflictingAppointments.length > 0) {
+          console.warn('Cannot move appointment - time slot is occupied');
+        } else {
+          // Move the appointment
+          moveAppointment({
+            appointmentId: active.id as string,
+            newStaffId,
+            newTime,
+            duration: draggedAppointment.duration || 60
+          });
+
+          // Call the callback if provided
+          if (onAppointmentMove) {
+            onAppointmentMove(active.id as string, newStaffId, newTime);
+          }
+        }
       }
     }
 
@@ -219,6 +282,16 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
       onDragEnd={handleDragEnd}
     >
       <div className="w-full h-full bg-white overflow-hidden flex flex-col">
+        {/* Loading overlay */}
+        {isMoving && (
+          <div className="absolute inset-0 bg-black/10 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg p-4 shadow-lg">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-sm text-gray-600 mt-2">Moving appointment...</p>
+            </div>
+          </div>
+        )}
+
         {/* Sticky Staff Header */}
         <div 
           className="sticky top-0 z-20 bg-white border-b-2 border-gray-400 shadow-sm flex-shrink-0"
@@ -276,44 +349,49 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
                 <span className="text-xs font-semibold text-gray-800">{timeSlot.time}</span>
               </div>
               
-              {/* Staff Columns with Enhanced Containment */}
+              {/* Staff Columns with Drop Zones */}
               {staff.map((staffMember, staffIndex) => {
                 const slotAppointments = getAppointmentsForStaffAndTime(staffMember.id || '', timeSlot.time);
                 
                 return (
-                  <div 
+                  <DroppableTimeSlot
                     key={`${staffMember.id}-${timeSlot.time}`}
-                    className={`p-1 border-r-2 border-gray-400 last:border-r-0 min-h-[60px] overflow-hidden relative ${
-                      staffIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
-                    }`}
-                    style={{ 
-                      maxWidth: '100%',
-                      minWidth: 0,
-                      position: 'relative',
-                      isolation: 'isolate'
-                    }}
+                    staffId={staffMember.id || ''}
+                    time={timeSlot.time}
                   >
-                    <SortableContext 
-                      items={slotAppointments.map(apt => apt.id)} 
-                      strategy={verticalListSortingStrategy}
+                    <div 
+                      className={`p-1 border-r-2 border-gray-400 last:border-r-0 min-h-[60px] overflow-hidden relative ${
+                        staffIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
+                      }`}
+                      style={{ 
+                        maxWidth: '100%',
+                        minWidth: 0,
+                        position: 'relative',
+                        isolation: 'isolate'
+                      }}
                     >
-                      <div className="w-full h-full overflow-hidden">
-                        {slotAppointments.length > 0 ? (
-                          <div className="w-full overflow-hidden">
-                            {slotAppointments.map(appointment => (
-                              <AppointmentBlock key={appointment.id} appointment={appointment} />
-                            ))}
-                          </div>
-                        ) : (
-                          <EmptyTimeSlot 
-                            staffId={staffMember.id || ''} 
-                            time={timeSlot.time} 
-                            selectedDate={selectedDate}
-                          />
-                        )}
-                      </div>
-                    </SortableContext>
-                  </div>
+                      <SortableContext 
+                        items={slotAppointments.map(apt => apt.id)} 
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="w-full h-full overflow-hidden">
+                          {slotAppointments.length > 0 ? (
+                            <div className="w-full overflow-hidden">
+                              {slotAppointments.map(appointment => (
+                                <AppointmentBlock key={appointment.id} appointment={appointment} />
+                              ))}
+                            </div>
+                          ) : (
+                            <EmptyTimeSlot 
+                              staffId={staffMember.id || ''} 
+                              time={timeSlot.time} 
+                              selectedDate={selectedDate}
+                            />
+                          )}
+                        </div>
+                      </SortableContext>
+                    </div>
+                  </DroppableTimeSlot>
                 );
               })}
             </div>
@@ -323,9 +401,7 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
 
       <DragOverlay>
         {activeId && draggedAppointment ? (
-          <div className="transform rotate-2 scale-105">
-            <AppointmentBlock appointment={draggedAppointment} isDragging />
-          </div>
+          <AppointmentBlock appointment={draggedAppointment} isDragging />
         ) : null}
       </DragOverlay>
     </DndContext>

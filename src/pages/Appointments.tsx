@@ -12,8 +12,8 @@ const Appointments = () => {
   const canViewAppointments = hasPermissionSync('appointments', 'view');
 
   const handleAppointmentMove = (appointmentId: string, newStaffId: string, newTime: string) => {
-    console.log('Moving appointment:', { appointmentId, newStaffId, newTime });
-    // TODO: Implement actual appointment moving logic with API call
+    console.log('Appointment move handled:', { appointmentId, newStaffId, newTime });
+    // The actual database update is now handled by the useAppointmentOperations hook
   };
 
   if (!canViewAppointments) {

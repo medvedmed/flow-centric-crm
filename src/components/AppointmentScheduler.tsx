@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 
 interface AppointmentSchedulerProps {
   selectedDate: Date;
-  onAppointmentMove: (appointmentId: string, newStaffId: string, newTime: string) => void;
+  onAppointmentMove?: (appointmentId: string, newStaffId: string, newTime: string) => void;
 }
 
 export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
@@ -23,8 +23,10 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   };
 
   const handleAppointmentMove = (appointmentId: string, newStaffId: string, newTime: string) => {
-    console.log('Moving appointment:', { appointmentId, newStaffId, newTime });
-    onAppointmentMove(appointmentId, newStaffId, newTime);
+    console.log('Appointment moved:', { appointmentId, newStaffId, newTime });
+    if (onAppointmentMove) {
+      onAppointmentMove(appointmentId, newStaffId, newTime);
+    }
   };
 
   if (isLoading) {

@@ -1,160 +1,165 @@
 
-import React, { useState, useEffect } from 'react';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
-import { Check, ChevronsUpDown, User, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import React, { useState } from 'react';
 import { useClients } from '@/hooks/useCrmData';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Plus, Search } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { useCreateClient } from '@/hooks/useCrmData';
+import { useToast } from '@/hooks/use-toast';
 
 interface ClientSelectorProps {
   value: string;
-  onValueChange: (clientName: string, clientId?: string, clientPhone?: string) => void;
+  onValueChange: (clientId: string, clientName: string, clientPhone?: string) => void;
 }
 
 export const ClientSelector: React.FC<ClientSelectorProps> = ({
   value,
   onValueChange
 }) => {
-  const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isNewClient, setIsNewClient] = useState(false);
-  const [newClientPhone, setNewClientPhone] = useState('');
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [newClient, setNewClient] = useState({
+    name: '',
+    email: '',
+    phone: ''
+  });
 
-  const { data: clientsData } = useClients(searchTerm, 1, 50, 'all');
+  const { data: clientsData, isLoading } = useClients(searchTerm, 1, 50);
+  const createClient = useCreateClient();
+  const { toast } = useToast();
+
   const clients = clientsData?.data || [];
+  const filteredClients = clients.filter(client =>
+    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (client.phone && client.phone.includes(searchTerm))
+  );
 
-  const handleSelect = (client: any) => {
-    onValueChange(client.name, client.id, client.phone);
-    setOpen(false);
-    setIsNewClient(false);
-  };
+  const handleCreateClient = async () => {
+    if (!newClient.name || !newClient.email) return;
 
-  const handleNewClient = () => {
-    if (searchTerm.trim()) {
-      onValueChange(searchTerm.trim(), undefined, newClientPhone);
-      setOpen(false);
-      setIsNewClient(false);
-      setNewClientPhone('');
-    }
-  };
-
-  const handleSearchChange = (search: string) => {
-    setSearchTerm(search);
-    // If typing a new name that doesn't match existing clients, prepare for new client
-    if (search && !clients.some(client => 
-      client.name.toLowerCase().includes(search.toLowerCase())
-    )) {
-      setIsNewClient(true);
-    } else {
-      setIsNewClient(false);
+    try {
+      const createdClient = await createClient.mutateAsync(newClient);
+      onValueChange(createdClient.id, createdClient.name, createdClient.phone);
+      setIsAddingNew(false);
+      setNewClient({ name: '', email: '', phone: '' });
+      toast({
+        title: "Client Added",
+        description: `${createdClient.name} has been added successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create client",
+        variant: "destructive",
+      });
     }
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between"
-        >
-          <div className="flex items-center gap-2">
-            <User className="w-4 h-4" />
-            {value || "Select or enter client name..."}
-          </div>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
-        <Command>
-          <CommandInput
-            placeholder="Search clients or enter new name..."
-            value={searchTerm}
-            onValueChange={handleSearchChange}
-          />
-          <CommandList>
-            <CommandEmpty>
-              {searchTerm ? (
-                <div className="p-4 space-y-3">
-                  <p className="text-sm text-gray-600">No existing client found.</p>
-                  <div className="space-y-2">
-                    <Input
-                      placeholder="Phone number (optional)"
-                      value={newClientPhone}
-                      onChange={(e) => setNewClientPhone(e.target.value)}
-                    />
-                    <Button
-                      onClick={handleNewClient}
-                      className="w-full gap-2"
-                      size="sm"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add "{searchTerm}" as new client
-                    </Button>
-                  </div>
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <Select value={value} onValueChange={(clientId) => {
+            const client = clients.find(c => c.id === clientId);
+            if (client) {
+              onValueChange(clientId, client.name, client.phone);
+            }
+          }}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a client" />
+            </SelectTrigger>
+            <SelectContent>
+              <div className="p-2">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search clients..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8"
+                  />
                 </div>
+              </div>
+              {isLoading ? (
+                <SelectItem value="loading" disabled>Loading clients...</SelectItem>
+              ) : filteredClients.length === 0 ? (
+                <SelectItem value="no-clients" disabled>No clients found</SelectItem>
               ) : (
-                "Start typing to search clients..."
-              )}
-            </CommandEmpty>
-            {clients.length > 0 && (
-              <CommandGroup>
-                {clients.map((client) => (
-                  <CommandItem
-                    key={client.id}
-                    onSelect={() => handleSelect(client)}
-                    className="flex items-center gap-2"
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value === client.name ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <div className="flex-1">
-                      <div className="font-medium">{client.name}</div>
+                filteredClients.map((client) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    <div className="flex flex-col">
+                      <span>{client.name}</span>
+                      <span className="text-sm text-muted-foreground">{client.email}</span>
                       {client.phone && (
-                        <div className="text-sm text-gray-500">{client.phone}</div>
+                        <span className="text-sm text-muted-foreground">{client.phone}</span>
                       )}
                     </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-            {isNewClient && searchTerm && (
-              <CommandGroup>
-                <CommandItem onSelect={() => {}}>
-                  <div className="w-full p-2 space-y-2">
-                    <div className="flex items-center gap-2 font-medium">
-                      <Plus className="w-4 h-4" />
-                      Add new client: {searchTerm}
-                    </div>
-                    <Input
-                      placeholder="Phone number (optional)"
-                      value={newClientPhone}
-                      onChange={(e) => setNewClientPhone(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleNewClient();
-                      }}
-                      className="w-full"
-                      size="sm"
-                    >
-                      Add Client
-                    </Button>
-                  </div>
-                </CommandItem>
-              </CommandGroup>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <Dialog open={isAddingNew} onOpenChange={setIsAddingNew}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="icon">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Client</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="clientName">Name *</Label>
+                <Input
+                  id="clientName"
+                  value={newClient.name}
+                  onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
+                  placeholder="Client name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="clientEmail">Email *</Label>
+                <Input
+                  id="clientEmail"
+                  type="email"
+                  value={newClient.email}
+                  onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                  placeholder="Client email"
+                />
+              </div>
+              <div>
+                <Label htmlFor="clientPhone">Phone</Label>
+                <Input
+                  id="clientPhone"
+                  value={newClient.phone}
+                  onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+                  placeholder="Client phone"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleCreateClient}
+                  disabled={!newClient.name || !newClient.email || createClient.isPending}
+                  className="flex-1"
+                >
+                  {createClient.isPending ? "Adding..." : "Add Client"}
+                </Button>
+                <Button variant="outline" onClick={() => setIsAddingNew(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
   );
 };

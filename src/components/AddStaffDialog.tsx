@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -24,7 +25,7 @@ const AddStaffDialog = () => {
     workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
     breakStart: "12:00",
     breakEnd: "13:00",
-    hourlyRate: 0,
+    hourlyRate: 25,
     commissionRate: 35,
     status: "active",
     efficiency: 100,
@@ -39,39 +40,36 @@ const AddStaffDialog = () => {
   };
 
   const handleAddStaff = () => {
-    console.log('=== Add Staff Debug Info ===');
-    console.log('User:', user);
-    console.log('Session:', session);
-    console.log('User ID:', user?.id);
-    console.log('New Staff Data:', newStaff);
-    
     if (!user || !session) {
-      console.error('No authenticated user or session found');
+      toast({
+        title: "Authentication Error",
+        description: "Please log in to add staff members",
+        variant: "destructive"
+      });
       return;
     }
 
     if (!newStaff.name || !newStaff.email) {
-      console.error('Missing required fields: name or email');
+      toast({
+        title: "Missing Information",
+        description: "Please enter both name and email",
+        variant: "destructive"
+      });
       return;
     }
 
-    // Ensure salon_id is set to the authenticated user's ID
     const staffToCreate = {
       ...newStaff,
-      salonId: user.id // Explicitly set salon_id to user.id
+      salonId: user.id
     } as StaffType;
-
-    console.log('Final staff data to create:', staffToCreate);
 
     createStaffMutation.mutate(staffToCreate, {
       onSuccess: (createdStaffData) => {
-        console.log('Staff created successfully:', createdStaffData);
         setCreatedStaff(createdStaffData);
         toast({
-          title: "Success",
+          title: "Staff Added Successfully",
           description: `${createdStaffData.name} has been added to your team!`,
         });
-        // Close dialog after successful creation
         setTimeout(() => {
           resetForm();
         }, 2000);
@@ -98,7 +96,7 @@ const AddStaffDialog = () => {
       workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
       breakStart: "12:00",
       breakEnd: "13:00",
-      hourlyRate: 0,
+      hourlyRate: 25,
       commissionRate: 35,
       status: "active",
       efficiency: 100,
@@ -109,11 +107,10 @@ const AddStaffDialog = () => {
     setIsOpen(false);
   };
 
-  // Show authentication status in UI for debugging
   if (!user || !session) {
     return (
       <div className="text-sm text-red-600 p-2 border border-red-200 rounded">
-        Authentication required to add staff. Please log in.
+        Please log in to add staff members.
       </div>
     );
   }
@@ -144,22 +141,28 @@ const AddStaffDialog = () => {
             <div className="text-center p-4 bg-green-50 border border-green-200 rounded-lg">
               <h3 className="font-semibold text-green-800 mb-2">{createdStaff.name} Added!</h3>
               <p className="text-sm text-green-700 mb-4">
-                Your staff member needs to create their account to access the system:
+                Staff member has been successfully added to your salon team.
               </p>
               
               <div className="space-y-3">
                 <div className="bg-white p-3 rounded border">
-                  <Label className="text-xs text-gray-600">Staff Email</Label>
-                  <p className="font-mono text-sm">{createdStaff.email}</p>
+                  <Label className="text-xs text-gray-600">Staff Details</Label>
+                  <p className="font-semibold">{createdStaff.name}</p>
+                  <p className="text-sm text-gray-600">{createdStaff.email}</p>
+                  {createdStaff.phone && (
+                    <p className="text-sm text-gray-600">{createdStaff.phone}</p>
+                  )}
                 </div>
-              </div>
-              
-              <div className="text-xs text-gray-600 mt-4 space-y-1 text-left">
-                <p className="font-semibold">Next Steps for {createdStaff.name}:</p>
-                <p>• Visit the login page and click "Sign Up"</p>
-                <p>• Use the email: <span className="font-mono">{createdStaff.email}</span></p>
-                <p>• Create a password and confirm their email</p>
-                <p>• They'll automatically get staff permissions</p>
+                {createdStaff.specialties && createdStaff.specialties.length > 0 && (
+                  <div className="bg-white p-3 rounded border">
+                    <Label className="text-xs text-gray-600">Specialties</Label>
+                    <p className="text-sm">{createdStaff.specialties.join(', ')}</p>
+                  </div>
+                )}
+                <div className="bg-white p-3 rounded border">
+                  <Label className="text-xs text-gray-600">Working Hours</Label>
+                  <p className="text-sm">{createdStaff.workingHoursStart} - {createdStaff.workingHoursEnd}</p>
+                </div>
               </div>
             </div>
             
@@ -171,7 +174,7 @@ const AddStaffDialog = () => {
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-sm text-blue-800">
-                <strong>Important:</strong> After adding a staff member, they need to sign up using the email you provide here.
+                <strong>Quick Setup:</strong> Add your staff members to enable appointment booking.
               </p>
             </div>
             
@@ -193,9 +196,6 @@ const AddStaffDialog = () => {
                 onChange={(e) => setNewStaff({...newStaff, email: e.target.value})}
                 placeholder="Enter email address"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Staff will use this email to sign up and access the system
-              </p>
             </div>
             <div>
               <Label htmlFor="staffPhone">Phone</Label>
@@ -243,7 +243,7 @@ const AddStaffDialog = () => {
                   type="number"
                   value={newStaff.hourlyRate}
                   onChange={(e) => setNewStaff({...newStaff, hourlyRate: parseFloat(e.target.value)})}
-                  placeholder="0"
+                  placeholder="25"
                 />
               </div>
               <div>

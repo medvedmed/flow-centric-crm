@@ -1,14 +1,18 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Appointment, Staff } from './types';
-import { realTimeScheduleApi, ScheduleConflict } from './api/realTimeScheduleApi';
-import { permissionApi, PermissionArea } from './permissionApi';
+import { Staff, Appointment } from './types';
+import { realTimeScheduleApi } from './api/realTimeScheduleApi';
+import { permissionApi } from './permissionApi';
 
-export interface PermissionAwareAppointmentResult {
+interface BookingResult {
   success: boolean;
-  appointment?: Appointment;
   error?: string;
-  conflicts?: ScheduleConflict[];
+  appointment?: Appointment;
+}
+
+interface MoveResult {
+  success: boolean;
+  error?: string;
 }
 
 export const permissionAwareScheduleApi = {
@@ -16,24 +20,18 @@ export const permissionAwareScheduleApi = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Get user permissions
-    const permissions = await permissionApi.getCurrentUserRole();
+    // Get user role to determine access
+    const userRole = await permissionApi.getCurrentUserRole();
     
-    let query = supabase.from('staff').select('*').eq('salon_id', user.id);
+    let query = supabase
+      .from('staff')
+      .select('*')
+      .eq('salon_id', user.id)
+      .eq('status', 'active');
 
-    // If user is staff, only return their own record
-    if (permissions.role === 'staff') {
-      const { data: userStaff } = await supabase
-        .from('staff')
-        .select('id')
-        .eq('email', user.email)
-        .single();
-      
-      if (userStaff) {
-        query = query.eq('id', userStaff.id);
-      } else {
-        return []; // Staff member not found
-      }
+    // If user is staff, only show their own record
+    if (userRole?.role === 'staff') {
+      query = query.eq('email', user.email);
     }
 
     const { data, error } = await query.order('name');
@@ -60,55 +58,43 @@ export const permissionAwareScheduleApi = {
       notes: staff.notes,
       hireDate: staff.hire_date,
       salonId: staff.salon_id,
+      staffCode: staff.staff_code,
+      staffLoginId: staff.staff_login_id,
+      staffLoginPassword: staff.staff_login_password,
       createdAt: staff.created_at,
       updatedAt: staff.updated_at
     })) || [];
   },
 
-  async getUserAccessibleAppointments(
-    date?: string,
-    staffId?: string
-  ): Promise<Appointment[]> {
+  async getUserAccessibleAppointments(date: string): Promise<Appointment[]> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Check permissions
-    const hasViewPermission = await permissionApi.hasPermission('appointments', 'view');
-    if (!hasViewPermission) {
-      throw new Error('No permission to view appointments');
-    }
-
-    const permissions = await permissionApi.getCurrentUserRole();
+    // Get user role to determine access
+    const userRole = await permissionApi.getCurrentUserRole();
     
     let query = supabase
       .from('appointments')
       .select('*')
-      .eq('salon_id', user.id);
+      .eq('salon_id', user.id)
+      .eq('date', date);
 
     // If user is staff, only show their own appointments
-    if (permissions.role === 'staff') {
-      const { data: userStaff } = await supabase
+    if (userRole?.role === 'staff') {
+      // Get staff record to filter by staff_id
+      const { data: staffData } = await supabase
         .from('staff')
         .select('id')
+        .eq('salon_id', user.id)
         .eq('email', user.email)
         .single();
       
-      if (userStaff) {
-        query = query.eq('staff_id', userStaff.id);
-      } else {
-        return []; // Staff member not found
+      if (staffData) {
+        query = query.eq('staff_id', staffData.id);
       }
-    } else if (staffId) {
-      query = query.eq('staff_id', staffId);
     }
 
-    if (date) {
-      query = query.eq('date', date);
-    }
-
-    const { data, error } = await query
-      .order('date', { ascending: true })
-      .order('start_time', { ascending: true });
+    const { data, error } = await query.order('start_time');
     
     if (error) throw error;
     
@@ -132,62 +118,72 @@ export const permissionAwareScheduleApi = {
     })) || [];
   },
 
-  async createAppointmentWithValidation(
-    appointment: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | 'salonId'>
-  ): Promise<PermissionAwareAppointmentResult> {
-    // Check create permission
-    const hasCreatePermission = await permissionApi.hasPermission('appointments', 'create');
-    if (!hasCreatePermission) {
-      return { success: false, error: 'No permission to create appointments' };
-    }
+  async createAppointmentWithValidation(appointment: {
+    clientId?: string;
+    clientName: string;
+    clientPhone?: string;
+    staffId: string;
+    service: string;
+    date: string;
+    startTime: string;
+    duration: number;
+    price: number;
+    notes?: string;
+  }): Promise<BookingResult> {
+    try {
+      // Check if user has permission to create appointments
+      const hasPermission = await permissionApi.hasPermission('appointments', 'create');
+      if (!hasPermission) {
+        return { success: false, error: 'You do not have permission to create appointments' };
+      }
 
-    // Validate availability
-    const availability = await realTimeScheduleApi.checkStaffAvailability(
-      appointment.staffId,
-      appointment.date,
-      appointment.startTime,
-      appointment.endTime
-    );
+      // Calculate end time
+      const endTime = new Date(`2000-01-01 ${appointment.startTime}`);
+      endTime.setMinutes(endTime.getMinutes() + appointment.duration);
+      const endTimeString = endTime.toTimeString().slice(0, 5);
 
-    if (!availability.isAvailable) {
-      return {
-        success: false,
-        error: 'Time slot not available',
-        conflicts: availability.conflicts
-      };
-    }
+      // Check staff availability
+      const availability = await realTimeScheduleApi.checkStaffAvailability(
+        appointment.staffId,
+        appointment.date,
+        appointment.startTime,
+        endTimeString
+      );
 
-    // Create appointment
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { success: false, error: 'Not authenticated' };
+      if (!availability.isAvailable) {
+        return { 
+          success: false, 
+          error: `Time slot not available: ${availability.conflicts[0]?.message || 'Scheduling conflict'}` 
+        };
+      }
 
-    const { data, error } = await supabase
-      .from('appointments')
-      .insert({
-        client_id: appointment.clientId,
-        staff_id: appointment.staffId,
-        client_name: appointment.clientName,
-        client_phone: appointment.clientPhone,
-        service: appointment.service,
-        start_time: appointment.startTime,
-        end_time: appointment.endTime,
-        date: appointment.date,
-        price: appointment.price,
-        duration: appointment.duration || 60,
-        status: appointment.status || 'Scheduled',
-        notes: appointment.notes,
-        salon_id: user.id
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      return { success: false, error: error.message };
-    }
-    
-    return {
-      success: true,
-      appointment: {
+      // Create the appointment
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('appointments')
+        .insert({
+          client_id: appointment.clientId,
+          staff_id: appointment.staffId,
+          client_name: appointment.clientName,
+          client_phone: appointment.clientPhone,
+          service: appointment.service,
+          start_time: appointment.startTime,
+          end_time: endTimeString,
+          date: appointment.date,
+          price: appointment.price,
+          duration: appointment.duration,
+          status: 'Scheduled',
+          notes: appointment.notes,
+          salon_id: user.id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const createdAppointment: Appointment = {
         id: data.id,
         clientId: data.client_id,
         staffId: data.staff_id,
@@ -204,8 +200,16 @@ export const permissionAwareScheduleApi = {
         salonId: data.salon_id,
         createdAt: data.created_at,
         updatedAt: data.updated_at
-      }
-    };
+      };
+
+      return { success: true, appointment: createdAppointment };
+    } catch (error) {
+      console.error('Error creating appointment:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to create appointment' 
+      };
+    }
   },
 
   async moveAppointmentWithValidation(
@@ -214,68 +218,51 @@ export const permissionAwareScheduleApi = {
     newDate: string,
     newStartTime: string,
     newEndTime: string
-  ): Promise<PermissionAwareAppointmentResult> {
-    // Check edit permission
-    const hasEditPermission = await permissionApi.hasPermission('appointments', 'edit');
-    if (!hasEditPermission) {
-      return { success: false, error: 'No permission to edit appointments' };
-    }
+  ): Promise<MoveResult> {
+    try {
+      // Check if user has permission to edit appointments
+      const hasPermission = await permissionApi.hasPermission('appointments', 'edit');
+      if (!hasPermission) {
+        return { success: false, error: 'You do not have permission to edit appointments' };
+      }
 
-    // Validate the move
-    const validation = await realTimeScheduleApi.validateAppointmentMove(
-      appointmentId,
-      newStaffId,
-      newDate,
-      newStartTime,
-      newEndTime
-    );
+      // Validate the move
+      const validation = await realTimeScheduleApi.validateAppointmentMove(
+        appointmentId,
+        newStaffId,
+        newDate,
+        newStartTime,
+        newEndTime
+      );
 
-    if (!validation.isValid) {
-      return {
-        success: false,
-        error: 'Cannot move appointment to this slot',
-        conflicts: validation.conflicts
+      if (!validation.isValid) {
+        return { 
+          success: false, 
+          error: validation.conflicts[0]?.message || 'Cannot move appointment to this time slot' 
+        };
+      }
+
+      // Update the appointment
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          staff_id: newStaffId,
+          date: newDate,
+          start_time: newStartTime,
+          end_time: newEndTime,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', appointmentId);
+
+      if (error) throw error;
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error moving appointment:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to move appointment' 
       };
     }
-
-    // Update appointment
-    const { data, error } = await supabase
-      .from('appointments')
-      .update({
-        staff_id: newStaffId,
-        date: newDate,
-        start_time: newStartTime,
-        end_time: newEndTime,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', appointmentId)
-      .select()
-      .single();
-    
-    if (error) {
-      return { success: false, error: error.message };
-    }
-    
-    return {
-      success: true,
-      appointment: {
-        id: data.id,
-        clientId: data.client_id,
-        staffId: data.staff_id,
-        clientName: data.client_name,
-        clientPhone: data.client_phone,
-        service: data.service,
-        startTime: data.start_time,
-        endTime: data.end_time,
-        date: data.date,
-        price: data.price,
-        duration: data.duration,
-        status: data.status as Appointment['status'],
-        notes: data.notes,
-        salonId: data.salon_id,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at
-      }
-    };
   }
 };

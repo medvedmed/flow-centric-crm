@@ -1,15 +1,16 @@
+
 import React, { useState } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, User, DollarSign, Plus, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Staff, Appointment } from '@/services/types';
 import { AddAppointmentDialog } from './AddAppointmentDialog';
+import { format } from 'date-fns';
 
 interface TimeSlot {
   time: string;
@@ -28,11 +29,10 @@ interface DragDropSchedulerProps {
 // Utility function to normalize time format for comparison
 const normalizeTime = (time: string): string => {
   if (!time) return '';
-  // Remove seconds if present (e.g., "08:00:00" -> "08:00")
   return time.split(':').slice(0, 2).join(':');
 };
 
-// Compact Appointment Block Component optimized for single-sheet layout
+// Compact Appointment Block Component
 const AppointmentBlock: React.FC<{
   appointment: Appointment;
   isDragging?: boolean;
@@ -53,12 +53,12 @@ const AppointmentBlock: React.FC<{
   };
 
   const statusColors = {
-    'Scheduled': 'bg-blue-50 border-l-blue-400 text-blue-900',
-    'Confirmed': 'bg-green-50 border-l-green-400 text-green-900', 
-    'In Progress': 'bg-purple-50 border-l-purple-400 text-purple-900',
-    'Completed': 'bg-gray-50 border-l-gray-400 text-gray-900',
-    'Cancelled': 'bg-red-50 border-l-red-400 text-red-900',
-    'No Show': 'bg-orange-50 border-l-orange-400 text-orange-900'
+    'Scheduled': 'bg-blue-50 border-l-blue-500 text-blue-900',
+    'Confirmed': 'bg-green-50 border-l-green-500 text-green-900', 
+    'In Progress': 'bg-purple-50 border-l-purple-500 text-purple-900',
+    'Completed': 'bg-gray-50 border-l-gray-500 text-gray-900',
+    'Cancelled': 'bg-red-50 border-l-red-500 text-red-900',
+    'No Show': 'bg-orange-50 border-l-orange-500 text-orange-900'
   };
 
   return (
@@ -67,7 +67,7 @@ const AppointmentBlock: React.FC<{
       style={style}
       {...attributes}
       {...listeners}
-      className={`cursor-grab active:cursor-grabbing w-full rounded-lg border-l-4 p-2 mb-1 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
+      className={`cursor-grab active:cursor-grabbing w-full rounded-md border-l-4 p-2 mb-1 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
         statusColors[appointment.status as keyof typeof statusColors] || statusColors.Scheduled
       } ${isDragging ? 'z-50' : ''}`}
     >
@@ -144,13 +144,6 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null);
 
-  // Debug logging
-  console.log('DragDropScheduler Debug Info:');
-  console.log('Staff count:', staff.length);
-  console.log('Appointments count:', appointments.length);
-  console.log('Appointments data:', appointments);
-  console.log('Staff data:', staff);
-
   // Generate time slots from 8 AM to 8 PM
   const timeSlots: TimeSlot[] = [];
   for (let hour = 8; hour < 20; hour++) {
@@ -183,7 +176,6 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
 
     // Handle drop logic here
     if (onAppointmentMove) {
-      // Extract staff ID and time from the drop target
       const dropData = (over.data?.current as any) || {};
       if (dropData.staffId && dropData.time) {
         onAppointmentMove(active.id as string, dropData.staffId, dropData.time);
@@ -196,28 +188,10 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
 
   const getAppointmentsForStaffAndTime = (staffId: string, time: string) => {
     const normalizedTime = normalizeTime(time);
-    const matchingAppointments = appointments.filter(apt => {
+    return appointments.filter(apt => {
       const normalizedStartTime = normalizeTime(apt.startTime);
-      const matches = apt.staffId === staffId && normalizedStartTime === normalizedTime;
-      
-      // Debug logging for time comparison
-      console.log(`Comparing appointment ${apt.id}:`, {
-        appointmentStaffId: apt.staffId,
-        targetStaffId: staffId,
-        appointmentStartTime: apt.startTime,
-        normalizedAppointmentTime: normalizedStartTime,
-        targetTime: time,
-        normalizedTargetTime: normalizedTime,
-        staffMatch: apt.staffId === staffId,
-        timeMatch: normalizedStartTime === normalizedTime,
-        overallMatch: matches
-      });
-      
-      return matches;
+      return apt.staffId === staffId && normalizedStartTime === normalizedTime;
     });
-    
-    console.log(`Found ${matchingAppointments.length} appointments for staff ${staffId} at time ${time}`);
-    return matchingAppointments;
   };
 
   const getInitials = (name: string) => {
@@ -245,26 +219,35 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
       onDragEnd={handleDragEnd}
     >
       <div className="w-full h-full bg-white overflow-hidden flex flex-col">
-        {/* Sticky Header with Staff Columns */}
+        {/* Schedule Header with Date */}
+        <div className="flex-shrink-0 p-3 bg-gradient-to-r from-blue-50 to-purple-50 border-b-2 border-gray-300">
+          <div className="flex items-center justify-center">
+            <h2 className="text-lg font-semibold text-gray-800">
+              {format(selectedDate, 'EEEE, MMMM dd, yyyy')}
+            </h2>
+          </div>
+        </div>
+
+        {/* Sticky Staff Header */}
         <div 
-          className="sticky top-0 z-10 bg-white border-b-2 border-gray-300 shadow-sm flex-shrink-0"
+          className="sticky top-0 z-10 bg-white border-b-2 border-gray-400 shadow-sm flex-shrink-0"
           style={{ 
             display: 'grid',
-            gridTemplateColumns: `140px repeat(${staff.length}, 1fr)` 
+            gridTemplateColumns: `120px repeat(${staff.length}, 1fr)` 
           }}
         >
           {/* Time Column Header */}
-          <div className="p-4 border-r-2 border-gray-300 bg-gray-100 flex items-center justify-center">
-            <h3 className="font-bold text-gray-800 text-sm">TIME</h3>
+          <div className="p-3 border-r-2 border-gray-400 bg-gray-100 flex items-center justify-center">
+            <span className="font-bold text-gray-800 text-sm">TIME</span>
           </div>
           
           {/* Staff Headers */}
-          {staff.map((staffMember, index) => (
+          {staff.map((staffMember) => (
             <div 
               key={staffMember.id} 
-              className="p-3 border-r-2 border-gray-300 last:border-r-0 bg-gradient-to-b from-gray-50 to-white overflow-hidden"
+              className="p-2 border-r-2 border-gray-400 last:border-r-0 bg-gradient-to-b from-gray-50 to-white overflow-hidden"
             >
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col items-center gap-1">
                 <Avatar className="w-8 h-8 flex-shrink-0">
                   <AvatarImage src={staffMember.imageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${staffMember.name}`} />
                   <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-500 text-white text-xs">
@@ -275,8 +258,6 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
                   <h3 className="font-semibold text-gray-800 text-sm truncate">{staffMember.name}</h3>
                   <div className="flex items-center justify-center gap-1 text-xs text-gray-600">
                     <span>{staffMember.rating || 5.0}⭐</span>
-                    <span>•</span>
-                    <span>{staffMember.efficiency || 100}%</span>
                   </div>
                 </div>
               </div>
@@ -289,49 +270,55 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
           {timeSlots.map((timeSlot, timeIndex) => (
             <div 
               key={timeSlot.time} 
-              className={`border-b border-gray-200 hover:bg-gray-50/30 transition-colors ${
+              className={`border-b border-gray-300 hover:bg-gray-50/30 transition-colors ${
                 timeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'
               }`}
               style={{ 
                 display: 'grid',
-                gridTemplateColumns: `140px repeat(${staff.length}, 1fr)`,
+                gridTemplateColumns: `120px repeat(${staff.length}, 1fr)`,
                 minHeight: '64px'
               }}
             >
               {/* Time Label */}
-              <div className="p-3 border-r-2 border-gray-300 bg-gray-100 flex items-center justify-center sticky left-0 z-5">
+              <div className="p-3 border-r-2 border-gray-400 bg-gray-100 flex items-center justify-center sticky left-0 z-5">
                 <span className="text-sm font-semibold text-gray-800">{timeSlot.time}</span>
               </div>
               
-              {/* Staff Columns */}
+              {/* Staff Columns with Enhanced Containment */}
               {staff.map((staffMember, staffIndex) => {
                 const slotAppointments = getAppointmentsForStaffAndTime(staffMember.id || '', timeSlot.time);
                 
                 return (
                   <div 
                     key={`${staffMember.id}-${timeSlot.time}`}
-                    className={`p-2 border-r-2 border-gray-300 last:border-r-0 min-h-[64px] overflow-hidden ${
+                    className={`p-2 border-r-2 border-gray-400 last:border-r-0 min-h-[64px] overflow-hidden relative ${
                       staffIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
                     }`}
-                    style={{ maxWidth: '100%' }}
+                    style={{ 
+                      maxWidth: '100%',
+                      position: 'relative',
+                      isolation: 'isolate'
+                    }}
                   >
                     <SortableContext 
                       items={slotAppointments.map(apt => apt.id)} 
                       strategy={verticalListSortingStrategy}
                     >
-                      {slotAppointments.length > 0 ? (
-                        <div className="w-full overflow-hidden">
-                          {slotAppointments.map(appointment => (
-                            <AppointmentBlock key={appointment.id} appointment={appointment} />
-                          ))}
-                        </div>
-                      ) : (
-                        <EmptyTimeSlot 
-                          staffId={staffMember.id || ''} 
-                          time={timeSlot.time} 
-                          selectedDate={selectedDate}
-                        />
-                      )}
+                      <div className="w-full h-full overflow-hidden">
+                        {slotAppointments.length > 0 ? (
+                          <div className="w-full overflow-hidden">
+                            {slotAppointments.map(appointment => (
+                              <AppointmentBlock key={appointment.id} appointment={appointment} />
+                            ))}
+                          </div>
+                        ) : (
+                          <EmptyTimeSlot 
+                            staffId={staffMember.id || ''} 
+                            time={timeSlot.time} 
+                            selectedDate={selectedDate}
+                          />
+                        )}
+                      </div>
                     </SortableContext>
                   </div>
                 );

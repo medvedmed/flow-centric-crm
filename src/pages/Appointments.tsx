@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
-import { ProtectedComponent } from '@/components/ProtectedComponent';
 import { Card, CardContent } from '@/components/ui/card';
 import { Shield } from 'lucide-react';
 import { AppointmentScheduler } from '@/components/AppointmentScheduler';
@@ -33,17 +32,15 @@ const Appointments = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      {/* Compact Header */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-white">
+    <div className="h-screen flex flex-col bg-white overflow-hidden">
+      {/* Compact Header with Calendar */}
+      <div className="flex-shrink-0 p-3 border-b border-gray-300 bg-gradient-to-r from-gray-50 to-white">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Appointments
-            </h1>
-            <p className="text-sm text-muted-foreground">Manage your salon appointments with drag-and-drop scheduling.</p>
+            <h1 className="text-xl font-bold text-gray-800">Appointments</h1>
+            <p className="text-xs text-gray-600">Drag-and-drop scheduling</p>
           </div>
-          <div className="w-80">
+          <div className="w-72">
             <MiniCalendar
               selectedDate={selectedDate}
               onDateSelect={setSelectedDate}
@@ -54,12 +51,10 @@ const Appointments = () => {
 
       {/* Full Height Scheduler */}
       <div className="flex-1 overflow-hidden">
-        <ProtectedComponent area="appointments" action="view">
-          <AppointmentScheduler
-            selectedDate={selectedDate}
-            onAppointmentMove={handleAppointmentMove}
-          />
-        </ProtectedComponent>
+        <AppointmentScheduler
+          selectedDate={selectedDate}
+          onAppointmentMove={handleAppointmentMove}
+        />
       </div>
     </div>
   );

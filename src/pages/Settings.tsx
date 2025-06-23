@@ -2,16 +2,17 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings as SettingsIcon, Building, Shield, MessageSquare, Bell, Users, Calendar, UserCog, AlertCircle } from "lucide-react";
+import { Settings as SettingsIcon, Building, Shield, MessageSquare, Bell, Users, Calendar, UserCog, AlertCircle, BarChart3, Zap } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAdminSetup } from "@/hooks/useAdminSetup";
 import { AdminSetupDialog } from "@/components/AdminSetupDialog";
-import { SalonProfileSection } from "@/components/SalonProfileSection";
+import { EnhancedSalonProfile } from "@/components/EnhancedSalonProfile";
 import { UnifiedRoleManagement } from "@/components/UnifiedRoleManagement";
-import { WhatsAppSection } from "@/components/WhatsAppSection";
+import { WhatsAppIntegration } from "@/components/WhatsAppIntegration";
 import { StaffScheduleSection } from "@/components/StaffScheduleSection";
 import ManagerSection from "@/components/ManagerSection";
 import { NotificationPreferences } from "@/components/NotificationPreferences";
+import { BusinessAnalytics } from "@/components/BusinessAnalytics";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 
@@ -35,6 +36,7 @@ const Settings = () => {
   // Check if user has settings permissions
   const canViewSettings = hasPermissionSync('settings', 'view');
   const canEditSettings = hasPermissionSync('settings', 'edit');
+  const canViewReports = hasPermissionSync('reports', 'view');
 
   if (isLoading) {
     return (
@@ -86,17 +88,21 @@ const Settings = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Settings
+            Settings & Analytics
           </h1>
-          <p className="text-muted-foreground mt-1">Configure your salon management system preferences and settings.</p>
+          <p className="text-muted-foreground mt-1">Complete salon management, automation, and business insights.</p>
         </div>
       </div>
 
       <Tabs defaultValue="salon" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-8">
           <TabsTrigger value="salon" className="flex items-center gap-2">
             <Building className="w-4 h-4" />
             <span className="hidden sm:inline">Salon</span>
+          </TabsTrigger>
+          <TabsTrigger value="whatsapp" className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            <span className="hidden sm:inline">WhatsApp</span>
           </TabsTrigger>
           <TabsTrigger value="manager" className="flex items-center gap-2">
             <UserCog className="w-4 h-4" />
@@ -110,9 +116,13 @@ const Settings = () => {
             <Calendar className="w-4 h-4" />
             <span className="hidden sm:inline">Schedule</span>
           </TabsTrigger>
-          <TabsTrigger value="whatsapp" className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" />
-            <span className="hidden sm:inline">WhatsApp</span>
+          <TabsTrigger value="analytics" className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            <span className="hidden sm:inline">Analytics</span>
+          </TabsTrigger>
+          <TabsTrigger value="automation" className="flex items-center gap-2">
+            <Zap className="w-4 h-4" />
+            <span className="hidden sm:inline">Automation</span>
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex items-center gap-2">
             <Bell className="w-4 h-4" />
@@ -121,7 +131,11 @@ const Settings = () => {
         </TabsList>
 
         <TabsContent value="salon" className="space-y-6">
-          <SalonProfileSection />
+          <EnhancedSalonProfile />
+        </TabsContent>
+
+        <TabsContent value="whatsapp" className="space-y-6">
+          <WhatsAppIntegration />
         </TabsContent>
 
         <TabsContent value="manager" className="space-y-6">
@@ -163,8 +177,47 @@ const Settings = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="whatsapp" className="space-y-6">
-          <WhatsAppSection />
+        <TabsContent value="analytics" className="space-y-6">
+          {canViewReports ? (
+            <BusinessAnalytics />
+          ) : (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <BarChart3 className="h-8 w-8 mx-auto mb-4 text-gray-400" />
+                <p className="text-gray-600">You need report permissions to view business analytics.</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="automation" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5" />
+                Automation Hub
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium mb-2">Smart Scheduling</h3>
+                  <p className="text-sm text-gray-600 mb-3">Automatically suggest optimal appointment times based on staff availability and client preferences.</p>
+                  <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">Coming Soon</div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium mb-2">Auto Follow-ups</h3>
+                  <p className="text-sm text-gray-600 mb-3">Send personalized follow-up messages and review requests automatically.</p>
+                  <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">Available in WhatsApp</div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium mb-2">Predictive Analytics</h3>
+                  <p className="text-sm text-gray-600 mb-3">AI-powered insights to predict busy periods and optimize staffing.</p>
+                  <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">Coming Soon</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6">

@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -27,7 +26,12 @@ import "./App.css"
 
 const queryClient = new QueryClient()
 
+import { useRealTimeUpdates } from '@/hooks/useRealTimeUpdates';
+
 function App() {
+  // Enable real-time updates across the app
+  useRealTimeUpdates();
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

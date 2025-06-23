@@ -24,17 +24,32 @@ export const profileApi = {
       subscription_status: data.subscription_status as 'trial' | 'active' | 'cancelled' | 'expired',
       subscription_end_date: data.subscription_end_date,
       created_at: data.created_at,
-      updated_at: data.updated_at
-    };
+      updated_at: data.updated_at,
+      // New enhanced fields
+      address: data.address,
+      description: data.description,
+      opening_hours: data.opening_hours,
+      closing_hours: data.closing_hours,
+      working_days: data.working_days,
+      website: data.website,
+      social_media: data.social_media
+    } as any;
   },
 
-  async updateProfile(profile: Partial<Profile>): Promise<Profile> {
+  async updateProfile(profile: Partial<Profile & any>): Promise<Profile> {
     const { data, error } = await supabase
       .from('profiles')
       .update({
         full_name: profile.full_name,
         salon_name: profile.salon_name,
         phone: profile.phone,
+        address: profile.address,
+        description: profile.description,
+        opening_hours: profile.opening_hours,
+        closing_hours: profile.closing_hours,
+        working_days: profile.working_days,
+        website: profile.website,
+        social_media: profile.social_media,
         updated_at: new Date().toISOString()
       })
       .select()
@@ -52,7 +67,14 @@ export const profileApi = {
       subscription_status: data.subscription_status as 'trial' | 'active' | 'cancelled' | 'expired',
       subscription_end_date: data.subscription_end_date,
       created_at: data.created_at,
-      updated_at: data.updated_at
-    };
+      updated_at: data.updated_at,
+      address: data.address,
+      description: data.description,
+      opening_hours: data.opening_hours,
+      closing_hours: data.closing_hours,
+      working_days: data.working_days,
+      website: data.website,
+      social_media: data.social_media
+    } as any;
   }
 };

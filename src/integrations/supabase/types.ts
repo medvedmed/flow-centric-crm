@@ -146,6 +146,48 @@ export type Database = {
           },
         ]
       }
+      business_analytics: {
+        Row: {
+          cancelled_appointments: number | null
+          completed_appointments: number | null
+          created_at: string | null
+          daily_revenue: number | null
+          date: string
+          id: string
+          new_clients: number | null
+          no_show_appointments: number | null
+          returning_clients: number | null
+          salon_id: string
+          total_appointments: number | null
+        }
+        Insert: {
+          cancelled_appointments?: number | null
+          completed_appointments?: number | null
+          created_at?: string | null
+          daily_revenue?: number | null
+          date: string
+          id?: string
+          new_clients?: number | null
+          no_show_appointments?: number | null
+          returning_clients?: number | null
+          salon_id: string
+          total_appointments?: number | null
+        }
+        Update: {
+          cancelled_appointments?: number | null
+          completed_appointments?: number | null
+          created_at?: string | null
+          daily_revenue?: number | null
+          date?: string
+          id?: string
+          new_clients?: number | null
+          no_show_appointments?: number | null
+          returning_clients?: number | null
+          salon_id?: string
+          total_appointments?: number | null
+        }
+        Relationships: []
+      }
       client_sessions: {
         Row: {
           client_id: string
@@ -254,67 +296,100 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
+          closing_hours: string | null
           created_at: string | null
+          description: string | null
           email: string
           full_name: string | null
           id: string
+          opening_hours: string | null
           phone: string | null
           role: string | null
           salon_name: string | null
+          social_media: Json | null
           subscription_end_date: string | null
           subscription_status: string | null
           updated_at: string | null
+          website: string | null
+          working_days: string[] | null
         }
         Insert: {
+          address?: string | null
+          closing_hours?: string | null
           created_at?: string | null
+          description?: string | null
           email: string
           full_name?: string | null
           id: string
+          opening_hours?: string | null
           phone?: string | null
           role?: string | null
           salon_name?: string | null
+          social_media?: Json | null
           subscription_end_date?: string | null
           subscription_status?: string | null
           updated_at?: string | null
+          website?: string | null
+          working_days?: string[] | null
         }
         Update: {
+          address?: string | null
+          closing_hours?: string | null
           created_at?: string | null
+          description?: string | null
           email?: string
           full_name?: string | null
           id?: string
+          opening_hours?: string | null
           phone?: string | null
           role?: string | null
           salon_name?: string | null
+          social_media?: Json | null
           subscription_end_date?: string | null
           subscription_status?: string | null
           updated_at?: string | null
+          website?: string | null
+          working_days?: string[] | null
         }
         Relationships: []
       }
       reminder_settings: {
         Row: {
+          auto_send: boolean | null
           created_at: string
+          follow_up_enabled: boolean | null
+          follow_up_template: string | null
           id: string
           is_enabled: boolean
           message_template: string
+          optimal_send_time: string | null
           reminder_timing: string
           salon_id: string
           updated_at: string
         }
         Insert: {
+          auto_send?: boolean | null
           created_at?: string
+          follow_up_enabled?: boolean | null
+          follow_up_template?: string | null
           id?: string
           is_enabled?: boolean
           message_template?: string
+          optimal_send_time?: string | null
           reminder_timing?: string
           salon_id: string
           updated_at?: string
         }
         Update: {
+          auto_send?: boolean | null
           created_at?: string
+          follow_up_enabled?: boolean | null
+          follow_up_template?: string | null
           id?: string
           is_enabled?: boolean
           message_template?: string
+          optimal_send_time?: string | null
           reminder_timing?: string
           salon_id?: string
           updated_at?: string
@@ -626,6 +701,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      whatsapp_sessions: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_connected: boolean | null
+          last_connected_at: string | null
+          phone_number: string | null
+          salon_id: string
+          session_data: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_connected?: boolean | null
+          last_connected_at?: string | null
+          phone_number?: string | null
+          salon_id: string
+          session_data?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_connected?: boolean | null
+          last_connected_at?: string | null
+          phone_number?: string | null
+          salon_id?: string
+          session_data?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {

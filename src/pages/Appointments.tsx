@@ -4,10 +4,9 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Shield } from 'lucide-react';
 import { AppointmentScheduler } from '@/components/AppointmentScheduler';
-import { MiniCalendar } from '@/components/MiniCalendar';
 
 const Appointments = () => {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate] = useState<Date>(new Date());
   const { hasPermissionSync } = usePermissions();
 
   const canViewAppointments = hasPermissionSync('appointments', 'view');
@@ -32,30 +31,11 @@ const Appointments = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-white overflow-hidden">
-      {/* Compact Header with Calendar */}
-      <div className="flex-shrink-0 p-3 border-b border-gray-300 bg-gradient-to-r from-gray-50 to-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-800">Appointments</h1>
-            <p className="text-xs text-gray-600">Drag-and-drop scheduling</p>
-          </div>
-          <div className="w-72">
-            <MiniCalendar
-              selectedDate={selectedDate}
-              onDateSelect={setSelectedDate}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Full Height Scheduler */}
-      <div className="flex-1 overflow-hidden">
-        <AppointmentScheduler
-          selectedDate={selectedDate}
-          onAppointmentMove={handleAppointmentMove}
-        />
-      </div>
+    <div className="h-screen w-full overflow-hidden bg-white">
+      <AppointmentScheduler
+        selectedDate={selectedDate}
+        onAppointmentMove={handleAppointmentMove}
+      />
     </div>
   );
 };

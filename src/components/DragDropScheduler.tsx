@@ -219,26 +219,17 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
       onDragEnd={handleDragEnd}
     >
       <div className="w-full h-full bg-white overflow-hidden flex flex-col">
-        {/* Schedule Header with Date */}
-        <div className="flex-shrink-0 p-3 bg-gradient-to-r from-blue-50 to-purple-50 border-b-2 border-gray-300">
-          <div className="flex items-center justify-center">
-            <h2 className="text-lg font-semibold text-gray-800">
-              {format(selectedDate, 'EEEE, MMMM dd, yyyy')}
-            </h2>
-          </div>
-        </div>
-
         {/* Sticky Staff Header */}
         <div 
-          className="sticky top-0 z-10 bg-white border-b-2 border-gray-400 shadow-sm flex-shrink-0"
+          className="sticky top-0 z-20 bg-white border-b-2 border-gray-400 shadow-sm flex-shrink-0"
           style={{ 
             display: 'grid',
-            gridTemplateColumns: `120px repeat(${staff.length}, 1fr)` 
+            gridTemplateColumns: `100px repeat(${staff.length}, 1fr)` 
           }}
         >
           {/* Time Column Header */}
-          <div className="p-3 border-r-2 border-gray-400 bg-gray-100 flex items-center justify-center">
-            <span className="font-bold text-gray-800 text-sm">TIME</span>
+          <div className="p-2 border-r-2 border-gray-400 bg-gray-100 flex items-center justify-center">
+            <span className="font-bold text-gray-800 text-xs">TIME</span>
           </div>
           
           {/* Staff Headers */}
@@ -246,18 +237,19 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
             <div 
               key={staffMember.id} 
               className="p-2 border-r-2 border-gray-400 last:border-r-0 bg-gradient-to-b from-gray-50 to-white overflow-hidden"
+              style={{ minWidth: 0 }}
             >
               <div className="flex flex-col items-center gap-1">
-                <Avatar className="w-8 h-8 flex-shrink-0">
+                <Avatar className="w-6 h-6 flex-shrink-0">
                   <AvatarImage src={staffMember.imageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${staffMember.name}`} />
                   <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-500 text-white text-xs">
                     {getInitials(staffMember.name)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="text-center w-full overflow-hidden">
-                  <h3 className="font-semibold text-gray-800 text-sm truncate">{staffMember.name}</h3>
+                  <h3 className="font-semibold text-gray-800 text-xs truncate">{staffMember.name}</h3>
                   <div className="flex items-center justify-center gap-1 text-xs text-gray-600">
-                    <span>{staffMember.rating || 5.0}⭐</span>
+                    <span className="text-xs">{staffMember.rating || 5.0}⭐</span>
                   </div>
                 </div>
               </div>
@@ -275,13 +267,13 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
               }`}
               style={{ 
                 display: 'grid',
-                gridTemplateColumns: `120px repeat(${staff.length}, 1fr)`,
-                minHeight: '64px'
+                gridTemplateColumns: `100px repeat(${staff.length}, 1fr)`,
+                minHeight: '60px'
               }}
             >
               {/* Time Label */}
-              <div className="p-3 border-r-2 border-gray-400 bg-gray-100 flex items-center justify-center sticky left-0 z-5">
-                <span className="text-sm font-semibold text-gray-800">{timeSlot.time}</span>
+              <div className="p-2 border-r-2 border-gray-400 bg-gray-100 flex items-center justify-center sticky left-0 z-10">
+                <span className="text-xs font-semibold text-gray-800">{timeSlot.time}</span>
               </div>
               
               {/* Staff Columns with Enhanced Containment */}
@@ -291,11 +283,12 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
                 return (
                   <div 
                     key={`${staffMember.id}-${timeSlot.time}`}
-                    className={`p-2 border-r-2 border-gray-400 last:border-r-0 min-h-[64px] overflow-hidden relative ${
+                    className={`p-1 border-r-2 border-gray-400 last:border-r-0 min-h-[60px] overflow-hidden relative ${
                       staffIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
                     }`}
                     style={{ 
                       maxWidth: '100%',
+                      minWidth: 0,
                       position: 'relative',
                       isolation: 'isolate'
                     }}

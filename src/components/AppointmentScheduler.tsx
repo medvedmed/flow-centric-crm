@@ -3,8 +3,6 @@ import React from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { useAppointmentData } from '@/hooks/useAppointmentData';
-import { usePermissions } from '@/hooks/usePermissions';
-import { AddAppointmentDialog } from './AddAppointmentDialog';
 import DragDropScheduler from './DragDropScheduler';
 import { format } from 'date-fns';
 
@@ -19,10 +17,6 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 }) => {
   const dateString = format(selectedDate, 'yyyy-MM-dd');
   const { staff, appointments, isLoading, error, staffError, appointmentsError } = useAppointmentData(dateString);
-  const { hasPermissionSync, userRole } = usePermissions();
-
-  const canCreateAppointments = hasPermissionSync('appointments', 'create');
-  const isStaff = userRole === 'staff';
 
   const handleRefresh = () => {
     window.location.reload();
@@ -60,14 +54,12 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   }
 
   return (
-    <div className="h-full w-full overflow-hidden bg-white">
-      <DragDropScheduler
-        staff={staff}
-        appointments={appointments}
-        selectedDate={selectedDate}
-        onAppointmentMove={handleAppointmentMove}
-        onRefresh={handleRefresh}
-      />
-    </div>
+    <DragDropScheduler
+      staff={staff}
+      appointments={appointments}
+      selectedDate={selectedDate}
+      onAppointmentMove={handleAppointmentMove}
+      onRefresh={handleRefresh}
+    />
   );
 };

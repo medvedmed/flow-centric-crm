@@ -702,35 +702,119 @@ export type Database = {
           },
         ]
       }
+      whatsapp_messages: {
+        Row: {
+          appointment_id: string | null
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          id: string
+          message_content: string
+          message_type: string | null
+          read_at: string | null
+          recipient_name: string | null
+          recipient_phone: string
+          reminder_id: string | null
+          salon_id: string
+          sent_at: string | null
+          status: string | null
+          updated_at: string
+          whatsapp_message_id: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          message_content: string
+          message_type?: string | null
+          read_at?: string | null
+          recipient_name?: string | null
+          recipient_phone: string
+          reminder_id?: string | null
+          salon_id: string
+          sent_at?: string | null
+          status?: string | null
+          updated_at?: string
+          whatsapp_message_id?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          message_content?: string
+          message_type?: string | null
+          read_at?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string
+          reminder_id?: string | null
+          salon_id?: string
+          sent_at?: string | null
+          status?: string | null
+          updated_at?: string
+          whatsapp_message_id?: string | null
+        }
+        Relationships: []
+      }
       whatsapp_sessions: {
         Row: {
+          client_id: string | null
+          client_token: string | null
+          connection_state: string | null
           created_at: string | null
+          device_info: Json | null
+          encrypted_session: string | null
           id: string
           is_connected: boolean | null
           last_connected_at: string | null
+          last_seen: string | null
           phone_number: string | null
+          qr_code: string | null
           salon_id: string
+          server_token: string | null
           session_data: Json | null
+          session_key: string | null
           updated_at: string | null
         }
         Insert: {
+          client_id?: string | null
+          client_token?: string | null
+          connection_state?: string | null
           created_at?: string | null
+          device_info?: Json | null
+          encrypted_session?: string | null
           id?: string
           is_connected?: boolean | null
           last_connected_at?: string | null
+          last_seen?: string | null
           phone_number?: string | null
+          qr_code?: string | null
           salon_id: string
+          server_token?: string | null
           session_data?: Json | null
+          session_key?: string | null
           updated_at?: string | null
         }
         Update: {
+          client_id?: string | null
+          client_token?: string | null
+          connection_state?: string | null
           created_at?: string | null
+          device_info?: Json | null
+          encrypted_session?: string | null
           id?: string
           is_connected?: boolean | null
           last_connected_at?: string | null
+          last_seen?: string | null
           phone_number?: string | null
+          qr_code?: string | null
           salon_id?: string
+          server_token?: string | null
           session_data?: Json | null
+          session_key?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -850,6 +934,20 @@ export type Database = {
       get_user_role: {
         Args: { user_id: string; salon_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      get_whatsapp_session: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          salon_id: string
+          phone_number: string
+          is_connected: boolean
+          connection_state: string
+          qr_code: string
+          last_connected_at: string
+          last_seen: string
+          device_info: Json
+        }[]
       }
       has_permission: {
         Args: {

@@ -2,11 +2,13 @@
 import React, { useState } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent } from '@/components/ui/card';
-import { Shield } from 'lucide-react';
+import { Shield, Calendar } from 'lucide-react';
 import { AppointmentScheduler } from '@/components/AppointmentScheduler';
+import { Button } from '@/components/ui/button';
+import { format } from 'date-fns';
 
 const Appointments = () => {
-  const [selectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { hasPermissionSync } = usePermissions();
 
   const canViewAppointments = hasPermissionSync('appointments', 'view');
@@ -14,6 +16,22 @@ const Appointments = () => {
   const handleAppointmentMove = (appointmentId: string, newStaffId: string, newTime: string) => {
     console.log('Appointment move handled:', { appointmentId, newStaffId, newTime });
     // The actual database update is now handled by the useAppointmentOperations hook
+  };
+
+  const goToPreviousDay = () => {
+    const previousDay = new Date(selectedDate);
+    previousDay.setDate(selectedDate.getDate() - 1);
+    setSelectedDate(previousDay);
+  };
+
+  const goToNextDay = () => {
+    const nextDay = new Date(selectedDate);
+    nextDay.setDate(selectedDate.getDate() + 1);
+    setSelectedDate(nextDay);
+  };
+
+  const goToToday = () => {
+    setSelectedDate(new Date());
   };
 
   if (!canViewAppointments) {
@@ -31,11 +49,38 @@ const Appointments = () => {
   }
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-white">
-      <AppointmentScheduler
-        selectedDate={selectedDate}
-        onAppointmentMove={handleAppointmentMove}
-      />
+    <div className="h-screen w-full overflow-hidden bg-white flex flex-col">
+      {/* Date Navigation Header */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-gray-600" />
+            <h1 className="text-lg font-semibold text-gray-900">
+              {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+            </h1>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={goToPreviousDay}>
+            Previous
+          </Button>
+          <Button variant="outline" size="sm" onClick={goToToday}>
+            Today
+          </Button>
+          <Button variant="outline" size="sm" onClick={goToNextDay}>
+            Next
+          </Button>
+        </div>
+      </div>
+
+      {/* Main Scheduler */}
+      <div className="flex-1 overflow-hidden">
+        <AppointmentScheduler
+          selectedDate={selectedDate}
+          onAppointmentMove={handleAppointmentMove}
+        />
+      </div>
     </div>
   );
 };

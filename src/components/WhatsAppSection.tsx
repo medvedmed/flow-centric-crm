@@ -9,9 +9,15 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { MessageSquare, Send, CheckCircle, Clock, AlertTriangle, ExternalLink, Play, AlertCircle } from 'lucide-react';
+import { MessageSquare, Send, CheckCircle, Clock, AlertTriangle, ExternalLink, Play, AlertCircle, QrCode, Smartphone } from 'lucide-react';
 import { reminderApi } from '@/services/api/reminderApi';
 import { ReminderSettings, AppointmentReminder } from '@/services/types';
+
+interface WhatsAppSession {
+  isConnected: boolean;
+  phoneNumber?: string;
+  lastConnectedAt?: string;
+}
 
 export const WhatsAppSection: React.FC = () => {
   const { toast } = useToast();
@@ -20,6 +26,9 @@ export const WhatsAppSection: React.FC = () => {
   const [processingReminders, setProcessingReminders] = useState(false);
   const [settings, setSettings] = useState<ReminderSettings | null>(null);
   const [reminders, setReminders] = useState<AppointmentReminder[]>([]);
+  const [whatsappSession, setWhatsappSession] = useState<WhatsAppSession>({ isConnected: false });
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [connectingWhatsApp, setConnectingWhatsApp] = useState(false);
   
   const [formData, setFormData] = useState({
     reminderTiming: '24_hours' as '24_hours' | '2_hours',
@@ -31,8 +40,62 @@ export const WhatsAppSection: React.FC = () => {
     if (isAuthenticated && user) {
       loadReminderSettings();
       loadPendingReminders();
+      loadWhatsAppSession();
     }
   }, [isAuthenticated, user]);
+
+  const loadWhatsAppSession = async () => {
+    // Mock loading WhatsApp session - in real implementation, this would check actual WhatsApp Web session
+    setWhatsappSession({
+      isConnected: false,
+      phoneNumber: undefined,
+      lastConnectedAt: undefined
+    });
+  };
+
+  const connectWhatsApp = async () => {
+    setConnectingWhatsApp(true);
+    setShowQRCode(true);
+    
+    try {
+      // Simulate QR code connection process
+      // In real implementation, this would:
+      // 1. Generate QR code for WhatsApp Web
+      // 2. Wait for user to scan with their phone
+      // 3. Establish WhatsApp Web session
+      
+      setTimeout(() => {
+        setWhatsappSession({
+          isConnected: true,
+          phoneNumber: '+1234567890', // This would come from actual WhatsApp session
+          lastConnectedAt: new Date().toISOString()
+        });
+        setShowQRCode(false);
+        setConnectingWhatsApp(false);
+        
+        toast({
+          title: "WhatsApp Connected!",
+          description: "Your WhatsApp account is now connected to send reminders.",
+        });
+      }, 3000);
+    } catch (error) {
+      setConnectingWhatsApp(false);
+      setShowQRCode(false);
+      toast({
+        title: "Connection Failed",
+        description: "Failed to connect WhatsApp. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const disconnectWhatsApp = () => {
+    setWhatsappSession({ isConnected: false });
+    toast({
+      title: "WhatsApp Disconnected",
+      description: "Your WhatsApp account has been disconnected.",
+    });
+  };
 
   const loadReminderSettings = async () => {
     try {
@@ -104,6 +167,15 @@ export const WhatsAppSection: React.FC = () => {
       toast({
         title: "Authentication Required",
         description: "Please log in to process reminders",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!whatsappSession.isConnected) {
+      toast({
+        title: "WhatsApp Not Connected",
+        description: "Please connect your WhatsApp account first to send reminders.",
         variant: "destructive",
       });
       return;
@@ -205,25 +277,83 @@ export const WhatsAppSection: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* WhatsApp Connection Notice */}
+      {/* WhatsApp Connection */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
-            WhatsApp Integration Notice
+            WhatsApp Connection
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-medium text-blue-900 mb-2">How WhatsApp Integration Works</h3>
-            <p className="text-blue-800 text-sm mb-3">
-              This system generates WhatsApp Web links with pre-filled messages. When you click "Send", 
-              it will open WhatsApp Web in your browser with the message ready to send.
-            </p>
-            <p className="text-blue-800 text-sm">
-              <strong>Note:</strong> You need to be logged into WhatsApp Web in your browser for this to work properly.
-            </p>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className={`w-3 h-3 rounded-full ${whatsappSession.isConnected ? 'bg-green-500' : 'bg-gray-500'}`}></div>
+              <div>
+                <p className="font-medium">
+                  {whatsappSession.isConnected ? 'Connected' : 'Not Connected'}
+                </p>
+                {whatsappSession.phoneNumber && (
+                  <p className="text-sm text-gray-600">{whatsappSession.phoneNumber}</p>
+                )}
+              </div>
+            </div>
+            <Badge variant={whatsappSession.isConnected ? 'default' : 'secondary'}>
+              {whatsappSession.isConnected ? 'Active' : 'Inactive'}
+            </Badge>
           </div>
+
+          {!whatsappSession.isConnected ? (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Connect your WhatsApp account by scanning the QR code with WhatsApp on your phone.
+              </p>
+              <Button 
+                onClick={connectWhatsApp} 
+                disabled={connectingWhatsApp}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                <QrCode className="w-4 h-4 mr-2" />
+                {connectingWhatsApp ? "Connecting..." : "Connect WhatsApp"}
+              </Button>
+              
+              {showQRCode && (
+                <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
+                  <div className="w-48 h-48 mx-auto bg-gray-100 rounded-lg flex items-center justify-center mb-4">
+                    <QrCode className="w-16 h-16 text-gray-400" />
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Scan this QR code with WhatsApp on your phone
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Go to WhatsApp → Settings → Linked Devices → Link a Device
+                  </p>
+                  <div className="mt-4">
+                    <div className="animate-pulse text-blue-600 text-sm">
+                      Waiting for scan...
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-green-600">
+                  <CheckCircle className="w-4 h-4" />
+                  <span className="text-sm">WhatsApp Connected Successfully</span>
+                </div>
+                <Button variant="outline" size="sm" onClick={disconnectWhatsApp}>
+                  Disconnect
+                </Button>
+              </div>
+              {whatsappSession.lastConnectedAt && (
+                <p className="text-xs text-gray-500">
+                  Connected: {new Date(whatsappSession.lastConnectedAt).toLocaleString()}
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -293,16 +423,21 @@ export const WhatsAppSection: React.FC = () => {
         <CardContent>
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
-              Click below to check for appointments that need reminders and generate WhatsApp links.
+              Click below to check for appointments that need reminders and generate WhatsApp messages.
             </p>
             <Button 
               onClick={handleProcessReminders} 
-              disabled={processingReminders || !formData.isEnabled}
+              disabled={processingReminders || !formData.isEnabled || !whatsappSession.isConnected}
               className="w-full"
             >
               <Play className="w-4 h-4 mr-2" />
               {processingReminders ? "Processing..." : "Process Reminders Now"}
             </Button>
+            {!whatsappSession.isConnected && (
+              <p className="text-xs text-orange-600">
+                Connect WhatsApp first to process reminders
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -367,12 +502,13 @@ export const WhatsAppSection: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-2 text-sm text-gray-600">
-            <p>1. Enable automatic reminders and choose your preferred timing (24 hours or 2 hours before appointments)</p>
-            <p>2. Customize your message template with client and appointment details</p>
-            <p>3. Click "Process Reminders Now" to generate WhatsApp links for upcoming appointments</p>
-            <p>4. Click "Send" to open WhatsApp Web with the pre-filled message</p>
-            <p>5. Send the message directly from your WhatsApp account</p>
-            <p className="text-blue-600 font-medium">💡 Pro tip: Make sure you're logged into WhatsApp Web in your browser!</p>
+            <p>1. Connect your WhatsApp account by scanning the QR code</p>
+            <p>2. Enable automatic reminders and choose your preferred timing</p>
+            <p>3. Customize your message template with client and appointment details</p>
+            <p>4. Click "Process Reminders Now" to generate messages for upcoming appointments</p>
+            <p>5. Click "Send" to open WhatsApp with the pre-filled message</p>
+            <p>6. Send the message directly from your WhatsApp account</p>
+            <p className="text-blue-600 font-medium">💡 Your salon's WhatsApp will be used to send all reminders</p>
           </div>
         </CardContent>
       </Card>

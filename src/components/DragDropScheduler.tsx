@@ -30,7 +30,9 @@ interface DragDropSchedulerProps {
 // Utility function to normalize time format for comparison
 const normalizeTime = (time: string): string => {
   if (!time) return '';
-  return time.split(':').slice(0, 2).join(':');
+  // Handle both HH:MM and HH:MM:SS formats
+  const parts = time.split(':');
+  return `${parts[0]}:${parts[1]}`;
 };
 
 // Droppable Time Slot Component with conflict detection
@@ -195,7 +197,12 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
   const { moveAppointment, isMoving } = useAppointmentOperations();
   const { toast } = useToast();
 
-  console.log('DragDropScheduler received:', { staff: staff.length, appointments: appointments.length });
+  console.log('DragDropScheduler received:', { 
+    staff: staff.length, 
+    appointments: appointments.length,
+    appointmentIds: appointments.map(a => a.id),
+    selectedDate: selectedDate.toISOString().split('T')[0]
+  });
 
   // Generate time slots from 8 AM to 8 PM
   const timeSlots: TimeSlot[] = [];
@@ -305,16 +312,20 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
     const normalizedTime = normalizeTime(time);
     const staffAppointments = appointments.filter(apt => {
       const normalizedStartTime = normalizeTime(apt.startTime);
-      const match = apt.staffId === staffId && normalizedStartTime === normalizedTime;
-      if (match) {
+      // Also check if staff_id matches (handle both string and null cases)
+      const staffMatches = apt.staffId === staffId;
+      const timeMatches = normalizedStartTime === normalizedTime;
+      
+      if (staffMatches && timeMatches) {
         console.log('Found appointment match:', { 
           appointmentId: apt.id, 
           staffId, 
           time: normalizedTime, 
-          appointmentStartTime: normalizedStartTime 
+          appointmentStartTime: normalizedStartTime,
+          clientName: apt.clientName
         });
       }
-      return match;
+      return staffMatches && timeMatches;
     });
     
     return staffAppointments;
@@ -354,6 +365,11 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
             </div>
           </div>
         )}
+
+        {/* Debug Info */}
+        <div className="bg-gray-100 p-2 text-xs text-gray-600 border-b">
+          <p>Total appointments: {appointments.length} | Staff: {staff.length} | Date: {selectedDate.toDateString()}</p>
+        </div>
 
         {/* Sticky Staff Header */}
         <div 

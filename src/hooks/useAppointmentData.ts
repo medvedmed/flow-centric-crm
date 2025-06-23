@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Staff, Appointment } from '@/services/types';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 export const useAppointmentData = (date: string) => {
   const { toast } = useToast();
@@ -87,7 +88,7 @@ export const useAppointmentData = (date: string) => {
         throw error;
       }
       
-      console.log('Raw appointments data:', data);
+      console.log('Raw appointments data for date', date, ':', data);
       
       const mappedAppointments = data?.map(appointment => ({
         id: appointment.id,
@@ -108,7 +109,15 @@ export const useAppointmentData = (date: string) => {
         updatedAt: appointment.updated_at
       })) || [];
 
-      console.log('Mapped appointments:', mappedAppointments);
+      console.log('Mapped appointments for date', date, ':', mappedAppointments);
+      console.log('Appointment details:', mappedAppointments.map(apt => ({
+        id: apt.id,
+        clientName: apt.clientName,
+        staffId: apt.staffId,
+        startTime: apt.startTime,
+        date: apt.date
+      })));
+      
       return mappedAppointments;
     },
     staleTime: 30 * 1000, // 30 seconds for real-time feel

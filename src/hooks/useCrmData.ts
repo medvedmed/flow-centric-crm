@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   supabaseApi, 
@@ -9,6 +10,7 @@ import {
   StaffAvailability
 } from '../services/supabaseApi';
 import { PaginatedResult } from '../services/types';
+import { CreateClientPayload, CreateAppointmentPayload, CreateStaffPayload } from '../types/api';
 import { useToast } from './use-toast';
 
 // Profile hooks
@@ -72,7 +74,7 @@ export const useCreateClient = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (client: Client) => supabaseApi.createClient(client),
+    mutationFn: (client: CreateClientPayload) => supabaseApi.createClient(client as Client),
     onSuccess: async (createdClient) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       
@@ -155,7 +157,7 @@ export const useCreateStaff = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (staff: Staff) => supabaseApi.createStaff(staff),
+    mutationFn: (staff: CreateStaffPayload) => supabaseApi.createStaff(staff as Staff),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff'] });
       toast({
@@ -245,7 +247,7 @@ export const useCreateAppointment = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (appointment: Appointment) => supabaseApi.createAppointment(appointment),
+    mutationFn: (appointment: CreateAppointmentPayload) => supabaseApi.createAppointment(appointment as Appointment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       toast({

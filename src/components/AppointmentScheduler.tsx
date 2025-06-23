@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { useAppointmentData } from '@/hooks/useAppointmentData';
+import { useAuth } from '@/hooks/useAuth';
 import DragDropScheduler from './DragDropScheduler';
 import { format } from 'date-fns';
 
@@ -15,6 +16,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   selectedDate,
   onAppointmentMove
 }) => {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const dateString = format(selectedDate, 'yyyy-MM-dd');
   const { staff, appointments, isLoading, error, staffError, appointmentsError } = useAppointmentData(dateString);
 
@@ -28,6 +30,32 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       onAppointmentMove(appointmentId, newStaffId, newTime);
     }
   };
+
+  // Show loading if auth is still loading
+  if (authLoading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-white">
+        <div className="flex items-center gap-2">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span>Loading authentication...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth error if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-white p-8">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Authentication required. Please log in to view appointments.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -48,7 +76,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
           <AlertDescription>
             {staffError ? 'Error loading staff data. ' : ''}
             {appointmentsError ? 'Error loading appointment data. ' : ''}
-            Please try refreshing the page.
+            Please try refreshing the page or contact support if the issue persists.
           </AlertDescription>
         </Alert>
       </div>

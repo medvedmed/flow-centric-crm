@@ -1,12 +1,14 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/services/types';
 
 export const useAppointmentOperations = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { isAuthenticated, user } = useAuth();
 
   const moveAppointmentMutation = useMutation({
     mutationFn: async ({ 
@@ -20,6 +22,10 @@ export const useAppointmentOperations = () => {
       newTime: string;
       duration?: number;
     }) => {
+      if (!isAuthenticated || !user) {
+        throw new Error('Authentication required');
+      }
+
       console.log('Moving appointment:', { appointmentId, newStaffId, newTime, duration });
       
       // Calculate end time
@@ -30,9 +36,6 @@ export const useAppointmentOperations = () => {
       console.log('Calculated times:', { startTime: newTime, endTime: endTimeString });
 
       // Check for conflicts first
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
       const appointmentDate = new Date().toISOString().split('T')[0]; // Today's date for now
       
       const { data: conflicts, error: conflictError } = await supabase
@@ -138,8 +141,9 @@ export const useAppointmentOperations = () => {
 
   const createAppointmentMutation = useMutation({
     mutationFn: async (appointmentData: Partial<Appointment>) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!isAuthenticated || !user) {
+        throw new Error('Authentication required');
+      }
 
       // Map camelCase properties to snake_case for database
       const dbAppointmentData = {
@@ -179,7 +183,7 @@ export const useAppointmentOperations = () => {
       console.error('Create appointment error:', error);
       toast({
         title: "Error Creating Appointment",
-        description: "Failed to create appointment. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create appointment. Please try again.",
         variant: "destructive",
       });
     },

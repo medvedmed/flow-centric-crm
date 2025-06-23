@@ -8,12 +8,14 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, Send, CheckCircle, Clock, AlertTriangle, ExternalLink, Play } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { MessageSquare, Send, CheckCircle, Clock, AlertTriangle, ExternalLink, Play, AlertCircle } from 'lucide-react';
 import { reminderApi } from '@/services/api/reminderApi';
 import { ReminderSettings, AppointmentReminder } from '@/services/types';
 
 export const WhatsAppSection: React.FC = () => {
   const { toast } = useToast();
+  const { isAuthenticated, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [processingReminders, setProcessingReminders] = useState(false);
   const [settings, setSettings] = useState<ReminderSettings | null>(null);
@@ -26,9 +28,11 @@ export const WhatsAppSection: React.FC = () => {
   });
 
   useEffect(() => {
-    loadReminderSettings();
-    loadPendingReminders();
-  }, []);
+    if (isAuthenticated && user) {
+      loadReminderSettings();
+      loadPendingReminders();
+    }
+  }, [isAuthenticated, user]);
 
   const loadReminderSettings = async () => {
     try {
@@ -43,6 +47,11 @@ export const WhatsAppSection: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading reminder settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load reminder settings",
+        variant: "destructive",
+      });
     }
   };
 
@@ -56,6 +65,15 @@ export const WhatsAppSection: React.FC = () => {
   };
 
   const handleSaveSettings = async () => {
+    if (!isAuthenticated || !user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to save settings",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       if (settings) {
@@ -70,9 +88,10 @@ export const WhatsAppSection: React.FC = () => {
         description: "Reminder settings updated successfully!",
       });
     } catch (error) {
+      console.error('Save settings error:', error);
       toast({
         title: "Error",
-        description: "Failed to update reminder settings",
+        description: error instanceof Error ? error.message : "Failed to update reminder settings",
         variant: "destructive",
       });
     } finally {
@@ -81,6 +100,15 @@ export const WhatsAppSection: React.FC = () => {
   };
 
   const handleProcessReminders = async () => {
+    if (!isAuthenticated || !user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to process reminders",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setProcessingReminders(true);
     try {
       await reminderApi.processReminders();
@@ -90,9 +118,10 @@ export const WhatsAppSection: React.FC = () => {
         description: "Reminders processed successfully!",
       });
     } catch (error) {
+      console.error('Process reminders error:', error);
       toast({
         title: "Error",
-        description: "Failed to process reminders",
+        description: error instanceof Error ? error.message : "Failed to process reminders",
         variant: "destructive",
       });
     } finally {
@@ -102,6 +131,7 @@ export const WhatsAppSection: React.FC = () => {
 
   const handleSendReminder = async (reminder: AppointmentReminder) => {
     if (reminder.whatsappUrl) {
+      // Open WhatsApp Web with the pre-filled message
       window.open(reminder.whatsappUrl, '_blank');
       
       try {
@@ -134,6 +164,19 @@ export const WhatsAppSection: React.FC = () => {
     }
   };
 
+  // Show authentication warning if not logged in
+  if (!isAuthenticated) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+          <h2 className="text-xl font-semibold mb-2">Authentication Required</h2>
+          <p className="text-gray-600">Please log in to access WhatsApp integration settings.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'ready':
@@ -162,6 +205,28 @@ export const WhatsAppSection: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* WhatsApp Connection Notice */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            WhatsApp Integration Notice
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="font-medium text-blue-900 mb-2">How WhatsApp Integration Works</h3>
+            <p className="text-blue-800 text-sm mb-3">
+              This system generates WhatsApp Web links with pre-filled messages. When you click "Send", 
+              it will open WhatsApp Web in your browser with the message ready to send.
+            </p>
+            <p className="text-blue-800 text-sm">
+              <strong>Note:</strong> You need to be logged into WhatsApp Web in your browser for this to work properly.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Reminder Settings */}
       <Card>
         <CardHeader>
@@ -305,9 +370,9 @@ export const WhatsAppSection: React.FC = () => {
             <p>1. Enable automatic reminders and choose your preferred timing (24 hours or 2 hours before appointments)</p>
             <p>2. Customize your message template with client and appointment details</p>
             <p>3. Click "Process Reminders Now" to generate WhatsApp links for upcoming appointments</p>
-            <p>4. Click "Send" to open WhatsApp with the pre-filled message</p>
+            <p>4. Click "Send" to open WhatsApp Web with the pre-filled message</p>
             <p>5. Send the message directly from your WhatsApp account</p>
-            <p className="text-blue-600 font-medium">💡 Pro tip: Set up a daily routine to process and send reminders!</p>
+            <p className="text-blue-600 font-medium">💡 Pro tip: Make sure you're logged into WhatsApp Web in your browser!</p>
           </div>
         </CardContent>
       </Card>

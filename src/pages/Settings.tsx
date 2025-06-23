@@ -2,13 +2,14 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings as SettingsIcon, Building, Shield, MessageSquare, Bell, Users, Calendar, UserCog, AlertCircle, BarChart3, Zap } from "lucide-react";
+import { Settings as SettingsIcon, Building, Shield, MessageSquare, Bell, Users, Calendar, UserCog, AlertCircle, BarChart3, Zap, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAdminSetup } from "@/hooks/useAdminSetup";
+import { useAuth } from "@/hooks/useAuth";
 import { AdminSetupDialog } from "@/components/AdminSetupDialog";
 import { EnhancedSalonProfile } from "@/components/EnhancedSalonProfile";
 import { UnifiedRoleManagement } from "@/components/UnifiedRoleManagement";
-import { WhatsAppIntegration } from "@/components/WhatsAppIntegration";
+import { WhatsAppSection } from "@/components/WhatsAppSection";
 import { StaffScheduleSection } from "@/components/StaffScheduleSection";
 import ManagerSection from "@/components/ManagerSection";
 import { NotificationPreferences } from "@/components/NotificationPreferences";
@@ -18,9 +19,12 @@ import { useToast } from "@/hooks/use-toast";
 
 const Settings = () => {
   const { needsAdminSetup } = useAdminSetup();
-  const { hasPermissionSync, isLoading, error } = usePermissions();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { hasPermissionSync, isLoading: permissionsLoading, error } = usePermissions();
   const { toast } = useToast();
   const [showAdminDialog, setShowAdminDialog] = useState(needsAdminSetup);
+
+  const isLoading = authLoading || permissionsLoading;
 
   // Show error if permissions failed to load
   useEffect(() => {
@@ -38,14 +42,28 @@ const Settings = () => {
   const canEditSettings = hasPermissionSync('settings', 'edit');
   const canViewReports = hasPermissionSync('reports', 'view');
 
+  // Show loading screen while authentication is being verified
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-pulse space-y-4 w-full max-w-4xl mx-auto p-6">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-12 bg-gray-200 rounded"></div>
-          <div className="h-96 bg-gray-200 rounded"></div>
+        <div className="flex items-center gap-2">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span>Loading settings...</span>
         </div>
+      </div>
+    );
+  }
+
+  // Show authentication error if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen p-6">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Authentication required. Please log in to access settings.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -135,7 +153,7 @@ const Settings = () => {
         </TabsContent>
 
         <TabsContent value="whatsapp" className="space-y-6">
-          <WhatsAppIntegration />
+          <WhatsAppSection />
         </TabsContent>
 
         <TabsContent value="manager" className="space-y-6">

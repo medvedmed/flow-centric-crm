@@ -78,25 +78,33 @@ serve(async (req) => {
 
 async function initWhatsAppSession(supabase: any, userId: string) {
   try {
-    // Generate a unique QR code for this session
-    const qrCode = generateQRCode(userId)
+    console.log('Initializing WhatsApp session for user:', userId)
     
-    // Create or update WhatsApp session - use ORDER BY and LIMIT to get the most recent one
+    // First, clean up any existing sessions for this user to avoid duplicates
+    await supabase
+      .from('whatsapp_sessions')
+      .delete()
+      .eq('salon_id', userId)
+    
+    // Generate a more realistic QR code data
+    const qrCode = generateRealisticQRCode(userId)
+    
+    // Create new WhatsApp session
     const { data, error } = await supabase
       .from('whatsapp_sessions')
-      .upsert({
+      .insert({
         salon_id: userId,
         qr_code: qrCode,
         connection_state: 'waiting_for_scan',
         is_connected: false,
-        session_data: { initialized_at: new Date().toISOString() },
+        session_data: { 
+          initialized_at: new Date().toISOString(),
+          qr_expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes
+        },
+        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'salon_id'
       })
       .select()
-      .order('updated_at', { ascending: false })
-      .limit(1)
       .single()
 
     if (error) {
@@ -104,10 +112,13 @@ async function initWhatsAppSession(supabase: any, userId: string) {
       throw error
     }
 
+    console.log('WhatsApp session initialized successfully:', data.id)
+
     return new Response(
       JSON.stringify({ 
         success: true, 
         qr_code: qrCode,
+        qr_image_data: generateQRImageData(qrCode),
         session_id: data.id 
       }),
       { 
@@ -127,20 +138,55 @@ async function getQRCode(supabase: any, userId: string) {
   try {
     const { data, error } = await supabase
       .from('whatsapp_sessions')
-      .select('qr_code, connection_state')
+      .select('qr_code, connection_state, session_data')
       .eq('salon_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       console.error('Database error in getQRCode:', error)
       throw error
+    }
+
+    // Check if QR code has expired
+    if (data?.session_data?.qr_expires_at) {
+      const expiresAt = new Date(data.session_data.qr_expires_at)
+      if (new Date() > expiresAt) {
+        // QR code expired, generate a new one
+        const newQrCode = generateRealisticQRCode(userId)
+        await supabase
+          .from('whatsapp_sessions')
+          .update({
+            qr_code: newQrCode,
+            session_data: {
+              ...data.session_data,
+              qr_expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+            },
+            updated_at: new Date().toISOString()
+          })
+          .eq('salon_id', userId)
+        
+        return new Response(
+          JSON.stringify({ 
+            qr_code: newQrCode,
+            qr_image_data: generateQRImageData(newQrCode),
+            connection_state: data?.connection_state || 'disconnected'
+          }),
+          { 
+            headers: { 
+              ...corsHeaders, 
+              'Content-Type': 'application/json' 
+            } 
+          }
+        )
+      }
     }
 
     return new Response(
       JSON.stringify({ 
         qr_code: data?.qr_code,
+        qr_image_data: data?.qr_code ? generateQRImageData(data.qr_code) : null,
         connection_state: data?.connection_state || 'disconnected'
       }),
       { 
@@ -164,9 +210,9 @@ async function checkConnection(supabase: any, userId: string) {
       .eq('salon_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       console.error('Database error in checkConnection:', error)
       throw error
     }
@@ -188,35 +234,50 @@ async function checkConnection(supabase: any, userId: string) {
       )
     }
 
-    // Simulate connection check - in real implementation, this would check actual WhatsApp Web connection
+    // Enhanced connection simulation - more realistic behavior
     let connectionState = data.connection_state || 'disconnected'
     let isConnected = data.is_connected || false
     let phoneNumber = data.phone_number
 
-    // Mock connection establishment after QR scan (30% chance when waiting for scan)
-    if (connectionState === 'waiting_for_scan' && Math.random() > 0.7) {
-      connectionState = 'connected'
-      isConnected = true
-      phoneNumber = '+1234567890' // This would come from actual WhatsApp session
-      
-      // Update the session
-      await supabase
-        .from('whatsapp_sessions')
-        .update({
-          connection_state: connectionState,
-          is_connected: isConnected,
-          phone_number: phoneNumber,
-          last_connected_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('salon_id', userId)
+    // Simulate connection process with better logic
+    if (connectionState === 'waiting_for_scan') {
+      // Check if QR code has expired
+      const qrExpiresAt = data.session_data?.qr_expires_at
+      if (qrExpiresAt && new Date() > new Date(qrExpiresAt)) {
+        connectionState = 'qr_expired'
+      } else {
+        // Random chance of connection (simulate user scanning)
+        const connectionChance = Math.random()
+        if (connectionChance > 0.85) { // 15% chance per check
+          connectionState = 'connected'
+          isConnected = true
+          phoneNumber = '+1234567890' // This would be the actual phone number from WhatsApp
+          
+          // Update the session
+          await supabase
+            .from('whatsapp_sessions')
+            .update({
+              connection_state: connectionState,
+              is_connected: isConnected,
+              phone_number: phoneNumber,
+              last_connected_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              session_data: {
+                ...data.session_data,
+                connected_at: new Date().toISOString()
+              }
+            })
+            .eq('salon_id', userId)
+        }
+      }
     }
 
     return new Response(
       JSON.stringify({ 
         is_connected: isConnected,
         connection_state: connectionState,
-        phone_number: phoneNumber
+        phone_number: phoneNumber,
+        last_connected_at: data.last_connected_at
       }),
       { 
         headers: { 
@@ -234,13 +295,18 @@ async function checkConnection(supabase: any, userId: string) {
 async function sendMessage(supabase: any, userId: string, phone: string, message: string, appointmentId?: string) {
   try {
     // Check if WhatsApp is connected
-    const { data: session } = await supabase
+    const { data: session, error: sessionError } = await supabase
       .from('whatsapp_sessions')
       .select('is_connected, phone_number')
       .eq('salon_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
+
+    if (sessionError) {
+      console.error('Error checking session:', sessionError)
+      throw sessionError
+    }
 
     if (!session?.is_connected) {
       throw new Error('WhatsApp not connected')
@@ -254,16 +320,20 @@ async function sendMessage(supabase: any, userId: string, phone: string, message
         recipient_phone: phone,
         message_content: message,
         status: 'sending',
-        appointment_id: appointmentId
+        appointment_id: appointmentId,
+        created_at: new Date().toISOString()
       })
       .select()
       .single()
 
-    if (logError) throw logError
+    if (logError) {
+      console.error('Error logging message:', logError)
+      throw logError
+    }
 
-    // In real implementation, this would send via WhatsApp Web API
-    // For now, we'll simulate successful sending
-    const success = Math.random() > 0.1 // 90% success rate
+    // Enhanced message sending simulation
+    const success = Math.random() > 0.05 // 95% success rate
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
     if (success) {
       await supabase
@@ -271,15 +341,29 @@ async function sendMessage(supabase: any, userId: string, phone: string, message
         .update({
           status: 'sent',
           sent_at: new Date().toISOString(),
-          whatsapp_message_id: `msg_${Date.now()}`
+          whatsapp_message_id: messageId,
+          updated_at: new Date().toISOString()
         })
         .eq('id', messageLog.id)
+
+      // Simulate delivery after a short delay
+      setTimeout(async () => {
+        await supabase
+          .from('whatsapp_messages')
+          .update({
+            status: 'delivered',
+            delivered_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', messageLog.id)
+      }, 2000)
 
       return new Response(
         JSON.stringify({ 
           success: true, 
           message_id: messageLog.id,
-          whatsapp_message_id: `msg_${Date.now()}`
+          whatsapp_message_id: messageId,
+          status: 'sent'
         }),
         { 
           headers: { 
@@ -293,7 +377,8 @@ async function sendMessage(supabase: any, userId: string, phone: string, message
         .from('whatsapp_messages')
         .update({
           status: 'failed',
-          error_message: 'Failed to send message'
+          error_message: 'Failed to send message - network error',
+          updated_at: new Date().toISOString()
         })
         .eq('id', messageLog.id)
 
@@ -319,7 +404,10 @@ async function disconnectSession(supabase: any, userId: string) {
       })
       .eq('salon_id', userId)
 
-    if (error) throw error
+    if (error) {
+      console.error('Error disconnecting:', error)
+      throw error
+    }
 
     return new Response(
       JSON.stringify({ success: true }),
@@ -336,10 +424,55 @@ async function disconnectSession(supabase: any, userId: string) {
   }
 }
 
-function generateQRCode(userId: string): string {
-  // In real implementation, this would generate actual WhatsApp Web QR code
-  // For now, we'll create a mock QR code data
+function generateRealisticQRCode(userId: string): string {
+  // Generate a more realistic WhatsApp Web QR code format
   const timestamp = Date.now()
-  const sessionId = `${userId}_${timestamp}`
-  return `whatsapp://connect?session=${sessionId}&timestamp=${timestamp}`
+  const randomBytes = crypto.getRandomValues(new Uint8Array(16))
+  const randomString = Array.from(randomBytes, byte => byte.toString(16).padStart(2, '0')).join('')
+  
+  return `1@${randomString},${timestamp},${userId.substring(0, 8)},WhatsAppCRM`
+}
+
+function generateQRImageData(qrText: string): string {
+  // Generate a simple QR code representation as SVG data URI
+  // In a real implementation, you'd use a proper QR code library
+  const size = 200
+  const cellSize = size / 25 // 25x25 grid
+  
+  // Create a simple pattern based on the QR text hash
+  let hash = 0
+  for (let i = 0; i < qrText.length; i++) {
+    hash = ((hash << 5) - hash + qrText.charCodeAt(i)) & 0xffffffff
+  }
+  
+  let svg = `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">`
+  svg += `<rect width="${size}" height="${size}" fill="white"/>`
+  
+  // Generate a pattern based on the hash
+  for (let y = 0; y < 25; y++) {
+    for (let x = 0; x < 25; x++) {
+      const shouldFill = ((hash + x * 31 + y * 17) % 100) > 50
+      if (shouldFill) {
+        svg += `<rect x="${x * cellSize}" y="${y * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`
+      }
+    }
+  }
+  
+  // Add positioning squares (corners)
+  const cornerSize = cellSize * 7
+  const corners = [
+    { x: 0, y: 0 },
+    { x: size - cornerSize, y: 0 },
+    { x: 0, y: size - cornerSize }
+  ]
+  
+  corners.forEach(corner => {
+    svg += `<rect x="${corner.x}" y="${corner.y}" width="${cornerSize}" height="${cornerSize}" fill="black"/>`
+    svg += `<rect x="${corner.x + cellSize}" y="${corner.y + cellSize}" width="${cornerSize - 2 * cellSize}" height="${cornerSize - 2 * cellSize}" fill="white"/>`
+    svg += `<rect x="${corner.x + 2 * cellSize}" y="${corner.y + 2 * cellSize}" width="${cornerSize - 4 * cellSize}" height="${cornerSize - 4 * cellSize}" fill="black"/>`
+  })
+  
+  svg += '</svg>'
+  
+  return `data:image/svg+xml;base64,${btoa(svg)}`
 }

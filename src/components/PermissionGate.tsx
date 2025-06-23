@@ -8,7 +8,7 @@ interface PermissionGateProps {
   action: 'view' | 'create' | 'edit' | 'delete';
   children: React.ReactNode;
   fallback?: React.ReactNode;
-  roles?: string[]; // Optional: restrict to specific roles
+  roles?: string[];
 }
 
 export const PermissionGate: React.FC<PermissionGateProps> = ({
@@ -18,9 +18,9 @@ export const PermissionGate: React.FC<PermissionGateProps> = ({
   fallback = null,
   roles
 }) => {
-  const { hasPermissionSync, userRole, roleLoading } = usePermissions();
+  const { hasPermissionSync, userRole, isLoading } = usePermissions();
 
-  if (roleLoading) {
+  if (isLoading) {
     return <div className="animate-pulse bg-gray-200 rounded h-8 w-32" />;
   }
 

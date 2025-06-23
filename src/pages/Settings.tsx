@@ -1,25 +1,65 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings as SettingsIcon, Building, Shield, MessageSquare, Bell, Users, Calendar, UserCog } from "lucide-react";
+import { Settings as SettingsIcon, Building, Shield, MessageSquare, Bell, Users, Calendar, UserCog, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAdminSetup } from "@/hooks/useAdminSetup";
 import { AdminSetupDialog } from "@/components/AdminSetupDialog";
 import { SalonProfileSection } from "@/components/SalonProfileSection";
-import { RoleManagementSection } from "@/components/RoleManagementSection";
-import { RoleManagement } from "@/components/RoleManagement";
+import { UnifiedRoleManagement } from "@/components/UnifiedRoleManagement";
 import { WhatsAppSection } from "@/components/WhatsAppSection";
 import { StaffScheduleSection } from "@/components/StaffScheduleSection";
 import ManagerSection from "@/components/ManagerSection";
+import { NotificationPreferences } from "@/components/NotificationPreferences";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useToast } from "@/hooks/use-toast";
 
 const Settings = () => {
   const { needsAdminSetup } = useAdminSetup();
-  const { hasPermissionSync } = usePermissions();
+  const { hasPermissionSync, isLoading, error } = usePermissions();
+  const { toast } = useToast();
   const [showAdminDialog, setShowAdminDialog] = useState(needsAdminSetup);
+
+  // Show error if permissions failed to load
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Permission Error",
+        description: "Failed to load user permissions. Some features may not work correctly.",
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
 
   // Check if user has settings permissions
   const canViewSettings = hasPermissionSync('settings', 'view');
   const canEditSettings = hasPermissionSync('settings', 'edit');
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse space-y-4 w-full max-w-4xl mx-auto p-6">
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-12 bg-gray-200 rounded"></div>
+          <div className="h-96 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen p-6">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Failed to load settings. Please refresh the page or contact support.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   if (!canViewSettings) {
     return (
@@ -53,34 +93,30 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="salon" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-7">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6">
           <TabsTrigger value="salon" className="flex items-center gap-2">
             <Building className="w-4 h-4" />
-            Salon
+            <span className="hidden sm:inline">Salon</span>
           </TabsTrigger>
           <TabsTrigger value="manager" className="flex items-center gap-2">
             <UserCog className="w-4 h-4" />
-            Manager
+            <span className="hidden sm:inline">Manager</span>
           </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            Users
-          </TabsTrigger>
-          <TabsTrigger value="permissions" className="flex items-center gap-2">
+          <TabsTrigger value="roles" className="flex items-center gap-2">
             <Shield className="w-4 h-4" />
-            Permissions
+            <span className="hidden sm:inline">Roles</span>
           </TabsTrigger>
           <TabsTrigger value="schedule" className="flex items-center gap-2">
             <Calendar className="w-4 h-4" />
-            Schedule
+            <span className="hidden sm:inline">Schedule</span>
           </TabsTrigger>
           <TabsTrigger value="whatsapp" className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4" />
-            WhatsApp
+            <span className="hidden sm:inline">WhatsApp</span>
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex items-center gap-2">
             <Bell className="w-4 h-4" />
-            Notifications
+            <span className="hidden sm:inline">Notifications</span>
           </TabsTrigger>
         </TabsList>
 
@@ -101,27 +137,14 @@ const Settings = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="users" className="space-y-6">
+        <TabsContent value="roles" className="space-y-6">
           {canEditSettings ? (
-            <RoleManagementSection />
+            <UnifiedRoleManagement />
           ) : (
             <Card>
               <CardContent className="p-6 text-center">
                 <Shield className="h-8 w-8 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-600">You need edit permissions to manage users.</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="permissions" className="space-y-6">
-          {canEditSettings ? (
-            <RoleManagement />
-          ) : (
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Shield className="h-8 w-8 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-600">You need edit permissions to manage role permissions.</p>
+                <p className="text-gray-600">You need edit permissions to manage roles and permissions.</p>
               </CardContent>
             </Card>
           )}
@@ -145,24 +168,7 @@ const Settings = () => {
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                Notification Preferences
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                <Bell className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium mb-2">Notification Settings</p>
-                <p className="text-sm mb-4">
-                  Configure how and when you receive notifications.
-                </p>
-                <p className="text-xs text-blue-600">Coming Soon</p>
-              </div>
-            </CardContent>
-          </Card>
+          <NotificationPreferences />
         </TabsContent>
       </Tabs>
     </div>

@@ -3,7 +3,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { PermissionArea } from '@/services/permissionApi';
 
 export const useRoleBasedUI = () => {
-  const { userRole, hasPermissionSync, roleLoading } = usePermissions();
+  const { userRole, hasPermissionSync, isLoading } = usePermissions();
 
   const canAccess = (area: PermissionArea, action: 'view' | 'create' | 'edit' | 'delete') => {
     return hasPermissionSync(area, action);
@@ -61,7 +61,7 @@ export const useRoleBasedUI = () => {
 
   return {
     userRole,
-    roleLoading,
+    isLoading,
     canAccess,
     isRole,
     getAccessibleFeatures,

@@ -20,9 +20,9 @@ export const ProtectedComponent: React.FC<ProtectedComponentProps> = ({
   fallback,
   hideWhenNoAccess = false
 }) => {
-  const { hasPermissionSync, roleLoading } = usePermissions();
+  const { hasPermissionSync, isLoading } = usePermissions();
 
-  if (roleLoading) {
+  if (isLoading) {
     return <div className="animate-pulse bg-gray-200 h-8 rounded"></div>;
   }
 

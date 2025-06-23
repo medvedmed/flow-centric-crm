@@ -33,6 +33,8 @@ export const usePermissions = () => {
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   const hasPermissionSync = (area: PermissionArea, action: 'view' | 'create' | 'edit' | 'delete'): boolean => {
@@ -41,9 +43,9 @@ export const usePermissions = () => {
     // Staff have limited VIEW-ONLY permissions
     if (permissionsData.role === 'staff') {
       const staffPermissions = {
-        'dashboard': { view: false, create: false, edit: false, delete: false }, // No dashboard access
-        'appointments': { view: true, create: false, edit: false, delete: false }, // View only
-        'clients': { view: true, create: false, edit: false, delete: false }, // View only
+        'dashboard': { view: false, create: false, edit: false, delete: false },
+        'appointments': { view: true, create: false, edit: false, delete: false },
+        'clients': { view: true, create: false, edit: false, delete: false },
         'services': { view: false, create: false, edit: false, delete: false },
         'staff_management': { view: false, create: false, edit: false, delete: false },
         'inventory': { view: false, create: false, edit: false, delete: false },
@@ -82,7 +84,8 @@ export const usePermissions = () => {
     hasPermissionSync,
     hasPermission,
     userRole: permissionsData?.role,
-    salonId: permissionsData?.salonId
+    salonId: permissionsData?.salonId,
+    isLoading: roleLoading
   };
 };
 
@@ -90,13 +93,16 @@ export const useRoleManagement = () => {
   const { data: rolePermissions, isLoading: permissionsLoading, error, refetch: refetchPermissions } = useQuery({
     queryKey: ['role-permissions'],
     queryFn: () => permissionApi.getRolePermissions(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   return {
     rolePermissions,
     permissionsLoading,
     error,
-    refetchPermissions
+    refetchPermissions,
+    isLoading: permissionsLoading
   };
 };

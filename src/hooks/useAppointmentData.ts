@@ -64,6 +64,8 @@ export const useAppointmentData = (date: string) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      console.log('Fetching appointments for date:', date);
+
       const { data, error } = await supabase
         .from('appointments')
         .select('*')
@@ -76,7 +78,9 @@ export const useAppointmentData = (date: string) => {
         throw error;
       }
       
-      return data?.map(appointment => ({
+      console.log('Raw appointments data:', data);
+      
+      const mappedAppointments = data?.map(appointment => ({
         id: appointment.id,
         clientId: appointment.client_id,
         staffId: appointment.staff_id,
@@ -94,8 +98,12 @@ export const useAppointmentData = (date: string) => {
         createdAt: appointment.created_at,
         updatedAt: appointment.updated_at
       })) || [];
+
+      console.log('Mapped appointments:', mappedAppointments);
+      return mappedAppointments;
     },
     staleTime: 1 * 60 * 1000, // 1 minute for appointments
+    refetchInterval: 30 * 1000, // Refetch every 30 seconds for real-time updates
   });
 
   // Show error messages

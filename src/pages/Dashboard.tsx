@@ -5,14 +5,16 @@ import ReceptionistDashboard from "@/components/ReceptionistDashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Calendar, Plus, ArrowUp, ArrowDown, DollarSign, Shield } from "lucide-react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/profile/useProfileHooks";
 import { useDashboardStats } from "@/hooks/dashboard/useDashboardData";
+import { AddAppointmentDialog } from "@/components/AddAppointmentDialog";
 
 const Dashboard = () => {
   const { userRole, roleLoading } = usePermissions();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const navigate = useNavigate();
 
   if (roleLoading || profileLoading) {
     return (
@@ -49,6 +51,22 @@ const Dashboard = () => {
     return absGrowth.toFixed(1);
   };
 
+  const handleNewAppointment = () => {
+    navigate('/appointments');
+  };
+
+  const handleAddClient = () => {
+    navigate('/clients');
+  };
+
+  const handleViewSchedule = () => {
+    navigate('/appointments');
+  };
+
+  const handleViewReports = () => {
+    navigate('/reports');
+  };
+
   // Default to owner/manager dashboard
   return (
     <div className="space-y-6">
@@ -60,10 +78,15 @@ const Dashboard = () => {
           </h1>
           <p className="text-muted-foreground mt-1">Welcome back! Here's what's happening at your salon today.</p>
         </div>
-        <Button className="bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700">
-          <Plus className="w-4 h-4 mr-2" />
-          New Appointment
-        </Button>
+        <AddAppointmentDialog
+          selectedDate={new Date()}
+          trigger={
+            <Button className="bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700">
+              <Plus className="w-4 h-4 mr-2" />
+              New Appointment
+            </Button>
+          }
+        />
       </div>
 
       {/* Key Metrics - 3 Column Layout */}
@@ -168,19 +191,35 @@ const Dashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Button variant="outline" className="h-20 flex-col gap-2">
+            <Button 
+              variant="outline" 
+              className="h-20 flex-col gap-2"
+              onClick={handleNewAppointment}
+            >
               <Plus className="w-6 h-6" />
               <span>New Appointment</span>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
+            <Button 
+              variant="outline" 
+              className="h-20 flex-col gap-2"
+              onClick={handleAddClient}
+            >
               <Users className="w-6 h-6" />
               <span>Add Client</span>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
+            <Button 
+              variant="outline" 
+              className="h-20 flex-col gap-2"
+              onClick={handleViewSchedule}
+            >
               <Calendar className="w-6 h-6" />
               <span>View Schedule</span>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
+            <Button 
+              variant="outline" 
+              className="h-20 flex-col gap-2"
+              onClick={handleViewReports}
+            >
               <DollarSign className="w-6 h-6" />
               <span>View Reports</span>
             </Button>

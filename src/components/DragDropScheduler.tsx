@@ -52,8 +52,8 @@ const DroppableTimeSlot: React.FC<{
   return (
     <div
       ref={setNodeRef}
-      className={`relative h-16 transition-colors ${
-        isOver ? 'bg-blue-50 border-2 border-blue-300 border-dashed' : ''
+      className={`relative min-h-[60px] transition-all duration-200 ${
+        isOver ? 'bg-blue-50 border-2 border-blue-300 border-dashed rounded' : ''
       }`}
     >
       {children}
@@ -104,7 +104,7 @@ const AppointmentBlock: React.FC<{
       {...listeners}
       className={`cursor-grab active:cursor-grabbing w-full rounded-md border-l-4 p-2 mb-1 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
         statusColors[appointment.status as keyof typeof statusColors] || statusColors.Scheduled
-      } ${isDragging ? 'z-50 rotate-2 scale-105' : ''}`}
+      } ${isDragging ? 'z-50 rotate-2 scale-105 shadow-lg' : ''}`}
     >
       <div className="space-y-1 overflow-hidden">
         {/* Time and Status Row */}
@@ -180,6 +180,8 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
   const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null);
   const { moveAppointment, isMoving } = useAppointmentOperations();
 
+  console.log('DragDropScheduler received:', { staff: staff.length, appointments: appointments.length });
+
   // Generate time slots from 8 AM to 8 PM
   const timeSlots: TimeSlot[] = [];
   for (let hour = 8; hour < 20; hour++) {
@@ -199,23 +201,32 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
     
     const appointment = appointments.find(apt => apt.id === active.id);
     setDraggedAppointment(appointment || null);
+    console.log('Drag started for appointment:', appointment);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
+    console.log('Drag ended:', { active: active.id, over: over?.id, overData: over?.data?.current });
+    
     if (!over || !draggedAppointment) {
+      console.log('No valid drop target or dragged appointment');
       setActiveId(null);
       setDraggedAppointment(null);
       return;
     }
 
-    const overId = over.id as string;
     const overData = over.data?.current;
 
     // Check if we're dropping on a time slot
     if (overData?.type === 'timeSlot' && overData?.staffId && overData?.time) {
       const { staffId: newStaffId, time: newTime } = overData;
+      
+      console.log('Dropping on time slot:', { newStaffId, newTime });
+      console.log('Current appointment:', { 
+        staffId: draggedAppointment.staffId, 
+        startTime: draggedAppointment.startTime 
+      });
       
       // Only move if it's actually a different position
       if (newStaffId !== draggedAppointment.staffId || newTime !== normalizeTime(draggedAppointment.startTime)) {
@@ -227,8 +238,11 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
         );
 
         if (conflictingAppointments.length > 0) {
-          console.warn('Cannot move appointment - time slot is occupied');
+          console.warn('Cannot move appointment - time slot is occupied:', conflictingAppointments);
+          // You could show a toast here for user feedback
         } else {
+          console.log('Moving appointment to new position');
+          
           // Move the appointment
           moveAppointment({
             appointmentId: active.id as string,
@@ -242,6 +256,8 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
             onAppointmentMove(active.id as string, newStaffId, newTime);
           }
         }
+      } else {
+        console.log('Same position, no move needed');
       }
     }
 
@@ -251,10 +267,21 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
 
   const getAppointmentsForStaffAndTime = (staffId: string, time: string) => {
     const normalizedTime = normalizeTime(time);
-    return appointments.filter(apt => {
+    const staffAppointments = appointments.filter(apt => {
       const normalizedStartTime = normalizeTime(apt.startTime);
-      return apt.staffId === staffId && normalizedStartTime === normalizedTime;
+      const match = apt.staffId === staffId && normalizedStartTime === normalizedTime;
+      if (match) {
+        console.log('Found appointment match:', { 
+          appointmentId: apt.id, 
+          staffId, 
+          time: normalizedTime, 
+          appointmentStartTime: normalizedStartTime 
+        });
+      }
+      return match;
     });
+    
+    return staffAppointments;
   };
 
   const getInitials = (name: string) => {
@@ -281,7 +308,7 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="w-full h-full bg-white overflow-hidden flex flex-col">
+      <div className="w-full h-full bg-white overflow-hidden flex flex-col relative">
         {/* Loading overlay */}
         {isMoving && (
           <div className="absolute inset-0 bg-black/10 z-50 flex items-center justify-center">

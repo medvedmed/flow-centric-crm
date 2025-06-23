@@ -1,7 +1,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { supabaseApi } from '@/services/supabaseApi';
+import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/services/types';
 
 export const useAppointmentOperations = () => {
@@ -20,53 +20,72 @@ export const useAppointmentOperations = () => {
       newTime: string;
       duration?: number;
     }) => {
+      console.log('Moving appointment:', { appointmentId, newStaffId, newTime, duration });
+      
       // Calculate end time
       const startTime = new Date(`2000-01-01 ${newTime}`);
       const endTime = new Date(startTime.getTime() + duration * 60000);
       const endTimeString = endTime.toTimeString().slice(0, 5);
 
-      // Update appointment
-      return supabaseApi.updateAppointment(appointmentId, {
-        staffId: newStaffId,
-        startTime: newTime,
-        endTime: endTimeString
-      });
+      console.log('Calculated times:', { startTime: newTime, endTime: endTimeString });
+
+      // Update appointment in database
+      const { data, error } = await supabase
+        .from('appointments')
+        .update({
+          staff_id: newStaffId,
+          start_time: newTime,
+          end_time: endTimeString,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', appointmentId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Database update error:', error);
+        throw error;
+      }
+
+      console.log('Updated appointment:', data);
+      return data;
     },
     onMutate: async ({ appointmentId, newStaffId, newTime, duration = 60 }) => {
+      console.log('Optimistic update starting...');
+      
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['appointments-data'] });
 
       // Snapshot the previous value
-      const previousAppointments = queryClient.getQueryData(['appointments-data']);
+      const previousData = queryClient.getQueryData(['appointments-data']);
 
       // Optimistically update
-      queryClient.setQueryData(['appointments-data'], (old: any) => {
-        if (!old?.data) return old;
+      queryClient.setQueryData(['appointments-data'], (oldData: any) => {
+        if (!oldData) return oldData;
         
-        return {
-          ...old,
-          data: old.data.map((apt: Appointment) => {
-            if (apt.id === appointmentId) {
-              const startTime = new Date(`2000-01-01 ${newTime}`);
-              const endTime = new Date(startTime.getTime() + duration * 60000);
-              return {
-                ...apt,
-                staffId: newStaffId,
-                startTime: newTime,
-                endTime: endTime.toTimeString().slice(0, 5)
-              };
-            }
-            return apt;
-          })
-        };
+        return oldData.map((apt: Appointment) => {
+          if (apt.id === appointmentId) {
+            const startTime = new Date(`2000-01-01 ${newTime}`);
+            const endTime = new Date(startTime.getTime() + duration * 60000);
+            return {
+              ...apt,
+              staffId: newStaffId,
+              startTime: newTime,
+              endTime: endTime.toTimeString().slice(0, 5)
+            };
+          }
+          return apt;
+        });
       });
 
-      return { previousAppointments };
+      return { previousData };
     },
     onError: (err, variables, context) => {
+      console.error('Move appointment error:', err);
+      
       // Rollback on error
-      if (context?.previousAppointments) {
-        queryClient.setQueryData(['appointments-data'], context.previousAppointments);
+      if (context?.previousData) {
+        queryClient.setQueryData(['appointments-data'], context.previousData);
       }
       
       toast({
@@ -75,7 +94,9 @@ export const useAppointmentOperations = () => {
         variant: "destructive",
       });
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      console.log('Appointment moved successfully:', data);
+      
       toast({
         title: "Appointment Moved",
         description: "Appointment has been successfully moved.",

@@ -79,7 +79,7 @@ export const WhatsAppIntegration: React.FC = () => {
           optimalSendTime: data.optimal_send_time || '10:00',
           followUpEnabled: data.follow_up_enabled || false,
           followUpTemplate: data.follow_up_template || settings.followUpTemplate,
-          reminderTiming: data.reminder_timing || '24_hours',
+          reminderTiming: (data.reminder_timing as '24_hours' | '2_hours') || '24_hours',
           messageTemplate: data.message_template || settings.messageTemplate
         });
       }
@@ -144,9 +144,13 @@ export const WhatsAppIntegration: React.FC = () => {
   const saveAutomationSettings = async () => {
     setLoading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
       const { error } = await supabase
         .from('reminder_settings')
         .upsert({
+          salon_id: user.id,
           auto_send: settings.autoSend,
           optimal_send_time: settings.optimalSendTime,
           follow_up_enabled: settings.followUpEnabled,

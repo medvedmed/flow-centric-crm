@@ -105,7 +105,7 @@ export const useAppointmentData = (date: string) => {
         status: appointment.status as Appointment['status'],
         notes: appointment.notes,
         salonId: appointment.salon_id,
-        paymentStatus: appointment.payment_status || 'unpaid',
+        paymentStatus: (appointment.payment_status || 'unpaid') as 'paid' | 'unpaid' | 'partial',
         paymentMethod: appointment.payment_method,
         paymentDate: appointment.payment_date,
         createdAt: appointment.created_at,

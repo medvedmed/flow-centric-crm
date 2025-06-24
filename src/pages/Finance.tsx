@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePermissions } from '@/hooks/usePermissions';
-import { Shield, DollarSign, TrendingUp, TrendingDown, Calculator } from 'lucide-react';
+import { Shield, DollarSign, TrendingUp, TrendingDown, Calculator, Zap } from 'lucide-react';
 import { PaymentTracker } from '@/components/PaymentTracker';
+import { QuickPaymentInterface } from '@/components/QuickPaymentInterface';
 import { useQuery } from '@tanstack/react-query';
 import { financeApi } from '@/services/api/financeApi';
 
@@ -106,12 +107,42 @@ const Finance = () => {
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="payments" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="quick-payment" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="quick-payment" className="flex items-center gap-2">
+            <Zap className="w-4 h-4" />
+            Quick Payment
+          </TabsTrigger>
           <TabsTrigger value="payments">Real-Time Payments</TabsTrigger>
           <TabsTrigger value="transactions">All Transactions</TabsTrigger>
           <TabsTrigger value="reports">Financial Reports</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="quick-payment" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <QuickPaymentInterface />
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="text-sm text-muted-foreground mb-4">
+                  Use this interface to quickly record payments from walk-in clients or process pending appointment payments.
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" size="sm">
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Cash Sale
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <TrendingUp className="w-4 h-4 mr-2" />
+                    Product Sale
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
         <TabsContent value="payments" className="space-y-6">
           <PaymentTracker />

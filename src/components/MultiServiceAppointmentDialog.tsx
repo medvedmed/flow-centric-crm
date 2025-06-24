@@ -75,21 +75,25 @@ export const MultiServiceAppointmentDialog: React.FC<MultiServiceAppointmentDial
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch services, staff, and clients
-  const { data: services = [] } = useQuery({
+  // Fetch services, staff, and clients with proper query functions
+  const { data: servicesData = { data: [], count: 0 } } = useQuery({
     queryKey: ['services'],
-    queryFn: supabaseApi.getServices
+    queryFn: () => supabaseApi.getServices()
   });
 
   const { data: staff = [] } = useQuery({
     queryKey: ['staff'],
-    queryFn: supabaseApi.getStaff
+    queryFn: () => supabaseApi.getStaff()
   });
 
-  const { data: clients = [] } = useQuery({
+  const { data: clientsData = { data: [], count: 0 } } = useQuery({
     queryKey: ['clients'],
-    queryFn: supabaseApi.getClients
+    queryFn: () => supabaseApi.getClients()
   });
+
+  // Extract data arrays from paginated results
+  const services = Array.isArray(servicesData) ? servicesData : servicesData.data || [];
+  const clients = Array.isArray(clientsData) ? clientsData : clientsData.data || [];
 
   const createAppointmentMutation = useMutation({
     mutationFn: async (appointmentData: any) => {

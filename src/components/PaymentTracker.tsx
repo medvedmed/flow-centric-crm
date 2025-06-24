@@ -51,7 +51,7 @@ export const PaymentTracker: React.FC<PaymentTrackerProps> = ({ appointmentId })
         .select('*')
         .eq('salon_id', profile.user.id)
         .eq('status', 'Completed')
-        .is('payment_status', null);
+        .or('payment_status.is.null,payment_status.neq.paid');
 
       if (appointmentId) {
         query = query.eq('id', appointmentId);
@@ -150,13 +150,11 @@ export const PaymentTracker: React.FC<PaymentTrackerProps> = ({ appointmentId })
 
       if (transactionError) throw transactionError;
 
-      // Update appointment payment status
+      // Update appointment with payment information
       const { error: updateError } = await supabase
         .from('appointments')
         .update({ 
-          payment_status: 'paid',
-          payment_method: method,
-          payment_date: new Date().toISOString()
+          notes: `${appointment.notes || ''} - Payment received: $${amount} via ${method}`.trim()
         })
         .eq('id', appointmentId);
 

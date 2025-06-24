@@ -1,3 +1,4 @@
+
 // Re-export all types
 export * from './types';
 
@@ -10,6 +11,7 @@ export { timeOffApi } from './api/timeOffApi';
 export { availabilityApi } from './api/availabilityApi';
 export { analyticsApi } from './api/analyticsApi';
 export { reportsApi } from './api/reportsApi';
+export { serviceApi } from './api/serviceApi';
 
 // Re-export reminder API
 export { reminderApi } from './api/reminderApi';
@@ -35,6 +37,15 @@ export const supabaseApi = {
   deleteStaff: (id: string) => import('./api/staffApi').then(m => m.staffApi.deleteStaff(id)),
   createStaffWithRole: (staff: any, role?: 'staff' | 'receptionist') => 
     import('./api/staffApi').then(m => m.staffApi.createStaffWithRole(staff, role)),
+
+  // Service functions
+  getServices: (searchTerm?: string, category?: string, isActive?: boolean, page?: number, pageSize?: number) =>
+    import('./api/serviceApi').then(m => m.serviceApi.getServices(searchTerm, category, isActive, page, pageSize)),
+  getService: (id: string) => import('./api/serviceApi').then(m => m.serviceApi.getService(id)),
+  createService: (service: any) => import('./api/serviceApi').then(m => m.serviceApi.createService(service)),
+  updateService: (id: string, service: any) => import('./api/serviceApi').then(m => m.serviceApi.updateService(id, service)),
+  deleteService: (id: string) => import('./api/serviceApi').then(m => m.serviceApi.deleteService(id)),
+  getServiceCategories: () => import('./api/serviceApi').then(m => m.serviceApi.getCategories()),
 
   // Appointment functions
   getAppointments: (clientId?: string, staffId?: string, startDate?: string, endDate?: string, page?: number, pageSize?: number) =>

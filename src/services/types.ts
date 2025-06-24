@@ -59,6 +59,20 @@ export interface Staff {
   updatedAt?: string;
 }
 
+export interface Service {
+  id: string;
+  salon_id: string;
+  name: string;
+  category: string;
+  duration: number;
+  price: number;
+  description?: string;
+  is_active: boolean;
+  popular: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Appointment {
   id: string;
   clientId: string;

@@ -451,6 +451,48 @@ export type Database = {
           },
         ]
       }
+      services: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          duration: number
+          id: string
+          is_active: boolean
+          name: string
+          popular: boolean
+          price: number
+          salon_id: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          duration?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          popular?: boolean
+          price?: number
+          salon_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          duration?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          popular?: boolean
+          price?: number
+          salon_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       staff: {
         Row: {
           break_end: string | null

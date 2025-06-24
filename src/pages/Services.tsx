@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,81 +8,46 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Filter, Scissors, Clock, DollarSign, Edit, Trash } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Search, Clock, DollarSign, Edit, Trash, Scissors, Star, StarOff, ToggleLeft, ToggleRight } from "lucide-react";
+import { useServices, useCreateService, useDeleteService, useToggleServicePopular, useServiceCategories } from "@/hooks/services/useServiceHooks";
+import { EditServiceDialog } from "@/components/EditServiceDialog";
+import { Service } from "@/services/types";
 import { toast } from "@/hooks/use-toast";
 
-const servicesData = [
-  {
-    id: 1,
-    name: "Haircut & Style",
-    category: "Hair",
-    duration: 60,
-    price: 85,
-    description: "Professional haircut with styling",
-    popular: true
-  },
-  {
-    id: 2,
-    name: "Hair Coloring",
-    category: "Hair",
-    duration: 120,
-    price: 150,
-    description: "Full hair coloring service",
-    popular: true
-  },
-  {
-    id: 3,
-    name: "Manicure",
-    category: "Nails",
-    duration: 45,
-    price: 40,
-    description: "Classic manicure with polish",
-    popular: false
-  },
-  {
-    id: 4,
-    name: "Facial Treatment",
-    category: "Skincare",
-    duration: 75,
-    price: 95,
-    description: "Deep cleansing facial with moisturizing",
-    popular: true
-  },
-  {
-    id: 5,
-    name: "Pedicure",
-    category: "Nails",
-    duration: 60,
-    price: 55,
-    description: "Relaxing pedicure with foot massage",
-    popular: false
-  },
-];
-
 const Services = () => {
-  const [services, setServices] = useState(servicesData);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [showInactive, setShowInactive] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingService, setEditingService] = useState<Service | null>(null);
 
   const [newService, setNewService] = useState({
     name: "",
     category: "",
     duration: "",
     price: "",
-    description: ""
+    description: "",
+    is_active: true,
+    popular: false,
   });
 
-  const categories = ["all", "Hair", "Nails", "Skincare", "Massage"];
+  // Fetch data
+  const { data: servicesData, isLoading, error } = useServices(
+    searchTerm || undefined,
+    selectedCategory !== "all" ? selectedCategory : undefined,
+    showInactive ? undefined : true
+  );
 
-  const filteredServices = services.filter(service => {
-    const matchesSearch = service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         service.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || service.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const { data: categories = [] } = useServiceCategories();
+  const createServiceMutation = useCreateService();
+  const deleteServiceMutation = useDeleteService();
+  const togglePopularMutation = useToggleServicePopular();
 
-  const handleAddService = () => {
+  const services = servicesData?.data || [];
+  const totalServices = servicesData?.count || 0;
+
+  const handleAddService = async () => {
     if (!newService.name || !newService.category || !newService.duration || !newService.price) {
       toast({
         title: "Error",
@@ -92,39 +57,72 @@ const Services = () => {
       return;
     }
 
-    const service = {
-      id: services.length + 1,
-      name: newService.name,
-      category: newService.category,
-      duration: parseInt(newService.duration),
-      price: parseInt(newService.price),
-      description: newService.description,
-      popular: false
-    };
+    try {
+      await create  ServiceMutation.mutateAsync({
+        name: newService.name,
+        category: newService.category,
+        duration: parseInt(newService.duration),
+        price: parseFloat(newService.price),
+        description: newService.description,
+        is_active: newService.is_active,
+        popular: newService.popular,
+      });
 
-    setServices([...services, service]);
-    setNewService({
-      name: "",
-      category: "",
-      duration: "",
-      price: "",
-      description: ""
-    });
-    setIsAddDialogOpen(false);
-    
-    toast({
-      title: "Success",
-      description: "Service added successfully!",
-    });
+      setNewService({
+        name: "",
+        category: "",
+        duration: "",
+        price: "",
+        description: "",
+        is_active: true,
+        popular: false,
+      });
+      setIsAddDialogOpen(false);
+    } catch (error) {
+      console.error('Error creating service:', error);
+    }
   };
 
-  const handleDeleteService = (id) => {
-    setServices(services.filter(service => service.id !== id));
-    toast({
-      title: "Success",
-      description: "Service removed successfully!",
-    });
+  const handleDeleteService = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this service?")) {
+      try {
+        await deleteServiceMutation.mutateAsync(id);
+      } catch (error) {
+        console.error('Error deleting service:', error);
+      }
+    }
   };
+
+  const handleTogglePopular = async (service: Service) => {
+    try {
+      await togglePopularMutation.mutateAsync({
+        id: service.id,
+        popular: !service.popular,
+      });
+    } catch (error) {
+      console.error('Error toggling popular status:', error);
+    }
+  };
+
+  // Calculate stats
+  const activeServices = services.filter(s => s.is_active);
+  const popularServices = services.filter(s => s.popular);
+  const avgDuration = services.length > 0 ? Math.round(services.reduce((sum, s) => sum + s.duration, 0) / services.length) : 0;
+  const avgPrice = services.length > 0 ? Math.round(services.reduce((sum, s) => sum + s.price, 0) / services.length) : 0;
+
+  const availableCategories = ["all", ...categories];
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <p className="text-red-600">Error loading services: {error.message}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -168,6 +166,9 @@ const Services = () => {
                     <SelectItem value="Nails">Nails</SelectItem>
                     <SelectItem value="Skincare">Skincare</SelectItem>
                     <SelectItem value="Massage">Massage</SelectItem>
+                    <SelectItem value="Makeup">Makeup</SelectItem>
+                    <SelectItem value="Eyebrows">Eyebrows</SelectItem>
+                    <SelectItem value="Waxing">Waxing</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -187,9 +188,10 @@ const Services = () => {
                   <Input
                     id="price"
                     type="number"
+                    step="0.01"
                     value={newService.price}
                     onChange={(e) => setNewService({...newService, price: e.target.value})}
-                    placeholder="85"
+                    placeholder="85.00"
                   />
                 </div>
               </div>
@@ -203,9 +205,31 @@ const Services = () => {
                   rows={3}
                 />
               </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="is_active"
+                    checked={newService.is_active}
+                    onCheckedChange={(checked) => setNewService({...newService, is_active: checked})}
+                  />
+                  <Label htmlFor="is_active">Active</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="popular"
+                    checked={newService.popular}
+                    onCheckedChange={(checked) => setNewService({...newService, popular: checked})}
+                  />
+                  <Label htmlFor="popular">Popular</Label>
+                </div>
+              </div>
               <div className="flex gap-2 pt-4">
-                <Button onClick={handleAddService} className="flex-1">
-                  Add Service
+                <Button 
+                  onClick={handleAddService} 
+                  className="flex-1"
+                  disabled={createServiceMutation.isPending}
+                >
+                  {createServiceMutation.isPending ? "Adding..." : "Add Service"}
                 </Button>
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                   Cancel
@@ -224,18 +248,21 @@ const Services = () => {
             <Scissors className="h-4 w-4 text-teal-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-teal-900">{services.length}</div>
+            <div className="text-2xl font-bold text-teal-900">{totalServices}</div>
+            <p className="text-xs text-teal-600 mt-1">
+              {activeServices.length} active
+            </p>
           </CardContent>
         </Card>
 
         <Card className="border-0 shadow-lg bg-gradient-to-br from-amber-50 to-amber-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-amber-700">Popular Services</CardTitle>
-            <Scissors className="h-4 w-4 text-amber-600" />
+            <Star className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-900">
-              {services.filter(s => s.popular).length}
+              {popularServices.length}
             </div>
           </CardContent>
         </Card>
@@ -247,7 +274,7 @@ const Services = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-900">
-              {Math.round(services.reduce((sum, s) => sum + s.duration, 0) / services.length)} min
+              {avgDuration} min
             </div>
           </CardContent>
         </Card>
@@ -259,7 +286,7 @@ const Services = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-900">
-              ${Math.round(services.reduce((sum, s) => sum + s.price, 0) / services.length)}
+              ${avgPrice}
             </div>
           </CardContent>
         </Card>
@@ -283,63 +310,138 @@ const Services = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((category) => (
+                {availableCategories.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category === "all" ? "All Categories" : category}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="show-inactive"
+                checked={showInactive}
+                onCheckedChange={setShowInactive}
+              />
+              <Label htmlFor="show-inactive">Show Inactive</Label>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Services Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredServices.map((service) => (
-          <Card key={service.id} className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-lg">{service.name}</CardTitle>
-                  <Badge variant="secondary" className="mt-1">{service.category}</Badge>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i} className="border-0 shadow-lg animate-pulse">
+              <CardHeader>
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="h-3 bg-gray-200 rounded"></div>
+                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
                 </div>
-                {service.popular && (
-                  <Badge className="bg-amber-100 text-amber-800">Popular</Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">{service.description}</p>
-              
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Clock className="w-4 h-4" />
-                  {service.duration} min
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : services.length === 0 ? (
+        <Card>
+          <CardContent className="p-6 text-center">
+            <Scissors className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+            <h2 className="text-xl font-semibold mb-2">No Services Found</h2>
+            <p className="text-gray-600 mb-4">
+              {searchTerm || selectedCategory !== "all" 
+                ? "Try adjusting your search or filters." 
+                : "Get started by adding your first service."}
+            </p>
+            {!searchTerm && selectedCategory === "all" && (
+              <Button onClick={() => setIsAddDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Your First Service
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {services.map((service) => (
+            <Card key={service.id} className={`border-0 shadow-lg hover:shadow-xl transition-shadow ${!service.is_active ? 'opacity-60' : ''}`}>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-lg">{service.name}</CardTitle>
+                    <div className="flex gap-2 mt-1">
+                      <Badge variant="secondary">{service.category}</Badge>
+                      {service.popular && (
+                        <Badge className="bg-amber-100 text-amber-800">Popular</Badge>
+                      )}
+                      {!service.is_active && (
+                        <Badge variant="destructive">Inactive</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleTogglePopular(service)}
+                    disabled={togglePopularMutation.isPending}
+                  >
+                    {service.popular ? (
+                      <StarOff className="w-4 h-4 text-amber-500" />
+                    ) : (
+                      <Star className="w-4 h-4 text-gray-400" />
+                    )}
+                  </Button>
                 </div>
-                <div className="text-lg font-semibold text-teal-600">
-                  ${service.price}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">{service.description}</p>
+                
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Clock className="w-4 h-4" />
+                    {service.duration} min
+                  </div>
+                  <div className="text-lg font-semibold text-teal-600">
+                    ${service.price}
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex gap-2 pt-2">
-                <Button variant="ghost" size="sm" className="flex-1">
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => handleDeleteService(service.id)}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                <div className="flex gap-2 pt-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => setEditingService(service)}
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleDeleteService(service.id)}
+                    className="text-red-600 hover:text-red-700"
+                    disabled={deleteServiceMutation.isPending}
+                  >
+                    <Trash className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Edit Service Dialog */}
+      <EditServiceDialog
+        service={editingService}
+        open={!!editingService}
+        onOpenChange={(open) => !open && setEditingService(null)}
+      />
     </div>
   );
 };

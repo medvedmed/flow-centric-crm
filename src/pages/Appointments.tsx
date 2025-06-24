@@ -2,12 +2,14 @@
 import React, { useState } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent } from '@/components/ui/card';
-import { Shield, Calendar } from 'lucide-react';
+import { Shield, Calendar, Grid3X3, CalendarDays } from 'lucide-react';
 import { AppointmentScheduler } from '@/components/AppointmentScheduler';
 import { EditAppointmentDialog } from '@/components/EditAppointmentDialog';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { Appointment } from '@/services/types';
+import DragDropCalendar from '@/components/DragDropCalendar';
 
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -52,13 +54,13 @@ const Appointments = () => {
 
   return (
     <div className="h-screen w-full overflow-hidden bg-white flex flex-col">
-      {/* Date Navigation Header */}
+      {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-gray-600" />
             <h1 className="text-lg font-semibold text-gray-900">
-              {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+              Appointments
             </h1>
           </div>
         </div>
@@ -76,12 +78,36 @@ const Appointments = () => {
         </div>
       </div>
 
-      {/* Main Scheduler */}
-      <div className="flex-1 overflow-hidden">
-        <AppointmentScheduler
-          selectedDate={selectedDate}
-          onAppointmentClick={handleAppointmentClick}
-        />
+      {/* Main Content with Tabs */}
+      <div className="flex-1 overflow-hidden p-4">
+        <Tabs defaultValue="grid" className="w-full h-full flex flex-col">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="grid" className="flex items-center gap-2">
+              <Grid3X3 className="w-4 h-4" />
+              Grid View
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="flex items-center gap-2">
+              <CalendarDays className="w-4 h-4" />
+              Calendar View
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="grid" className="flex-1 overflow-hidden mt-4">
+            <div className="bg-white border-b border-gray-200 px-4 py-2 mb-4">
+              <h2 className="text-md font-medium text-gray-800">
+                {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+              </h2>
+            </div>
+            <AppointmentScheduler
+              selectedDate={selectedDate}
+              onAppointmentClick={handleAppointmentClick}
+            />
+          </TabsContent>
+
+          <TabsContent value="calendar" className="flex-1 overflow-hidden mt-4">
+            <DragDropCalendar onAppointmentClick={handleAppointmentClick} />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Edit Appointment Dialog */}

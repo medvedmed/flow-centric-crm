@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,7 +46,7 @@ export const StaffAvailabilityManager: React.FC<StaffAvailabilityManagerProps> =
 
   // Fetch data
   const { data: staffData } = useStaff();
-  const staff = staffData?.data || [];
+  const staff = staffData || [];
 
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });

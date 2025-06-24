@@ -9,9 +9,9 @@ export interface FinancialTransaction {
   amount: number;
   description?: string;
   payment_method: string;
+  transaction_date: string;
   reference_id?: string;
   reference_type?: string;
-  transaction_date: string;
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -22,10 +22,27 @@ export interface CreateTransaction {
   category: string;
   amount: number;
   description?: string;
-  payment_method?: string;
+  payment_method: string;
+  transaction_date: string;
   reference_id?: string;
   reference_type?: string;
-  transaction_date?: string;
+}
+
+export interface FinancialSummary {
+  totalIncome: number;
+  totalExpenses: number;
+  netProfit: number;
+  transactionCount: number;
+}
+
+export interface CategorySummary {
+  category: string;
+  amount: number;
+}
+
+export interface TransactionsResponse {
+  data: FinancialTransaction[];
+  count: number;
 }
 
 export const financeApi = {
@@ -36,25 +53,26 @@ export const financeApi = {
     category?: string,
     page: number = 1,
     pageSize: number = 50
-  ) {
+  ): Promise<TransactionsResponse> {
+    const { data: profile } = await supabase.auth.getUser();
+    if (!profile.user) throw new Error('User not authenticated');
+
     let query = supabase
       .from('financial_transactions')
       .select('*', { count: 'exact' })
+      .eq('salon_id', profile.user.id)
       .order('transaction_date', { ascending: false })
       .order('created_at', { ascending: false });
 
     if (startDate) {
       query = query.gte('transaction_date', startDate);
     }
-
     if (endDate) {
       query = query.lte('transaction_date', endDate);
     }
-
     if (type) {
       query = query.eq('transaction_type', type);
     }
-
     if (category) {
       query = query.eq('category', category);
     }
@@ -68,13 +86,11 @@ export const financeApi = {
 
     return {
       data: data || [],
-      totalCount: count || 0,
-      totalPages: Math.ceil((count || 0) / pageSize),
-      currentPage: page
+      count: count || 0
     };
   },
 
-  async createTransaction(transaction: CreateTransaction) {
+  async createTransaction(transaction: CreateTransaction): Promise<FinancialTransaction> {
     const { data: profile } = await supabase.auth.getUser();
     if (!profile.user) throw new Error('User not authenticated');
 
@@ -83,47 +99,48 @@ export const financeApi = {
       .insert([{
         ...transaction,
         salon_id: profile.user.id,
-        created_by: profile.user.id,
-        payment_method: transaction.payment_method || 'cash',
-        transaction_date: transaction.transaction_date || new Date().toISOString().split('T')[0]
+        created_by: profile.user.id
       }])
       .select()
       .single();
-    
+
     if (error) throw error;
     return data;
   },
 
-  async updateTransaction(id: string, updates: Partial<CreateTransaction>) {
+  async updateTransaction(id: string, updates: Partial<CreateTransaction>): Promise<FinancialTransaction> {
     const { data, error } = await supabase
       .from('financial_transactions')
       .update(updates)
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error) throw error;
     return data;
   },
 
-  async deleteTransaction(id: string) {
+  async deleteTransaction(id: string): Promise<void> {
     const { error } = await supabase
       .from('financial_transactions')
       .delete()
       .eq('id', id);
-    
+
     if (error) throw error;
   },
 
-  async getFinancialSummary(startDate?: string, endDate?: string) {
+  async getFinancialSummary(startDate?: string, endDate?: string): Promise<FinancialSummary> {
+    const { data: profile } = await supabase.auth.getUser();
+    if (!profile.user) throw new Error('User not authenticated');
+
     let query = supabase
       .from('financial_transactions')
-      .select('transaction_type, amount, transaction_date');
+      .select('transaction_type, amount')
+      .eq('salon_id', profile.user.id);
 
     if (startDate) {
       query = query.gte('transaction_date', startDate);
     }
-
     if (endDate) {
       query = query.lte('transaction_date', endDate);
     }
@@ -131,36 +148,42 @@ export const financeApi = {
     const { data, error } = await query;
     if (error) throw error;
 
-    const summary = {
-      totalIncome: 0,
-      totalExpenses: 0,
-      netProfit: 0,
-      transactionCount: data?.length || 0
+    const summary = data?.reduce(
+      (acc, transaction) => {
+        if (transaction.transaction_type === 'income') {
+          acc.totalIncome += Number(transaction.amount);
+        } else {
+          acc.totalExpenses += Number(transaction.amount);
+        }
+        acc.transactionCount++;
+        return acc;
+      },
+      { totalIncome: 0, totalExpenses: 0, transactionCount: 0 }
+    ) || { totalIncome: 0, totalExpenses: 0, transactionCount: 0 };
+
+    return {
+      ...summary,
+      netProfit: summary.totalIncome - summary.totalExpenses
     };
-
-    data?.forEach(transaction => {
-      if (transaction.transaction_type === 'income') {
-        summary.totalIncome += Number(transaction.amount);
-      } else {
-        summary.totalExpenses += Number(transaction.amount);
-      }
-    });
-
-    summary.netProfit = summary.totalIncome - summary.totalExpenses;
-
-    return summary;
   },
 
-  async getCategorySummary(type: 'income' | 'expense', startDate?: string, endDate?: string) {
+  async getCategorySummary(
+    type: 'income' | 'expense',
+    startDate?: string,
+    endDate?: string
+  ): Promise<CategorySummary[]> {
+    const { data: profile } = await supabase.auth.getUser();
+    if (!profile.user) throw new Error('User not authenticated');
+
     let query = supabase
       .from('financial_transactions')
       .select('category, amount')
+      .eq('salon_id', profile.user.id)
       .eq('transaction_type', type);
 
     if (startDate) {
       query = query.gte('transaction_date', startDate);
     }
-
     if (endDate) {
       query = query.lte('transaction_date', endDate);
     }
@@ -168,14 +191,13 @@ export const financeApi = {
     const { data, error } = await query;
     if (error) throw error;
 
-    const categoryTotals: Record<string, number> = {};
-    
+    const categoryMap = new Map<string, number>();
     data?.forEach(transaction => {
-      const category = transaction.category;
-      categoryTotals[category] = (categoryTotals[category] || 0) + Number(transaction.amount);
+      const current = categoryMap.get(transaction.category) || 0;
+      categoryMap.set(transaction.category, current + Number(transaction.amount));
     });
 
-    return Object.entries(categoryTotals).map(([category, amount]) => ({
+    return Array.from(categoryMap.entries()).map(([category, amount]) => ({
       category,
       amount
     }));

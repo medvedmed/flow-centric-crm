@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,12 +12,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { inventoryApi, CreateInventoryItem } from '@/services/api/inventoryApi';
 import { toast } from '@/hooks/use-toast';
 import { Package, Plus, Search, AlertTriangle, Edit, Trash, TrendingDown, TrendingUp } from 'lucide-react';
+import { InventoryErrorBoundary } from '@/components/InventoryErrorBoundary';
+import { useAuth } from '@/hooks/useAuth';
 
-export default function Inventory() {
+function InventoryContent() {
+  const { user } = useAuth();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [showLowStock, setShowLowStock] = useState(false);
 
   const [newItem, setNewItem] = useState<CreateInventoryItem>({
@@ -40,22 +44,45 @@ export default function Inventory() {
 
   const queryClient = useQueryClient();
 
+  // Don't render if user is not authenticated
+  if (!user) {
+    return (
+      <Card className="w-full max-w-md mx-auto mt-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-yellow-600">
+            <AlertTriangle className="w-5 h-5" />
+            Authentication Required
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            Please sign in to access inventory management.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // Fetch inventory items
-  const { data: items, isLoading } = useQuery({
+  const { data: items, isLoading, error } = useQuery({
     queryKey: ['inventory-items', selectedCategory, showLowStock],
-    queryFn: () => inventoryApi.getItems(selectedCategory || undefined, showLowStock)
+    queryFn: () => inventoryApi.getItems(selectedCategory === 'all' ? undefined : selectedCategory, showLowStock),
+    retry: 2,
+    retryDelay: 1000
   });
 
   // Fetch categories
   const { data: categories } = useQuery({
     queryKey: ['inventory-categories'],
-    queryFn: inventoryApi.getCategories
+    queryFn: inventoryApi.getCategories,
+    retry: 2
   });
 
   // Fetch low stock items for alerts
   const { data: lowStockItems } = useQuery({
     queryKey: ['low-stock-items'],
-    queryFn: inventoryApi.getLowStockItems
+    queryFn: inventoryApi.getLowStockItems,
+    retry: 2
   });
 
   // Create item mutation
@@ -73,9 +100,10 @@ export default function Inventory() {
       });
     },
     onError: (error: any) => {
+      console.error('Create item error:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to add item",
+        description: error.message || "Failed to add item. Please check your connection and try again.",
         variant: "destructive",
       });
     }
@@ -95,6 +123,7 @@ export default function Inventory() {
       });
     },
     onError: (error: any) => {
+      console.error('Update item error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to update item",
@@ -117,6 +146,7 @@ export default function Inventory() {
       });
     },
     onError: (error: any) => {
+      console.error('Stock update error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to update stock",
@@ -137,6 +167,7 @@ export default function Inventory() {
       });
     },
     onError: (error: any) => {
+      console.error('Delete item error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to delete item",
@@ -161,7 +192,7 @@ export default function Inventory() {
   };
 
   const handleCreateItem = () => {
-    if (!newItem.name || newItem.unit_price < 0) {
+    if (!newItem.name.trim() || newItem.unit_price < 0) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields with valid values",
@@ -220,6 +251,29 @@ export default function Inventory() {
   };
 
   const commonCategories = ['General', 'Hair Products', 'Skincare', 'Tools', 'Equipment', 'Cleaning Supplies'];
+
+  // Show error state
+  if (error) {
+    return (
+      <Card className="w-full max-w-md mx-auto mt-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-red-600">
+            <AlertTriangle className="w-5 h-5" />
+            Error Loading Inventory
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground mb-4">
+            Failed to load inventory data. This might be due to authentication or connectivity issues.
+          </p>
+          <Button onClick={() => window.location.reload()} className="w-full">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -407,7 +461,7 @@ export default function Inventory() {
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
                 {categories?.map(category => (
                   <SelectItem key={category} value={category}>
                     {category}
@@ -708,5 +762,13 @@ export default function Inventory() {
         </Dialog>
       )}
     </div>
+  );
+}
+
+export default function Inventory() {
+  return (
+    <InventoryErrorBoundary>
+      <InventoryContent />
+    </InventoryErrorBoundary>
   );
 }

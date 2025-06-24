@@ -25,41 +25,63 @@ import Help from "./pages/Help"
 import NotFound from "./pages/NotFound"
 import InviteAccept from "./pages/InviteAccept"
 import WebhookTest from "./pages/WebhookTest"
+import Finance from "@/pages/Finance"
 import "./App.css"
-import Finance from "@/pages/Finance";
 
 const queryClient = new QueryClient()
 
 function App() {
   return (
-    <Router>
-      <QueryClientProvider client={queryClient}>
-        <div className="min-h-screen bg-background">
-          <Routes>
-            <Route path="/" element={
-              <AppWithRealTime>
-                <Dashboard />
-              </AppWithRealTime>
-            }>
-              <Route index element={<Dashboard />} />
-              <Route path="appointments" element={<Appointments />} />
-              <Route path="clients" element={<Clients />} />
-              <Route path="staff" element={<Staff />} />
-              <Route path="services" element={<Services />} />
-              <Route path="finance" element={<Finance />} />
-              <Route path="inventory" element={<Inventory />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="help" element={<Help />} />
-              <Route path="webhook-test" element={<WebhookTest />} />
-              <Route path="invite/:inviteToken" element={<InviteAccept />} />
-              <Route path="*" element={<NotFound />} />
-            </Route>
-          </Routes>
-        </div>
-        <Toaster />
-      </QueryClientProvider>
-    </Router>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <StaffAuthProvider>
+              <Router>
+                <div className="min-h-screen bg-background">
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/invite/:inviteToken" element={<InviteAccept />} />
+                    <Route path="/*" element={
+                      <ProtectedRoute>
+                        <AppWithRealTime>
+                          <SidebarProvider>
+                            <div className="flex min-h-screen w-full">
+                              <AppSidebar />
+                              <div className="flex-1 flex flex-col">
+                                <AppHeader />
+                                <main className="flex-1 p-6">
+                                  <Routes>
+                                    <Route path="/dashboard" element={<Dashboard />} />
+                                    <Route path="/appointments" element={<Appointments />} />
+                                    <Route path="/clients" element={<Clients />} />
+                                    <Route path="/staff" element={<Staff />} />
+                                    <Route path="/services" element={<Services />} />
+                                    <Route path="/finance" element={<Finance />} />
+                                    <Route path="/inventory" element={<Inventory />} />
+                                    <Route path="/reports" element={<Reports />} />
+                                    <Route path="/settings" element={<Settings />} />
+                                    <Route path="/help" element={<Help />} />
+                                    <Route path="/webhook-test" element={<WebhookTest />} />
+                                    <Route path="*" element={<NotFound />} />
+                                  </Routes>
+                                </main>
+                              </div>
+                            </div>
+                          </SidebarProvider>
+                        </AppWithRealTime>
+                      </ProtectedRoute>
+                    } />
+                  </Routes>
+                </div>
+                <Toaster />
+                <Sonner />
+              </Router>
+            </StaffAuthProvider>
+          </AuthProvider>
+        </LanguageProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
 

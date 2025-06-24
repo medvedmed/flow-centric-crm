@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,7 +57,7 @@ const Services = () => {
     }
 
     try {
-      await create  ServiceMutation.mutateAsync({
+      await createServiceMutation.mutateAsync({
         name: newService.name,
         category: newService.category,
         duration: parseInt(newService.duration),

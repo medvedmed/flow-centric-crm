@@ -12,8 +12,6 @@ export interface InventoryItem {
   minimum_stock: number;
   maximum_stock?: number;
   unit_price: number;
-  cost_price?: number;
-  selling_price?: number;
   supplier_name?: string;
   supplier_contact?: string;
   last_restocked_at?: string;
@@ -31,8 +29,6 @@ export interface CreateInventoryItem {
   minimum_stock: number;
   maximum_stock?: number;
   unit_price: number;
-  cost_price?: number;
-  selling_price?: number;
   supplier_name?: string;
   supplier_contact?: string;
 }
@@ -50,16 +46,7 @@ export const inventoryApi = {
     }
 
     if (lowStock) {
-      // Use a subquery approach instead of raw SQL
-      const { data: allItems, error: allError } = await supabase
-        .from('inventory_items')
-        .select('*')
-        .eq('is_active', true);
-      
-      if (allError) throw allError;
-      
-      const filteredItems = allItems?.filter(item => item.current_stock <= item.minimum_stock) || [];
-      return filteredItems;
+      query = query.lt('current_stock', supabase.raw('minimum_stock'));
     }
 
     const { data, error } = await query;
@@ -82,17 +69,9 @@ export const inventoryApi = {
     const { data: profile } = await supabase.auth.getUser();
     if (!profile.user) throw new Error('User not authenticated');
 
-    // Set default selling price if not provided
-    const sellingPrice = item.selling_price || (item.cost_price || item.unit_price) * 1.5;
-
     const { data, error } = await supabase
       .from('inventory_items')
-      .insert([{ 
-        ...item, 
-        salon_id: profile.user.id,
-        cost_price: item.cost_price || item.unit_price,
-        selling_price: sellingPrice
-      }])
+      .insert([{ ...item, salon_id: profile.user.id }])
       .select()
       .single();
     
@@ -101,11 +80,6 @@ export const inventoryApi = {
   },
 
   async updateItem(id: string, updates: Partial<CreateInventoryItem>) {
-    // If updating cost_price, also update selling_price if not explicitly provided
-    if (updates.cost_price && !updates.selling_price) {
-      updates.selling_price = updates.cost_price * 1.5;
-    }
-
     const { data, error } = await supabase
       .from('inventory_items')
       .update(updates)

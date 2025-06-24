@@ -3,10 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { LogOut, User, Settings, Menu } from 'lucide-react';
+import { LogOut, User, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useSidebar } from '@/hooks/useSidebar';
 
 const getRoleBadgeColor = (role: string) => {
   switch (role) {
@@ -56,25 +55,15 @@ const getWelcomeMessage = (role: string) => {
 const AppHeader = () => {
   const { user, signOut } = useAuth();
   const { userRole } = usePermissions();
-  const { toggleSidebar } = useSidebar();
 
   const handleSignOut = async () => {
     await signOut();
   };
 
   return (
-    <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-30">
-      <div className="flex h-16 items-center justify-between px-4 lg:px-6">
+    <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-40">
+      <div className="flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleSidebar}
-            className="lg:hidden p-2 hover:bg-gray-100"
-          >
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle sidebar</span>
-          </Button>
           <h1 className="text-xl font-bold bg-gradient-to-r from-teal-500 to-cyan-600 bg-clip-text text-transparent">
             {getWelcomeMessage(userRole || '')}
           </h1>

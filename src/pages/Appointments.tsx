@@ -6,8 +6,6 @@ import { Shield, Calendar } from 'lucide-react';
 import { AppointmentScheduler } from '@/components/AppointmentScheduler';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { SidebarToggle } from '@/components/SidebarToggle';
-import { AppSidebar } from '@/components/AppSidebar';
 
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -51,53 +49,37 @@ const Appointments = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-gray-50 flex">
-      {/* Sidebar */}
-      <AppSidebar />
-      
-      {/* Mobile Toggle */}
-      <SidebarToggle />
-      
-      {/* Main Content */}
-      <div className="flex-1 lg:ml-0 flex flex-col min-w-0">
-        {/* Date Navigation Header */}
-        <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
-            <div className="flex items-center gap-2 min-w-0">
-              <Calendar className="w-5 h-5 text-gray-600 flex-shrink-0" />
-              <h1 className="text-sm md:text-lg font-semibold text-gray-900 truncate">
-                {format(selectedDate, 'EEEE, MMM d, yyyy')}
-              </h1>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-            <Button variant="outline" size="sm" onClick={goToPreviousDay}>
-              <span className="hidden sm:inline">Previous</span>
-              <span className="sm:hidden">←</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={goToToday}
-              className="bg-teal-50 border-teal-200 text-teal-700 hover:bg-teal-100"
-            >
-              Today
-            </Button>
-            <Button variant="outline" size="sm" onClick={goToNextDay}>
-              <span className="hidden sm:inline">Next</span>
-              <span className="sm:hidden">→</span>
-            </Button>
+    <div className="h-screen w-full overflow-hidden bg-white flex flex-col">
+      {/* Date Navigation Header */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-gray-600" />
+            <h1 className="text-lg font-semibold text-gray-900">
+              {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+            </h1>
           </div>
         </div>
+        
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={goToPreviousDay}>
+            Previous
+          </Button>
+          <Button variant="outline" size="sm" onClick={goToToday}>
+            Today
+          </Button>
+          <Button variant="outline" size="sm" onClick={goToNextDay}>
+            Next
+          </Button>
+        </div>
+      </div>
 
-        {/* Main Scheduler */}
-        <div className="flex-1 overflow-hidden p-2 md:p-4">
-          <AppointmentScheduler
-            selectedDate={selectedDate}
-            onAppointmentMove={handleAppointmentMove}
-          />
-        </div>
+      {/* Main Scheduler */}
+      <div className="flex-1 overflow-hidden">
+        <AppointmentScheduler
+          selectedDate={selectedDate}
+          onAppointmentMove={handleAppointmentMove}
+        />
       </div>
     </div>
   );

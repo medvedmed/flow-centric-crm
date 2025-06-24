@@ -3,70 +3,58 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { EnhancedAppointmentForm } from './EnhancedAppointmentForm';
-import { format } from 'date-fns';
+import { AppointmentForm } from './AppointmentForm';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface AddAppointmentDialogProps {
   selectedDate?: Date;
   selectedTime?: string;
   selectedStaffId?: string;
   trigger?: React.ReactNode;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  onSuccess?: () => void;
 }
 
 export const AddAppointmentDialog: React.FC<AddAppointmentDialogProps> = ({
-  selectedDate = new Date(),
+  selectedDate,
   selectedTime,
   selectedStaffId,
-  trigger,
-  open,
-  onOpenChange,
-  onSuccess
+  trigger
 }) => {
-  const [internalOpen, setInternalOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const { hasPermissionSync, userRole } = usePermissions();
 
-  const isControlled = open !== undefined && onOpenChange !== undefined;
-  const dialogOpen = isControlled ? open : internalOpen;
-  const setDialogOpen = isControlled ? onOpenChange : setInternalOpen;
+  const canCreateAppointments = hasPermissionSync('appointments', 'create');
+  const isStaff = userRole === 'staff';
 
-  const defaultTrigger = (
-    <Button size="sm" className="h-8">
-      <Plus className="w-4 h-4 mr-1" />
-      Add Appointment
-    </Button>
-  );
+  if (!canCreateAppointments || isStaff) {
+    return null;
+  }
 
   const handleSuccess = () => {
-    setDialogOpen(false);
-    onSuccess?.();
+    setIsOpen(false);
   };
 
   return (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      {!isControlled && (
-        <DialogTrigger asChild>
-          {trigger || defaultTrigger}
-        </DialogTrigger>
-      )}
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        {trigger || (
+          <Button className="gap-2 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700">
+            <Plus className="w-4 h-4" />
+            New Appointment
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            Add New Appointment
-            {selectedDate && (
-              <span className="text-sm font-normal text-gray-600 block">
-                {format(selectedDate, 'EEEE, MMMM d, yyyy')}
-                {selectedTime && ` at ${selectedTime}`}
-              </span>
-            )}
+          <DialogTitle className="text-xl font-semibold text-gray-900">
+            Book New Appointment
           </DialogTitle>
         </DialogHeader>
-        <EnhancedAppointmentForm
+        <AppointmentForm
           selectedDate={selectedDate}
           selectedTime={selectedTime}
           selectedStaffId={selectedStaffId}
           onSuccess={handleSuccess}
+          onCancel={() => setIsOpen(false)}
         />
       </DialogContent>
     </Dialog>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Home,
@@ -41,7 +40,7 @@ interface NavItemProps {
 const navigationItems = [
   {
     title: "Dashboard",
-    url: "/dashboard",
+    url: "/",
     icon: Home,
     requiredPermission: { area: "dashboard" as const, action: "view" as const }
   },
@@ -105,90 +104,68 @@ export const AppSidebar: React.FC = () => {
   const { isOpen, toggleSidebar } = useSidebar();
   const { isLoading } = useAuth();
 
-  console.log('AppSidebar - isOpen:', isOpen);
-
   return (
-    <>
-      {/* Mobile Overlay */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+    <aside
+      className={`fixed left-0 top-0 z-50 flex h-full flex-col overflow-y-auto border-r bg-secondary transition-transform duration-300 ease-in-out ${
+        isOpen ? 'w-64 translate-x-0' : '-translate-x-full w-0'
+      } lg:translate-x-0 lg:w-64`}
+    >
+      <div className="flex h-16 shrink-0 items-center px-4">
+        <button
           onClick={toggleSidebar}
-        />
-      )}
-      
-      {/* Sidebar */}
-      <aside
-        data-sidebar="true"
-        className={`fixed left-0 top-0 z-50 flex h-full flex-col overflow-y-auto border-r bg-white shadow-lg transition-transform duration-300 ease-in-out ${
-          isOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full'
-        } lg:translate-x-0 lg:shadow-none lg:relative lg:z-auto`}
-      >
-        <div className="flex h-16 shrink-0 items-center justify-between px-4 border-b">
-          <span className="font-semibold text-xl md:text-2xl text-teal-600">Salon CRM</span>
-          <button
-            data-sidebar-toggle="true"
-            onClick={toggleSidebar}
-            className="lg:hidden p-2 hover:bg-gray-100 rounded-md transition-colors"
-            aria-label="Close sidebar"
+          className="mr-2 inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:bg-muted lg:hidden"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-6 w-6"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M18 6L6 18" />
-              <path d="M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <nav className="flex flex-1 flex-col space-y-1 p-2">
-          {isLoading ? (
-            <>
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 rounded-md" />
-              ))}
-            </>
-          ) : (
-            <>
-              {navigationItems.map((item) => (
-                <PermissionGate
-                  key={item.title}
-                  area={item.requiredPermission.area}
-                  action={item.requiredPermission.action}
+            <path d="M3 6h18" />
+            <path d="M3 12h18" />
+            <path d="M3 18h18" />
+          </svg>
+          <span className="sr-only">Toggle Menu</span>
+        </button>
+        <span className="font-semibold text-2xl">CRM</span>
+      </div>
+      <nav className="flex flex-1 flex-col space-y-1 p-2">
+        {isLoading ? (
+          <>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-9 rounded-md" />
+            ))}
+          </>
+        ) : (
+          <>
+            {navigationItems.map((item) => (
+              <PermissionGate
+                key={item.title}
+                area={item.requiredPermission.area}
+                action={item.requiredPermission.action}
+              >
+                <NavLink
+                  to={item.url}
+                  className={({ isActive }) =>
+                    `flex items-center space-x-2 rounded-md p-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground ${
+                      isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                    }`
+                  }
                 >
-                  <NavLink
-                    to={item.url}
-                    onClick={() => {
-                      console.log(`Navigating to ${item.url}`);
-                      // Close sidebar on mobile when clicking a link
-                      if (window.innerWidth < 1024) {
-                        toggleSidebar();
-                      }
-                    }}
-                    className={({ isActive }) =>
-                      `flex items-center space-x-3 rounded-md p-3 text-sm font-medium transition-colors hover:bg-teal-50 hover:text-teal-700 ${
-                        isActive 
-                          ? 'bg-teal-100 text-teal-700 border-r-2 border-teal-600' 
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`
-                    }
-                  >
-                    <item.icon className="h-5 w-5 flex-shrink-0" />
-                    <span>{item.title}</span>
-                  </NavLink>
-                </PermissionGate>
-              ))}
-            </>
-          )}
-        </nav>
-      </aside>
-    </>
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.title}</span>
+                </NavLink>
+              </PermissionGate>
+            ))}
+          </>
+        )}
+      </nav>
+    </aside>
   );
 };

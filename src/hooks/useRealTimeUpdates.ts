@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -77,6 +76,58 @@ export const useRealTimeUpdates = () => {
       )
       .subscribe();
 
+    // Subscribe to staff availability changes
+    const staffAvailabilityChannel = supabase
+      .channel('staff-availability-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'staff_availability'
+        },
+        (payload) => {
+          console.log('Staff availability change:', payload);
+          queryClient.invalidateQueries({ queryKey: ['staff-availability'] });
+          queryClient.invalidateQueries({ queryKey: ['availability'] });
+        }
+      )
+      .subscribe();
+
+    // Subscribe to reminder changes
+    const remindersChannel = supabase
+      .channel('reminders-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointment_reminders'
+        },
+        (payload) => {
+          console.log('Reminders change:', payload);
+          queryClient.invalidateQueries({ queryKey: ['appointment-reminders'] });
+        }
+      )
+      .subscribe();
+
+    // Subscribe to analytics changes
+    const analyticsChannel = supabase
+      .channel('analytics-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'business_analytics'
+        },
+        (payload) => {
+          console.log('Analytics change:', payload);
+          queryClient.invalidateQueries({ queryKey: ['business-analytics'] });
+        }
+      )
+      .subscribe();
+
     // Subscribe to inventory changes
     const inventoryChannel = supabase
       .channel('inventory-changes')
@@ -134,33 +185,17 @@ export const useRealTimeUpdates = () => {
       )
       .subscribe();
 
-    // Subscribe to receipt templates changes
-    const receiptTemplatesChannel = supabase
-      .channel('receipt-templates-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'receipt_templates'
-        },
-        (payload) => {
-          console.log('Receipt templates change:', payload);
-          queryClient.invalidateQueries({ queryKey: ['receipt-templates'] });
-          queryClient.invalidateQueries({ queryKey: ['default-receipt-template'] });
-        }
-      )
-      .subscribe();
-
     return () => {
       supabase.removeChannel(servicesChannel);
       supabase.removeChannel(appointmentsChannel);
       supabase.removeChannel(clientsChannel);
       supabase.removeChannel(staffChannel);
+      supabase.removeChannel(staffAvailabilityChannel);
+      supabase.removeChannel(remindersChannel);
+      supabase.removeChannel(analyticsChannel);
       supabase.removeChannel(inventoryChannel);
       supabase.removeChannel(financeChannel);
       supabase.removeChannel(appointmentServicesChannel);
-      supabase.removeChannel(receiptTemplatesChannel);
     };
   }, [queryClient]);
 

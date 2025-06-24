@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { useAppointmentData } from '@/hooks/useAppointmentData';
 import { useAuth } from '@/hooks/useAuth';
-import EnhancedInteractiveScheduler from './EnhancedInteractiveScheduler';
+import DragDropScheduler from './DragDropScheduler';
 import { AppointmentErrorBoundary } from './AppointmentErrorBoundary';
 import { format } from 'date-fns';
 
@@ -19,20 +19,17 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 }) => {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const dateString = format(selectedDate, 'yyyy-MM-dd');
-  const { staff, appointments, isLoading, error } = useAppointmentData(dateString);
+  const { staff, appointments, isLoading, error, staffError, appointmentsError } = useAppointmentData(dateString);
 
-  console.log('AppointmentScheduler - Data:', {
-    dateString,
-    staffCount: staff?.length || 0,
-    appointmentCount: appointments?.length || 0,
-    isLoading,
-    error
-  });
-
-  const handleAppointmentUpdate = () => {
-    console.log('Appointment updated - triggering refresh');
-    // Simple refresh without complex logic
+  const handleRefresh = () => {
     window.location.reload();
+  };
+
+  const handleAppointmentMove = (appointmentId: string, newStaffId: string, newTime: string) => {
+    console.log('Appointment moved:', { appointmentId, newStaffId, newTime });
+    if (onAppointmentMove) {
+      onAppointmentMove(appointmentId, newStaffId, newTime);
+    }
   };
 
   // Show loading if auth is still loading
@@ -78,7 +75,9 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Error loading appointment data. Please try refreshing the page.
+            {staffError ? 'Error loading staff data. ' : ''}
+            {appointmentsError ? 'Error loading appointment data. ' : ''}
+            Please try refreshing the page or contact support if the issue persists.
           </AlertDescription>
         </Alert>
       </div>
@@ -87,11 +86,12 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
   return (
     <AppointmentErrorBoundary>
-      <EnhancedInteractiveScheduler
-        staff={staff || []}
-        appointments={appointments || []}
+      <DragDropScheduler
+        staff={staff}
+        appointments={appointments}
         selectedDate={selectedDate}
-        onAppointmentUpdate={handleAppointmentUpdate}
+        onAppointmentMove={handleAppointmentMove}
+        onRefresh={handleRefresh}
       />
     </AppointmentErrorBoundary>
   );

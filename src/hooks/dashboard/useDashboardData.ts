@@ -7,7 +7,6 @@ interface DashboardStats {
   todayAppointments: number;
   totalClients: number;
   monthlyRevenue: number;
-  todayRevenue: number;
   appointmentGrowth: number;
   clientGrowth: number;
   revenueGrowth: number;
@@ -118,18 +117,6 @@ export const useDashboardStats = () => {
           console.error('Error fetching current month revenue:', currentMonthError);
         }
 
-        // Get today's revenue from completed appointments
-        const { data: todayAppts2, error: todayRevenueError } = await supabase
-          .from('appointments')
-          .select('price')
-          .eq('salon_id', user.id)
-          .eq('date', today)
-          .eq('status', 'Completed');
-
-        if (todayRevenueError) {
-          console.error('Error fetching today revenue:', todayRevenueError);
-        }
-
         // Get last month revenue for growth calculation
         const { data: lastMonthAppts, error: lastMonthError } = await supabase
           .from('appointments')
@@ -168,7 +155,6 @@ export const useDashboardStats = () => {
 
         // Calculate growth percentages
         const currentMonthRevenue = currentMonthAppts?.reduce((sum, apt) => sum + (Number(apt.price) || 0), 0) || 0;
-        const todayRevenue = todayAppts2?.reduce((sum, apt) => sum + (Number(apt.price) || 0), 0) || 0;
         const lastMonthRevenue = lastMonthAppts?.reduce((sum, apt) => sum + (Number(apt.price) || 0), 0) || 0;
 
         const appointmentGrowth = yesterdayCount ? ((todayCount || 0) - yesterdayCount) / yesterdayCount * 100 : 0;
@@ -185,7 +171,6 @@ export const useDashboardStats = () => {
           todayAppointments: todayCount || 0,
           totalClients: totalClientsCount || 0,
           monthlyRevenue: currentMonthRevenue,
-          todayRevenue,
           appointmentGrowth,
           clientGrowth,
           revenueGrowth,

@@ -3,195 +3,230 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { inventoryApi } from '@/services/api/inventoryApi';
-import { useToast } from '@/hooks/use-toast';
-import { Package, Plus, AlertTriangle, Edit, Trash2, RefreshCw } from 'lucide-react';
-import { InventoryErrorBoundary } from '@/components/InventoryErrorBoundary';
+import { inventoryApi, CreateInventoryItem } from '@/services/api/inventoryApi';
+import { toast } from '@/hooks/use-toast';
+import { Package, Plus, Search, AlertTriangle, Edit, Trash, TrendingDown, TrendingUp } from 'lucide-react';
 
-interface InventoryItem {
-  id: string;
-  name: string;
-  category: string;
-  current_stock: number;
-  minimum_stock: number;
-  maximum_stock?: number;
-  unit_price: number;
-  description?: string;
-  sku?: string;
-  supplier_name?: string;
-  supplier_contact?: string;
-  is_active: boolean;
-  last_restocked_at?: string;
-}
-
-const Inventory = () => {
+export default function Inventory() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
-  const [formData, setFormData] = useState({
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [showLowStock, setShowLowStock] = useState(false);
+
+  const [newItem, setNewItem] = useState<CreateInventoryItem>({
     name: '',
+    description: '',
     category: 'General',
+    sku: '',
     current_stock: 0,
     minimum_stock: 0,
-    maximum_stock: '',
+    maximum_stock: undefined,
     unit_price: 0,
-    description: '',
-    sku: '',
     supplier_name: '',
     supplier_contact: ''
   });
 
-  const { toast } = useToast();
+  const [stockUpdate, setStockUpdate] = useState({
+    itemId: '',
+    quantity: 0,
+    operation: 'add' as 'add' | 'subtract' | 'set'
+  });
+
   const queryClient = useQueryClient();
 
-  const { data: items = [], isLoading, error } = useQuery({
-    queryKey: ['inventory-items'],
-    queryFn: () => inventoryApi.getItems()
+  // Fetch inventory items
+  const { data: items, isLoading } = useQuery({
+    queryKey: ['inventory-items', selectedCategory, showLowStock],
+    queryFn: () => inventoryApi.getItems(selectedCategory || undefined, showLowStock)
   });
 
-  const { data: categories = [] } = useQuery({
+  // Fetch categories
+  const { data: categories } = useQuery({
     queryKey: ['inventory-categories'],
-    queryFn: () => inventoryApi.getCategories()
+    queryFn: inventoryApi.getCategories
   });
 
-  const { data: lowStockItems = [] } = useQuery({
-    queryKey: ['low-stock-items'],  
-    queryFn: () => inventoryApi.getLowStockItems()
+  // Fetch low stock items for alerts
+  const { data: lowStockItems } = useQuery({
+    queryKey: ['low-stock-items'],
+    queryFn: inventoryApi.getLowStockItems
   });
 
+  // Create item mutation
   const createMutation = useMutation({
     mutationFn: inventoryApi.createItem,
     onSuccess: () => {
-      toast({ title: "Success", description: "Item added successfully!" });
       queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-categories'] });
       queryClient.invalidateQueries({ queryKey: ['low-stock-items'] });
       setIsAddDialogOpen(false);
-      resetForm();
+      resetNewItem();
+      toast({
+        title: "Success",
+        description: "Item added successfully",
+      });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
         description: error.message || "Failed to add item",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   });
 
+  // Update item mutation
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      inventoryApi.updateItem(id, data),
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<CreateInventoryItem> }) =>
+      inventoryApi.updateItem(id, updates),
     onSuccess: () => {
-      toast({ title: "Success", description: "Item updated successfully!" });
       queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
       queryClient.invalidateQueries({ queryKey: ['low-stock-items'] });
       setEditingItem(null);
-      resetForm();
+      toast({
+        title: "Success",
+        description: "Item updated successfully",
+      });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
         description: error.message || "Failed to update item",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: inventoryApi.deleteItem,
+  // Update stock mutation
+  const stockUpdateMutation = useMutation({
+    mutationFn: ({ id, quantity, operation }: { id: string; quantity: number; operation: 'add' | 'subtract' | 'set' }) =>
+      inventoryApi.updateStock(id, quantity, operation),
     onSuccess: () => {
-      toast({ title: "Success", description: "Item deleted successfully!" });
       queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
       queryClient.invalidateQueries({ queryKey: ['low-stock-items'] });
+      setStockUpdate({ itemId: '', quantity: 0, operation: 'add' });
+      toast({
+        title: "Success",
+        description: "Stock updated successfully",
+      });
     },
     onError: (error: any) => {
       toast({
-        title: "Error", 
-        description: error.message || "Failed to delete item",
-        variant: "destructive"
+        title: "Error",
+        description: error.message || "Failed to update stock",
+        variant: "destructive",
       });
     }
   });
 
-  const resetForm = () => {
-    setFormData({
+  // Delete item mutation
+  const deleteMutation = useMutation({
+    mutationFn: inventoryApi.deleteItem,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock-items'] });
+      toast({
+        title: "Success",
+        description: "Item deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete item",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const resetNewItem = () => {
+    setNewItem({
       name: '',
+      description: '',
       category: 'General',
+      sku: '',
       current_stock: 0,
       minimum_stock: 0,
-      maximum_stock: '',
+      maximum_stock: undefined,
       unit_price: 0,
-      description: '',
-      sku: '',
       supplier_name: '',
       supplier_contact: ''
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const data = {
-      ...formData,
-      maximum_stock: formData.maximum_stock ? parseInt(formData.maximum_stock) : null
-    };
-
-    if (editingItem) {
-      updateMutation.mutate({ id: editingItem.id, data });
-    } else {
-      createMutation.mutate(data);
+  const handleCreateItem = () => {
+    if (!newItem.name || newItem.unit_price < 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields with valid values",
+        variant: "destructive",
+      });
+      return;
     }
+
+    createMutation.mutate(newItem);
   };
 
-  const handleEdit = (item: InventoryItem) => {
-    setEditingItem(item);
-    setFormData({
-      name: item.name,
-      category: item.category,
-      current_stock: item.current_stock,
-      minimum_stock: item.minimum_stock,
-      maximum_stock: item.maximum_stock?.toString() || '',
-      unit_price: item.unit_price,
-      description: item.description || '',
-      sku: item.sku || '',
-      supplier_name: item.supplier_name || '',
-      supplier_contact: item.supplier_contact || ''
+  const handleUpdateItem = () => {
+    if (!editingItem) return;
+    updateMutation.mutate({
+      id: editingItem.id,
+      updates: editingItem
     });
   };
 
-  const getStockStatus = (item: InventoryItem) => {
-    if (item.current_stock <= 0) return 'out-of-stock';
-    if (item.current_stock <= item.minimum_stock) return 'low-stock';
-    return 'in-stock';
+  const handleStockUpdate = () => {
+    if (!stockUpdate.itemId || stockUpdate.quantity < 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please select an item and enter a valid quantity",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    stockUpdateMutation.mutate(stockUpdate);
   };
 
-  const getStockBadge = (item: InventoryItem) => {
-    const status = getStockStatus(item);
-    switch (status) {
-      case 'out-of-stock':
-        return <Badge variant="destructive">Out of Stock</Badge>;
-      case 'low-stock':
-        return <Badge variant="outline" className="border-orange-500 text-orange-600">Low Stock</Badge>;
-      default:
-        return <Badge variant="secondary">In Stock</Badge>;
+  const handleDeleteItem = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this item?')) {
+      deleteMutation.mutate(id);
     }
   };
 
-  if (error) {
-    return (
-      <InventoryErrorBoundary>
-        <div>Error loading inventory</div>
-      </InventoryErrorBoundary>
-    );
-  }
+  const filteredItems = items?.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.category.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
+
+  const getStockStatus = (item: any) => {
+    if (item.current_stock <= item.minimum_stock) {
+      return { status: 'low', color: 'text-red-600 bg-red-50' };
+    } else if (item.current_stock <= item.minimum_stock * 1.5) {
+      return { status: 'medium', color: 'text-yellow-600 bg-yellow-50' };
+    }
+    return { status: 'good', color: 'text-green-600 bg-green-50' };
+  };
+
+  const commonCategories = ['General', 'Hair Products', 'Skincare', 'Tools', 'Equipment', 'Cleaning Supplies'];
 
   return (
-    <InventoryErrorBoundary>
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex justify-between items-center">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
           <h1 className="text-3xl font-bold">Inventory Management</h1>
+          <p className="text-muted-foreground">Track stock levels, suppliers, and inventory costs</p>
+        </div>
+
+        <div className="flex gap-2">
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -203,378 +238,471 @@ const Inventory = () => {
               <DialogHeader>
                 <DialogTitle>Add New Inventory Item</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="name">Item Name</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="category">Category</Label>
-                    <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="General">General</SelectItem>
-                        <SelectItem value="Hair Care">Hair Care</SelectItem>
-                        <SelectItem value="Styling Tools">Styling Tools</SelectItem>
-                        <SelectItem value="Nail Care">Nail Care</SelectItem>
-                        <SelectItem value="Skin Care">Skin Care</SelectItem>
-                        <SelectItem value="Cleaning Supplies">Cleaning Supplies</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="current_stock">Current Stock</Label>
-                    <Input
-                      id="current_stock"
-                      type="number"
-                      value={formData.current_stock}
-                      onChange={(e) => setFormData({...formData, current_stock: parseInt(e.target.value)})}
-                      min="0"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="minimum_stock">Minimum Stock</Label>
-                    <Input
-                      id="minimum_stock"
-                      type="number"
-                      value={formData.minimum_stock}
-                      onChange={(e) => setFormData({...formData, minimum_stock: parseInt(e.target.value)})}
-                      min="0"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="maximum_stock">Maximum Stock (Optional)</Label>
-                    <Input
-                      id="maximum_stock"
-                      type="number"
-                      value={formData.maximum_stock}
-                      onChange={(e) => setFormData({...formData, maximum_stock: e.target.value})}
-                      min="0"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="unit_price">Unit Price</Label>
-                    <Input
-                      id="unit_price"
-                      type="number"
-                      step="0.01"
-                      value={formData.unit_price}
-                      onChange={(e) => setFormData({...formData, unit_price: parseFloat(e.target.value)})}
-                      min="0"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="sku">SKU (Optional)</Label>
-                    <Input
-                      id="sku"
-                      value={formData.sku}
-                      onChange={(e) => setFormData({...formData, sku: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="supplier_name">Supplier Name (Optional)</Label>
-                    <Input
-                      id="supplier_name"
-                      value={formData.supplier_name}
-                      onChange={(e) => setFormData({...formData, supplier_name: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="supplier_contact">Supplier Contact (Optional)</Label>
-                    <Input
-                      id="supplier_contact"
-                      value={formData.supplier_contact}
-                      onChange={(e) => setFormData({...formData, supplier_contact: e.target.value})}
-                    />
-                  </div>
-                </div>
-
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="description">Description (Optional)</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  <Label>Item Name *</Label>
+                  <Input
+                    value={newItem.name}
+                    onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                    placeholder="Item name"
                   />
                 </div>
 
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <div>
+                  <Label>Category</Label>
+                  <Select value={newItem.category} onValueChange={(value) => setNewItem({ ...newItem, category: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {commonCategories.map(category => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>SKU</Label>
+                  <Input
+                    value={newItem.sku}
+                    onChange={(e) => setNewItem({ ...newItem, sku: e.target.value })}
+                    placeholder="Stock keeping unit"
+                  />
+                </div>
+
+                <div>
+                  <Label>Unit Price *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={newItem.unit_price}
+                    onChange={(e) => setNewItem({ ...newItem, unit_price: Number(e.target.value) })}
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <Label>Current Stock</Label>
+                  <Input
+                    type="number"
+                    value={newItem.current_stock}
+                    onChange={(e) => setNewItem({ ...newItem, current_stock: Number(e.target.value) })}
+                    placeholder="0"
+                  />
+                </div>
+
+                <div>
+                  <Label>Minimum Stock</Label>
+                  <Input
+                    type="number"
+                    value={newItem.minimum_stock}
+                    onChange={(e) => setNewItem({ ...newItem, minimum_stock: Number(e.target.value) })}
+                    placeholder="0"
+                  />
+                </div>
+
+                <div>
+                  <Label>Maximum Stock</Label>
+                  <Input
+                    type="number"
+                    value={newItem.maximum_stock || ''}
+                    onChange={(e) => setNewItem({ ...newItem, maximum_stock: e.target.value ? Number(e.target.value) : undefined })}
+                    placeholder="Optional"
+                  />
+                </div>
+
+                <div>
+                  <Label>Supplier Name</Label>
+                  <Input
+                    value={newItem.supplier_name}
+                    onChange={(e) => setNewItem({ ...newItem, supplier_name: e.target.value })}
+                    placeholder="Supplier name"
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <Label>Supplier Contact</Label>
+                  <Input
+                    value={newItem.supplier_contact}
+                    onChange={(e) => setNewItem({ ...newItem, supplier_contact: e.target.value })}
+                    placeholder="Phone or email"
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <Label>Description</Label>
+                  <Textarea
+                    value={newItem.description}
+                    onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                    placeholder="Item description..."
+                  />
+                </div>
+
+                <div className="col-span-2 flex gap-2 pt-4">
+                  <Button onClick={handleCreateItem} disabled={createMutation.isPending} className="flex-1">
+                    {createMutation.isPending ? "Adding..." : "Add Item"}
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createMutation.isPending}>
-                    {createMutation.isPending ? 'Adding...' : 'Add Item'}
-                  </Button>
                 </div>
-              </form>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
+      </div>
 
-        {/* Low Stock Alert */}
-        {lowStockItems.length > 0 && (
-          <Card className="border-orange-200 bg-orange-50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-orange-700">
-                <AlertTriangle className="w-5 h-5" />
-                Low Stock Alert
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-orange-600 mb-2">
-                {lowStockItems.length} item(s) running low on stock:
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {lowStockItems.map((item) => (
-                  <Badge key={item.id} variant="outline" className="border-orange-500 text-orange-600">
-                    {item.name} ({item.current_stock} left)
-                  </Badge>
+      {/* Low Stock Alert */}
+      {lowStockItems && lowStockItems.length > 0 && (
+        <Card className="border-red-200 bg-red-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-700">
+              <AlertTriangle className="w-5 h-5" />
+              Low Stock Alert
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-red-700 mb-2">
+              {lowStockItems.length} item(s) are running low on stock
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {lowStockItems.slice(0, 5).map(item => (
+                <Badge key={item.id} variant="destructive">
+                  {item.name} ({item.current_stock} left)
+                </Badge>
+              ))}
+              {lowStockItems.length > 5 && (
+                <Badge variant="outline">
+                  +{lowStockItems.length - 5} more
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Filters and Search */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search items..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-64"
+              />
+            </div>
+
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Categories</SelectItem>
+                {categories?.map(category => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </SelectContent>
+            </Select>
 
-        {/* Inventory Grid */}
+            <Button
+              variant={showLowStock ? "default" : "outline"}
+              onClick={() => setShowLowStock(!showLowStock)}
+            >
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              Low Stock Only
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Inventory Grid */}
+      {isLoading ? (
+        <div className="text-center py-8">Loading inventory...</div>
+      ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {isLoading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="p-4">
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded mb-1"></div>
-                  <div className="h-3 bg-gray-200 rounded"></div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            items.map((item) => (
-              <Card key={item.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-2">
+          {filteredItems.map((item) => {
+            const stockStatus = getStockStatus(item);
+            
+            return (
+              <Card key={item.id}>
+                <CardHeader>
                   <div className="flex justify-between items-start">
                     <div>
                       <CardTitle className="text-lg">{item.name}</CardTitle>
-                      <p className="text-sm text-gray-600">{item.category}</p>
+                      <p className="text-sm text-muted-foreground">{item.category}</p>
+                      {item.sku && (
+                        <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>
+                      )}
                     </div>
-                    {getStockBadge(item)}
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingItem(item)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteItem(item.id)}
+                      >
+                        <Trash className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Current Stock:</span>
-                      <span className="font-medium">{item.current_stock}</span>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Stock Level</span>
+                      <Badge className={stockStatus.color}>
+                        {item.current_stock} units
+                      </Badge>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm">Min Stock:</span>
-                      <span>{item.minimum_stock}</span>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Unit Price</span>
+                      <span className="font-semibold">${Number(item.unit_price).toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm">Unit Price:</span>
-                      <span>${item.unit_price.toFixed(2)}</span>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Total Value</span>
+                      <span className="font-semibold">
+                        ${(item.current_stock * Number(item.unit_price)).toFixed(2)}
+                      </span>
                     </div>
-                    {item.sku && (
-                      <div className="flex justify-between">
-                        <span className="text-sm">SKU:</span>
-                        <span className="text-xs font-mono">{item.sku}</span>
+
+                    {item.supplier_name && (
+                      <div className="text-xs text-muted-foreground">
+                        Supplier: {item.supplier_name}
                       </div>
                     )}
-                    {item.description && (
-                      <p className="text-xs text-gray-600 mt-2">{item.description}</p>
-                    )}
-                  </div>
-                  <div className="flex justify-end space-x-2 mt-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleEdit(item)}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => deleteMutation.mutate(item.id)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setStockUpdate({ 
+                          itemId: item.id, 
+                          quantity: 1, 
+                          operation: 'add' 
+                        })}
+                        className="flex-1"
+                      >
+                        <TrendingUp className="w-3 h-3 mr-1" />
+                        Add Stock
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setStockUpdate({ 
+                          itemId: item.id, 
+                          quantity: 1, 
+                          operation: 'subtract' 
+                        })}
+                        className="flex-1"
+                      >
+                        <TrendingDown className="w-3 h-3 mr-1" />
+                        Use Stock
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-            ))
+            );
+          })}
+
+          {filteredItems.length === 0 && (
+            <div className="col-span-full text-center py-8 text-muted-foreground">
+              <Package className="h-12 w-12 mx-auto mb-4" />
+              <p className="text-lg font-medium mb-2">No Items Found</p>
+              <p>No inventory items match your current filters.</p>
+            </div>
           )}
         </div>
+      )}
 
-        {!isLoading && items.length === 0 && (
-          <Card>
-            <CardContent className="text-center py-8">
-              <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium mb-2">No inventory items yet</h3>
-              <p className="text-gray-600 mb-4">Start by adding your first inventory item.</p>
-              <Button onClick={() => setIsAddDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add First Item
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+      {/* Stock Update Dialog */}
+      {stockUpdate.itemId && (
+        <Dialog open={!!stockUpdate.itemId} onOpenChange={() => setStockUpdate({ itemId: '', quantity: 0, operation: 'add' })}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Update Stock</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Operation</Label>
+                <Select 
+                  value={stockUpdate.operation} 
+                  onValueChange={(value: 'add' | 'subtract' | 'set') => 
+                    setStockUpdate({ ...stockUpdate, operation: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="add">Add Stock</SelectItem>
+                    <SelectItem value="subtract">Remove Stock</SelectItem>
+                    <SelectItem value="set">Set Stock Level</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-        {/* Edit Dialog */}
+              <div>
+                <Label>Quantity</Label>
+                <Input
+                  type="number"
+                  value={stockUpdate.quantity}
+                  onChange={(e) => setStockUpdate({ ...stockUpdate, quantity: Number(e.target.value) })}
+                  placeholder="Enter quantity"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button onClick={handleStockUpdate} disabled={stockUpdateMutation.isPending} className="flex-1">
+                  {stockUpdateMutation.isPending ? "Updating..." : "Update Stock"}
+                </Button>
+                <Button variant="outline" onClick={() => setStockUpdate({ itemId: '', quantity: 0, operation: 'add' })}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Edit Item Dialog */}
+      {editingItem && (
         <Dialog open={!!editingItem} onOpenChange={() => setEditingItem(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Edit Inventory Item</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Item Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="category">Category</Label>
-                  <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="General">General</SelectItem>
-                      <SelectItem value="Hair Care">Hair Care</SelectItem>
-                      <SelectItem value="Styling Tools">Styling Tools</SelectItem>
-                      <SelectItem value="Nail Care">Nail Care</SelectItem>
-                      <SelectItem value="Skin Care">Skin Care</SelectItem>
-                      <SelectItem value="Cleaning Supplies">Cleaning Supplies</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="current_stock">Current Stock</Label>
-                  <Input
-                    id="current_stock"
-                    type="number"
-                    value={formData.current_stock}
-                    onChange={(e) => setFormData({...formData, current_stock: parseInt(e.target.value)})}
-                    min="0"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="minimum_stock">Minimum Stock</Label>
-                  <Input
-                    id="minimum_stock"
-                    type="number"
-                    value={formData.minimum_stock}
-                    onChange={(e) => setFormData({...formData, minimum_stock: parseInt(e.target.value)})}
-                    min="0"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="maximum_stock">Maximum Stock (Optional)</Label>
-                  <Input
-                    id="maximum_stock"
-                    type="number"
-                    value={formData.maximum_stock}
-                    onChange={(e) => setFormData({...formData, maximum_stock: e.target.value})}
-                    min="0"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="unit_price">Unit Price</Label>
-                  <Input
-                    id="unit_price"
-                    type="number"
-                    step="0.01"
-                    value={formData.unit_price}
-                    onChange={(e) => setFormData({...formData, unit_price: parseFloat(e.target.value)})}
-                    min="0"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="sku">SKU (Optional)</Label>
-                  <Input
-                    id="sku"
-                    value={formData.sku}
-                    onChange={(e) => setFormData({...formData, sku: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="supplier_name">Supplier Name (Optional)</Label>
-                  <Input
-                    id="supplier_name"
-                    value={formData.supplier_name}
-                    onChange={(e) => setFormData({...formData, supplier_name: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="supplier_contact">Supplier Contact (Optional)</Label>
-                  <Input
-                    id="supplier_contact"
-                    value={formData.supplier_contact}
-                    onChange={(e) => setFormData({...formData, supplier_contact: e.target.value})}
-                  />
-                </div>
-              </div>
-
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                <Label>Item Name *</Label>
+                <Input
+                  value={editingItem.name}
+                  onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                  placeholder="Item name"
                 />
               </div>
 
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setEditingItem(null)}>
+              <div>
+                <Label>Category</Label>
+                <Select value={editingItem.category} onValueChange={(value) => setEditingItem({ ...editingItem, category: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {commonCategories.map(category => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>SKU</Label>
+                <Input
+                  value={editingItem.sku}
+                  onChange={(e) => setEditingItem({ ...editingItem, sku: e.target.value })}
+                  placeholder="Stock keeping unit"
+                />
+              </div>
+
+              <div>
+                <Label>Unit Price *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editingItem.unit_price}
+                  onChange={(e) => setEditingItem({ ...editingItem, unit_price: Number(e.target.value) })}
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <Label>Current Stock</Label>
+                <Input
+                  type="number"
+                  value={editingItem.current_stock}
+                  onChange={(e) => setEditingItem({ ...editingItem, current_stock: Number(e.target.value) })}
+                  placeholder="0"
+                />
+              </div>
+
+              <div>
+                <Label>Minimum Stock</Label>
+                <Input
+                  type="number"
+                  value={editingItem.minimum_stock}
+                  onChange={(e) => setEditingItem({ ...editingItem, minimum_stock: Number(e.target.value) })}
+                  placeholder="0"
+                />
+              </div>
+
+              <div>
+                <Label>Maximum Stock</Label>
+                <Input
+                  type="number"
+                  value={editingItem.maximum_stock || ''}
+                  onChange={(e) => setEditingItem({ ...editingItem, maximum_stock: e.target.value ? Number(e.target.value) : undefined })}
+                  placeholder="Optional"
+                />
+              </div>
+
+              <div>
+                <Label>Supplier Name</Label>
+                <Input
+                  value={editingItem.supplier_name}
+                  onChange={(e) => setEditingItem({ ...editingItem, supplier_name: e.target.value })}
+                  placeholder="Supplier name"
+                />
+              </div>
+
+              <div className="col-span-2">
+                <Label>Supplier Contact</Label>
+                <Input
+                  value={editingItem.supplier_contact}
+                  onChange={(e) => setEditingItem({ ...editingItem, supplier_contact: e.target.value })}
+                  placeholder="Phone or email"
+                />
+              </div>
+
+              <div className="col-span-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={editingItem.description}
+                  onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+                  placeholder="Item description..."
+                />
+              </div>
+
+              <div className="col-span-2 flex gap-2 pt-4">
+                <Button onClick={handleUpdateItem} disabled={updateMutation.isPending} className="flex-1">
+                  {updateMutation.isPending ? "Updating..." : "Update Item"}
+                </Button>
+                <Button variant="outline" onClick={() => setEditingItem(null)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? 'Updating...' : 'Update Item'}
-                </Button>
               </div>
-            </form>
+            </div>
           </DialogContent>
         </Dialog>
-      </div>
-    </InventoryErrorBoundary>
+      )}
+    </div>
   );
-};
-
-export default Inventory;
+}

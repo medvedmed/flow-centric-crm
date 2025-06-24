@@ -34,12 +34,12 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   // Normalize appointment data to ensure consistent property names
   const normalizedAppointments = appointments?.map(apt => ({
     ...apt,
-    // Ensure camelCase properties are available
-    clientName: apt.clientName || apt.client_name || 'Unknown Client',
-    startTime: apt.startTime || apt.start_time || '09:00',
-    endTime: apt.endTime || apt.end_time || '10:00',
-    staffId: apt.staffId || apt.staff_id || '',
-    clientPhone: apt.clientPhone || apt.client_phone || ''
+    // Ensure camelCase properties are available (the interface already uses camelCase)
+    clientName: apt.clientName || 'Unknown Client',
+    startTime: apt.startTime || '09:00',
+    endTime: apt.endTime || '10:00',
+    staffId: apt.staffId || '',
+    clientPhone: apt.clientPhone || ''
   })) || [];
 
   console.log('AppointmentScheduler - Normalized Data:', {

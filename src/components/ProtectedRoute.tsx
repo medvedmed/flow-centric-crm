@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useStaffAuth } from '@/hooks/useStaffAuth';
 import AuthForm from './AuthForm';
 import { Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, isLoading: authLoading } = useAuth();
   const { isStaff, isLoading: staffLoading } = useStaffAuth();
+  const navigate = useNavigate();
 
   const isLoading = authLoading || staffLoading;
 
@@ -24,7 +26,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   // Allow access if user is logged in OR if it's a staff member
   if (!user && !isStaff) {
-    return <AuthForm onAuthSuccess={() => {}} />;
+    return <AuthForm onAuthSuccess={() => navigate('/dashboard')} />;
   }
 
   return <>{children}</>;

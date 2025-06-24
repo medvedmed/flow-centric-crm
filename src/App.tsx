@@ -8,7 +8,6 @@ import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/AppSidebar"
 import AppHeader from "@/components/AppHeader"
 import ProtectedRoute from "@/components/ProtectedRoute"
-import AppWithRealTime from "@/components/AppWithRealTime"
 import { AuthProvider } from "@/hooks/useAuth"
 import { StaffAuthProvider } from "@/hooks/useStaffAuth"
 import { LanguageProvider } from "@/contexts/LanguageContext"
@@ -25,8 +24,8 @@ import Help from "./pages/Help"
 import NotFound from "./pages/NotFound"
 import InviteAccept from "./pages/InviteAccept"
 import WebhookTest from "./pages/WebhookTest"
+import Finance from "@/pages/Finance"
 import "./App.css"
-import Finance from "@/pages/Finance";
 
 const queryClient = new QueryClient()
 
@@ -38,75 +37,92 @@ function App() {
           <StaffAuthProvider>
             <LanguageProvider>
               <TooltipProvider>
-                <SidebarProvider>
-                  <div className="min-h-screen bg-background flex w-full">
-                    <AppSidebar />
-                    <div className="flex-1 flex flex-col overflow-hidden">
-                      <AppHeader />
-                      <main className="flex-1 overflow-auto">
-                        <Routes>
-                          <Route path="/" element={
-                            <AppWithRealTime>
-                              <Dashboard />
-                            </AppWithRealTime>
-                          } />
-                          <Route path="/appointments" element={
-                            <AppWithRealTime>
-                              <Appointments />
-                            </AppWithRealTime>
-                          } />
-                          <Route path="/clients" element={
-                            <AppWithRealTime>
-                              <Clients />
-                            </AppWithRealTime>
-                          } />
-                          <Route path="/staff" element={
-                            <AppWithRealTime>
-                              <Staff />
-                            </AppWithRealTime>
-                          } />
-                          <Route path="/services" element={
-                            <AppWithRealTime>
-                              <Services />
-                            </AppWithRealTime>
-                          } />
-                          <Route path="/finance" element={
-                            <AppWithRealTime>
-                              <Finance />
-                            </AppWithRealTime>
-                          } />
-                          <Route path="/inventory" element={
-                            <AppWithRealTime>
-                              <Inventory />
-                            </AppWithRealTime>
-                          } />
-                          <Route path="/reports" element={
-                            <AppWithRealTime>
-                              <Reports />
-                            </AppWithRealTime>
-                          } />
-                          <Route path="/settings" element={
-                            <AppWithRealTime>
-                              <Settings />
-                            </AppWithRealTime>
-                          } />
-                          <Route path="/help" element={
-                            <AppWithRealTime>
-                              <Help />
-                            </AppWithRealTime>
-                          } />
-                          <Route path="/webhook-test" element={
-                            <AppWithRealTime>
-                              <WebhookTest />
-                            </AppWithRealTime>
-                          } />
-                          <Route path="/invite/:inviteToken" element={<InviteAccept />} />
-                          <Route path="*" element={<NotFound />} />
-                        </Routes>
-                      </main>
-                    </div>
-                  </div>
-                </SidebarProvider>
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/" element={<Index />} />
+                  <Route path="/invite/:inviteToken" element={<InviteAccept />} />
+                  
+                  {/* Protected routes */}
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Dashboard />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/appointments" element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Appointments />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/clients" element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Clients />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/staff" element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Staff />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/services" element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Services />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/finance" element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Finance />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/inventory" element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Inventory />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/reports" element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Reports />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/settings" element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Settings />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/help" element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Help />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/webhook-test" element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <WebhookTest />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
               </TooltipProvider>
             </LanguageProvider>
           </StaffAuthProvider>
@@ -115,6 +131,23 @@ function App() {
         <Sonner />
       </QueryClientProvider>
     </Router>
+  );
+}
+
+// Layout component for authenticated pages
+function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen bg-background flex w-full">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <AppHeader />
+          <main className="flex-1 overflow-auto">
+            {children}
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 }
 

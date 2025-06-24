@@ -1,15 +1,13 @@
 
 import React from 'react';
-import { useRealTimeUpdates } from '@/hooks/useRealTimeUpdates';
 
 interface AppWithRealTimeProps {
   children: React.ReactNode;
 }
 
 const AppWithRealTime = ({ children }: AppWithRealTimeProps) => {
-  // Enable real-time updates only after authentication
-  useRealTimeUpdates();
-  
+  // This component can be enhanced later with real-time functionality
+  // For now, it just passes through the children
   return <>{children}</>;
 };
 

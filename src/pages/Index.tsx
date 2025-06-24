@@ -21,6 +21,7 @@ const Index = () => {
       if (showWelcomeScreen || tab === 'welcome') {
         setShowWelcome(true);
       } else {
+        // Redirect authenticated users to dashboard
         navigate('/dashboard');
       }
     }

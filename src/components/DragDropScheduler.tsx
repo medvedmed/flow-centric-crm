@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -25,6 +24,7 @@ interface DragDropSchedulerProps {
   selectedDate: Date;
   onAppointmentMove?: (appointmentId: string, newStaffId: string, newTime: string) => void;
   onRefresh?: () => void;
+  onAppointmentClick?: (appointment: Appointment) => void;
 }
 
 // Utility function to normalize time format for comparison
@@ -189,7 +189,8 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
   appointments,
   selectedDate,
   onAppointmentMove,
-  onRefresh
+  onRefresh,
+  onAppointmentClick
 }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null);
@@ -460,7 +461,13 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
                           {slotAppointments.length > 0 ? (
                             <div className="w-full overflow-hidden">
                               {slotAppointments.map(appointment => (
-                                <AppointmentBlock key={appointment.id} appointment={appointment} />
+                                <div
+                                  key={appointment.id}
+                                  onClick={() => onAppointmentClick?.(appointment)}
+                                  className="cursor-pointer"
+                                >
+                                  <AppointmentBlock appointment={appointment} />
+                                </div>
                               ))}
                             </div>
                           ) : (

@@ -30,12 +30,22 @@ const Dashboard = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Product sales stats query - fix the function call to use no parameters for today's stats
+  // Product sales stats query - fix the function call to properly handle parameters
   const { data: todayProductStats } = useQuery({
     queryKey: ['product-sales', 'stats', 'today'],
     queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
-      return productSalesApi.getSalesStats(today, today);
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        return await productSalesApi.getSalesStats(today, today);
+      } catch (error) {
+        console.error('Error fetching product sales stats:', error);
+        return {
+          totalRevenue: 0,
+          totalProfit: 0,
+          totalQuantity: 0,
+          totalSales: 0
+        };
+      }
     },
     enabled: isAuthenticated
   });

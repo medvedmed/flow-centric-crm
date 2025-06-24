@@ -116,9 +116,10 @@ export const productSalesApi = {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
     
-    const { data: sales, error, count } = await query
-      .range(from, to)
-      .select('*', { count: 'exact' });
+    const { data: sales, error } = await query.range(from, to);
+    const { count } = await supabase
+      .from('product_sales')
+      .select('*', { count: 'exact', head: true });
 
     if (error) throw error;
 

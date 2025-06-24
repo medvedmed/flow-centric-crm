@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { MessageSquare, Send, CheckCircle, Clock, AlertTriangle, ExternalLink, Play, AlertCircle } from 'lucide-react';
 import { reminderApi } from '@/services/api/reminderApi';
 import { ReminderSettings, AppointmentReminder } from '@/services/types';
-import { RealWhatsAppClient } from './RealWhatsAppClient';
+import { PhoneWhatsAppClient } from './PhoneWhatsAppClient';
 import { whatsappClient } from '@/services/whatsappClient';
 
 export const WhatsAppSection: React.FC = () => {
@@ -248,8 +247,8 @@ export const WhatsAppSection: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Real WhatsApp Client Connection */}
-      <RealWhatsAppClient />
+      {/* Phone WhatsApp Client Connection */}
+      <PhoneWhatsAppClient />
 
       {/* Reminder Settings */}
       <Card>

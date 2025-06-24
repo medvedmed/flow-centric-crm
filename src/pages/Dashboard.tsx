@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Users, DollarSign, TrendingUp, Clock, Star } from 'lucide-react';
+import { Calendar, Users, DollarSign, TrendingUp, Clock, Star, AlertTriangle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -37,7 +37,7 @@ const Dashboard = () => {
 
       if (tomorrowError) throw tomorrowError;
 
-      // Get this month's revenue
+      // Get this month's revenue from completed appointments
       const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
       const { data: monthlyRevenue, error: revenueError } = await supabase
         .from('appointments')
@@ -47,6 +47,16 @@ const Dashboard = () => {
         .gte('date', startOfMonth);
 
       if (revenueError) throw revenueError;
+
+      // Get pending payments
+      const { data: pendingPayments, error: pendingError } = await supabase
+        .from('appointments')
+        .select('price, client_name')
+        .eq('salon_id', user?.id)
+        .eq('status', 'Completed')
+        .eq('payment_status', 'unpaid');
+
+      if (pendingError) throw pendingError;
 
       // Get total clients
       const { count: totalClients, error: clientsError } = await supabase
@@ -73,12 +83,14 @@ const Dashboard = () => {
         todayAppointments: todayAppointments || [],
         tomorrowAppointments: tomorrowAppointments || [],
         monthlyRevenue: monthlyRevenue?.reduce((sum, apt) => sum + (apt.price || 0), 0) || 0,
+        pendingPayments: pendingPayments || [],
         totalClients: totalClients || 0,
-        lowStockCount: lowStock.length
+        lowStockCount: lowStock.length,
+        lowStockItems: lowStock.slice(0, 3) // Show first 3 low stock items
       };
     },
     enabled: !!user,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 15000, // Refresh every 15 seconds for more real-time feel
   });
 
   const { data: upcomingAppointments = [] } = useQuery({
@@ -116,7 +128,10 @@ const Dashboard = () => {
       return enrichedData;
     },
     enabled: !!user,
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
+
+  const totalPendingPayments = dashboardStats?.pendingPayments?.reduce((sum, payment) => sum + (payment.price || 0), 0) || 0;
 
   if (isLoading) {
     return (
@@ -185,13 +200,68 @@ const Dashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-600">
+              ${totalPendingPayments.toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {dashboardStats?.pendingPayments?.length || 0} unpaid appointments
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Secondary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{dashboardStats?.totalClients || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {dashboardStats?.lowStockCount ? `${dashboardStats.lowStockCount} low stock items` : 'Stock levels good'}
+              Registered clients
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Low Stock Alert</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{dashboardStats?.lowStockCount || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Items need restocking
+            </p>
+            {dashboardStats?.lowStockItems && dashboardStats.lowStockItems.length > 0 && (
+              <div className="mt-2 text-xs text-red-600">
+                {dashboardStats.lowStockItems.map(item => item.name).join(', ')}
+                {dashboardStats.lowStockCount > 3 && ` +${dashboardStats.lowStockCount - 3} more`}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Today's Revenue</CardTitle>
+            <TrendingUp className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              ${dashboardStats?.todayAppointments
+                .filter(apt => apt.status === 'Completed')
+                .reduce((sum, apt) => sum + (apt.price || 0), 0)
+                .toFixed(2) || '0.00'}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              From completed appointments
             </p>
           </CardContent>
         </Card>
@@ -217,7 +287,7 @@ const Dashboard = () => {
                 </p>
               ) : (
                 upcomingAppointments.map((appointment) => (
-                  <div key={appointment.id} className="flex justify-between items-center p-3 border rounded-lg">
+                  <div key={appointment.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                     <div>
                       <div className="font-medium">{appointment.client_name}</div>
                       <div className="text-sm text-muted-foreground">
@@ -228,12 +298,17 @@ const Dashboard = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <Badge 
-                        variant={appointment.status === 'Confirmed' ? 'default' : 'secondary'}
-                      >
-                        {appointment.status}
-                      </Badge>
-                      <div className="text-sm font-medium mt-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant={appointment.status === 'Confirmed' ? 'default' : 'secondary'}>
+                          {appointment.status}
+                        </Badge>
+                        {appointment.payment_status === 'unpaid' && (
+                          <Badge variant="destructive" className="text-xs">
+                            Unpaid
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-sm font-medium">
                         ${appointment.price?.toFixed(2) || '0.00'}
                       </div>
                     </div>

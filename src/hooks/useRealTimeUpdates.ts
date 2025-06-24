@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -37,6 +38,8 @@ export const useRealTimeUpdates = () => {
           console.log('Appointments change:', payload);
           queryClient.invalidateQueries({ queryKey: ['appointments'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+          queryClient.invalidateQueries({ queryKey: ['staff-performance'] });
+          queryClient.invalidateQueries({ queryKey: ['enhanced-schedule-appointments'] });
         }
       )
       .subscribe();
@@ -72,6 +75,24 @@ export const useRealTimeUpdates = () => {
         (payload) => {
           console.log('Staff change:', payload);
           queryClient.invalidateQueries({ queryKey: ['staff'] });
+          queryClient.invalidateQueries({ queryKey: ['staff-performance'] });
+        }
+      )
+      .subscribe();
+
+    // Subscribe to staff performance changes
+    const staffPerformanceChannel = supabase
+      .channel('staff-performance-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'staff_performance'
+        },
+        (payload) => {
+          console.log('Staff performance change:', payload);
+          queryClient.invalidateQueries({ queryKey: ['staff-performance'] });
         }
       )
       .subscribe();
@@ -124,6 +145,7 @@ export const useRealTimeUpdates = () => {
         (payload) => {
           console.log('Analytics change:', payload);
           queryClient.invalidateQueries({ queryKey: ['business-analytics'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
         }
       )
       .subscribe();
@@ -163,6 +185,7 @@ export const useRealTimeUpdates = () => {
           queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
           queryClient.invalidateQueries({ queryKey: ['income-categories'] });
           queryClient.invalidateQueries({ queryKey: ['expense-categories'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
         }
       )
       .subscribe();
@@ -181,6 +204,25 @@ export const useRealTimeUpdates = () => {
           console.log('Appointment services change:', payload);
           queryClient.invalidateQueries({ queryKey: ['appointment-services'] });
           queryClient.invalidateQueries({ queryKey: ['appointments'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        }
+      )
+      .subscribe();
+
+    // Subscribe to client payments changes
+    const clientPaymentsChannel = supabase
+      .channel('client-payments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'client_payments'
+        },
+        (payload) => {
+          console.log('Client payments change:', payload);
+          queryClient.invalidateQueries({ queryKey: ['client-payments'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
         }
       )
       .subscribe();
@@ -190,12 +232,14 @@ export const useRealTimeUpdates = () => {
       supabase.removeChannel(appointmentsChannel);
       supabase.removeChannel(clientsChannel);
       supabase.removeChannel(staffChannel);
+      supabase.removeChannel(staffPerformanceChannel);
       supabase.removeChannel(staffAvailabilityChannel);
       supabase.removeChannel(remindersChannel);
       supabase.removeChannel(analyticsChannel);
       supabase.removeChannel(inventoryChannel);
       supabase.removeChannel(financeChannel);
       supabase.removeChannel(appointmentServicesChannel);
+      supabase.removeChannel(clientPaymentsChannel);
     };
   }, [queryClient]);
 

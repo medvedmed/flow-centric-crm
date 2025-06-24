@@ -136,14 +136,27 @@ export const useAppointmentOperations = () => {
       // Always refetch after error or success
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['staff-performance'] });
     },
   });
 
   const createAppointmentMutation = useMutation({
-    mutationFn: async (appointmentData: Partial<Appointment>) => {
+    mutationFn: async (appointmentData: Partial<Appointment> & { 
+      extraServices?: Array<{ id: string; name: string; price: number; duration: number }> 
+    }) => {
       if (!isAuthenticated || !user) {
         throw new Error('Authentication required');
       }
+
+      // Calculate total price including extra services
+      const basePrice = appointmentData.price || 0;
+      const extraServicesPrice = appointmentData.extraServices?.reduce((sum, service) => sum + service.price, 0) || 0;
+      const totalPrice = basePrice + extraServicesPrice;
+
+      // Calculate total duration including extra services
+      const baseDuration = appointmentData.duration || 60;
+      const extraServicesDuration = appointmentData.extraServices?.reduce((sum, service) => sum + service.duration, 0) || 0;
+      const totalDuration = baseDuration + extraServicesDuration;
 
       // Map camelCase properties to snake_case for database
       const dbAppointmentData = {
@@ -154,8 +167,8 @@ export const useAppointmentOperations = () => {
         start_time: appointmentData.startTime || '',
         end_time: appointmentData.endTime || '',
         date: appointmentData.date || '',
-        price: appointmentData.price,
-        duration: appointmentData.duration,
+        price: totalPrice,
+        duration: totalDuration,
         staff_id: appointmentData.staffId,
         notes: appointmentData.notes,
         salon_id: user.id,
@@ -169,11 +182,33 @@ export const useAppointmentOperations = () => {
         .single();
 
       if (error) throw error;
+
+      // Add extra services if any
+      if (appointmentData.extraServices && appointmentData.extraServices.length > 0) {
+        const serviceInserts = appointmentData.extraServices.map(service => ({
+          appointment_id: data.id,
+          service_name: service.name,
+          service_price: service.price,
+          service_duration: service.duration,
+          staff_id: appointmentData.staffId
+        }));
+
+        const { error: servicesError } = await supabase
+          .from('appointment_services')
+          .insert(serviceInserts);
+        
+        if (servicesError) {
+          console.error('Error adding extra services:', servicesError);
+          // Don't throw error here, appointment was created successfully
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['staff-performance'] });
       toast({
         title: "Appointment Created",
         description: "New appointment has been successfully created.",
@@ -189,10 +224,87 @@ export const useAppointmentOperations = () => {
     },
   });
 
+  const updatePaymentStatusMutation = useMutation({
+    mutationFn: async ({ 
+      appointmentId, 
+      paymentStatus, 
+      paymentMethod, 
+      amount 
+    }: {
+      appointmentId: string;
+      paymentStatus: 'paid' | 'unpaid' | 'partial';
+      paymentMethod?: string;
+      amount?: number;
+    }) => {
+      if (!isAuthenticated || !user) {
+        throw new Error('Authentication required');
+      }
+
+      // Update appointment payment status
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .update({
+          payment_status: paymentStatus,
+          payment_method: paymentMethod,
+          payment_date: paymentStatus === 'paid' ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', appointmentId)
+        .select()
+        .single();
+
+      if (appointmentError) throw appointmentError;
+
+      // If marking as paid, create financial transaction
+      if (paymentStatus === 'paid' && amount) {
+        const { error: transactionError } = await supabase
+          .from('financial_transactions')
+          .insert({
+            salon_id: user.id,
+            transaction_type: 'income',
+            category: 'Service Revenue',
+            amount: amount,
+            description: `Payment for ${appointment.service} - ${appointment.client_name}`,
+            payment_method: paymentMethod || 'cash',
+            reference_id: appointmentId,
+            reference_type: 'appointment',
+            transaction_date: new Date().toISOString().split('T')[0],
+            created_by: user.id
+          });
+
+        if (transactionError) {
+          console.error('Error creating financial transaction:', transactionError);
+          // Don't throw error here, appointment update was successful
+        }
+      }
+
+      return appointment;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      toast({
+        title: "Payment Updated",
+        description: "Payment status has been successfully updated.",
+      });
+    },
+    onError: (error) => {
+      console.error('Update payment error:', error);
+      toast({
+        title: "Error Updating Payment",
+        description: error instanceof Error ? error.message : "Failed to update payment. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     moveAppointment: moveAppointmentMutation.mutate,
     isMoving: moveAppointmentMutation.isPending,
     createAppointment: createAppointmentMutation.mutate,
     isCreating: createAppointmentMutation.isPending,
+    updatePaymentStatus: updatePaymentStatusMutation.mutate,
+    isUpdatingPayment: updatePaymentStatusMutation.isPending,
   };
 };

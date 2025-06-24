@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,7 +60,7 @@ const Inventory = () => {
 
   const { data: lowStockItems = [] } = useQuery({
     queryKey: ['low-stock-items'],  
-    queryFn: inventoryApi.getLowStockItems
+    queryFn: () => inventoryApi.getLowStockItems()
   });
 
   const createMutation = useMutation({

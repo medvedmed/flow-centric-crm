@@ -16,6 +16,11 @@ interface QuickPaymentInterfaceProps {
   className?: string;
 }
 
+interface SearchResults {
+  clients: any[];
+  appointments: any[];
+}
+
 export const QuickPaymentInterface: React.FC<QuickPaymentInterfaceProps> = ({ className = '' }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClient, setSelectedClient] = useState<any>(null);
@@ -27,10 +32,10 @@ export const QuickPaymentInterface: React.FC<QuickPaymentInterfaceProps> = ({ cl
   const queryClient = useQueryClient();
 
   // Search for clients and appointments
-  const { data: searchResults = [], isLoading: isSearching } = useQuery({
+  const { data: searchResults, isLoading: isSearching } = useQuery({
     queryKey: ['client-search', searchTerm],
-    queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 2) return [];
+    queryFn: async (): Promise<SearchResults> => {
+      if (!searchTerm || searchTerm.length < 2) return { clients: [], appointments: [] };
       
       const { data: profile } = await supabase.auth.getUser();
       if (!profile.user) throw new Error('User not authenticated');
@@ -202,7 +207,7 @@ export const QuickPaymentInterface: React.FC<QuickPaymentInterfaceProps> = ({ cl
                 <div className="p-3 text-center text-muted-foreground">Searching...</div>
               ) : (
                 <div className="space-y-1">
-                  {searchResults.clients?.map((client: any) => (
+                  {searchResults?.clients?.map((client: any) => (
                     <div
                       key={`client-${client.id}`}
                       onClick={() => handleSelectClient(client, 'client')}
@@ -220,7 +225,7 @@ export const QuickPaymentInterface: React.FC<QuickPaymentInterfaceProps> = ({ cl
                       </div>
                     </div>
                   ))}
-                  {searchResults.appointments?.map((appointment: any) => (
+                  {searchResults?.appointments?.map((appointment: any) => (
                     <div
                       key={`appointment-${appointment.id}`}
                       onClick={() => handleSelectClient(appointment, 'appointment')}
@@ -243,7 +248,7 @@ export const QuickPaymentInterface: React.FC<QuickPaymentInterfaceProps> = ({ cl
                       </div>
                     </div>
                   ))}
-                  {(!searchResults.clients?.length && !searchResults.appointments?.length) && (
+                  {(!searchResults?.clients?.length && !searchResults?.appointments?.length) && (
                     <div className="p-3 text-center text-muted-foreground">
                       No results found
                     </div>

@@ -4,6 +4,7 @@ import {
   Calendar,
   momentLocalizer,
   Views,
+  Event,
 } from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
@@ -17,7 +18,7 @@ import { Appointment } from "@/services/types";
 const localizer = momentLocalizer(moment);
 const DnDCalendar = withDragAndDrop(Calendar);
 
-interface CalendarEvent {
+interface CalendarEvent extends Event {
   id: string;
   title: string;
   start: Date;

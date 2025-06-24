@@ -4,369 +4,429 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { X, Plus, Calendar, Clock, User, Scissors } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { serviceApi } from '@/services/api/serviceApi';
-import { clientApi } from '@/services/api/clientApi';
-import { staffApi } from '@/services/api/staffApi';
-import { enhancedAppointmentApi } from '@/services/api/enhancedAppointmentApi';
-import { toast } from '@/hooks/use-toast';
-import { Plus, X, Clock, DollarSign } from 'lucide-react';
+import { supabaseApi } from '@/services/supabaseApi';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
-interface MultiServiceAppointmentDialogProps {
-  open: boolean;
-  onClose: () => void;
-  initialDate?: string;
-  initialTime?: string;
-}
-
-interface SelectedService {
+interface Service {
   id: string;
   name: string;
   price: number;
   duration: number;
+  category: string;
+}
+
+interface Staff {
+  id: string;
+  name: string;
+  specialties?: string[];
+}
+
+interface Client {
+  id: string;
+  name: string;
+  phone?: string;
+  email: string;
+}
+
+interface SelectedService {
+  serviceId: string;
+  name: string;
+  price: number;
+  duration: number;
+  staffId?: string;
+}
+
+interface CreateAppointmentService {
+  service_name: string;
+  service_price: number;
+  service_duration: number;
+  staff_id?: string;
+}
+
+interface MultiServiceAppointmentDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  selectedDate?: Date;
+  selectedTime?: string;
+  selectedStaffId?: string;
 }
 
 export const MultiServiceAppointmentDialog: React.FC<MultiServiceAppointmentDialogProps> = ({
   open,
-  onClose,
-  initialDate,
-  initialTime
+  onOpenChange,
+  selectedDate = new Date(),
+  selectedTime = '09:00',
+  selectedStaffId
 }) => {
-  const [appointmentData, setAppointmentData] = useState({
-    client_id: '',
-    client_name: '',
-    client_phone: '',
-    staff_id: '',
-    date: initialDate || '',
-    start_time: initialTime || '',
-    notes: ''
-  });
-
+  const [clientId, setClientId] = useState('');
+  const [clientName, setClientName] = useState('');
+  const [clientPhone, setClientPhone] = useState('');
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
-  const [availableServiceId, setAvailableServiceId] = useState('');
-
+  const [appointmentDate, setAppointmentDate] = useState(format(selectedDate, 'yyyy-MM-dd'));
+  const [appointmentTime, setAppointmentTime] = useState(selectedTime);
+  const [notes, setNotes] = useState('');
+  
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch data
-  const { data: services } = useQuery({
+  // Fetch services, staff, and clients
+  const { data: services = [] } = useQuery({
     queryKey: ['services'],
-    queryFn: () => serviceApi.getServices()
+    queryFn: supabaseApi.getServices
   });
 
-  const { data: clients } = useQuery({
-    queryKey: ['clients'],
-    queryFn: () => clientApi.getClients()
-  });
-
-  const { data: staff } = useQuery({
+  const { data: staff = [] } = useQuery({
     queryKey: ['staff'],
-    queryFn: () => staffApi.getStaff()
+    queryFn: supabaseApi.getStaff
   });
 
-  // Create appointment mutation
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: supabaseApi.getClients
+  });
+
   const createAppointmentMutation = useMutation({
-    mutationFn: (data: { appointmentData: any; services: SelectedService[] }) =>
-      enhancedAppointmentApi.createMultiServiceAppointment(data.appointmentData, data.services),
+    mutationFn: async (appointmentData: any) => {
+      const response = await supabaseApi.createAppointment(appointmentData);
+      return response;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       toast({
         title: "Success",
-        description: "Multi-service appointment created successfully",
+        description: "Multi-service appointment created successfully!",
       });
-      handleClose();
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      onOpenChange(false);
+      resetForm();
     },
     onError: (error: any) => {
-      console.error('Create appointment error:', error);
       toast({
-        title: "Error", 
+        title: "Error",
         description: error.message || "Failed to create appointment",
         variant: "destructive",
       });
-    }
+    },
   });
 
+  const resetForm = () => {
+    setClientId('');
+    setClientName('');
+    setClientPhone('');
+    setSelectedServices([]);
+    setAppointmentDate(format(selectedDate, 'yyyy-MM-dd'));
+    setAppointmentTime(selectedTime);
+    setNotes('');
+  };
+
   const addService = () => {
-    if (!availableServiceId) return;
-
-    const service = services?.data?.find(s => s.id === availableServiceId);
-    if (!service) return;
-
-    const isAlreadySelected = selectedServices.some(s => s.id === service.id);
-    if (isAlreadySelected) {
-      toast({
-        title: "Service Already Selected",
-        description: "This service is already added to the appointment",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSelectedServices(prev => [...prev, {
-      id: service.id,
-      name: service.name,
-      price: Number(service.price),
-      duration: service.duration
+    setSelectedServices([...selectedServices, {
+      serviceId: '',
+      name: '',
+      price: 0,
+      duration: 60,
+      staffId: selectedStaffId || ''
     }]);
-
-    setAvailableServiceId('');
   };
 
-  const removeService = (serviceId: string) => {
-    setSelectedServices(prev => prev.filter(s => s.id !== serviceId));
+  const removeService = (index: number) => {
+    setSelectedServices(selectedServices.filter((_, i) => i !== index));
   };
 
-  const handleClientSelect = (clientId: string) => {
-    const client = clients?.data?.find(c => c.id === clientId);
-    if (client) {
-      setAppointmentData(prev => ({
-        ...prev,
-        client_id: clientId,
-        client_name: client.name,
-        client_phone: client.phone || ''
-      }));
+  const updateService = (index: number, field: keyof SelectedService, value: any) => {
+    const updated = [...selectedServices];
+    if (field === 'serviceId' && value) {
+      const service = services.find(s => s.id === value);
+      if (service) {
+        updated[index] = {
+          ...updated[index],
+          serviceId: value,
+          name: service.name,
+          price: service.price,
+          duration: service.duration
+        };
+      }
+    } else {
+      updated[index] = { ...updated[index], [field]: value };
     }
+    setSelectedServices(updated);
   };
 
-  const calculateTotals = () => {
-    const totalPrice = selectedServices.reduce((sum, service) => sum + service.price, 0);
-    const totalDuration = selectedServices.reduce((sum, service) => sum + service.duration, 0);
-    return { totalPrice, totalDuration };
+  const calculateTotal = () => {
+    return selectedServices.reduce((total, service) => total + service.price, 0);
   };
 
-  const handleSubmit = () => {
-    if (!appointmentData.client_name || !appointmentData.date || !appointmentData.start_time || selectedServices.length === 0) {
+  const calculateTotalDuration = () => {
+    return selectedServices.reduce((total, service) => total + service.duration, 0);
+  };
+
+  const handleSubmit = async () => {
+    if (!clientId && !clientName) {
       toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields and select at least one service",
+        title: "Error",
+        description: "Please select or enter a client",
         variant: "destructive",
       });
       return;
     }
 
-    const { totalPrice, totalDuration } = calculateTotals();
+    if (selectedServices.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please add at least one service",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    const completeAppointmentData = {
-      ...appointmentData,
-      price: totalPrice,
-      duration: totalDuration,
-      end_time: calculateEndTime(appointmentData.start_time, totalDuration),
-      service: selectedServices.map(s => s.name).join(', '), // For backward compatibility
-      status: 'Scheduled'
+    const appointmentServices: CreateAppointmentService[] = selectedServices.map(service => ({
+      service_name: service.name,
+      service_price: service.price,
+      service_duration: service.duration,
+      staff_id: service.staffId || undefined
+    }));
+
+    const appointmentData = {
+      client_id: clientId || undefined,
+      client_name: clientName || clients.find(c => c.id === clientId)?.name || '',
+      client_phone: clientPhone || clients.find(c => c.id === clientId)?.phone || '',
+      date: appointmentDate,
+      start_time: appointmentTime,
+      end_time: calculateEndTime(appointmentTime, calculateTotalDuration()),
+      service: selectedServices.map(s => s.name).join(', '),
+      price: calculateTotal(),
+      duration: calculateTotalDuration(),
+      staff_id: selectedServices[0]?.staffId || selectedStaffId || undefined,
+      notes,
+      status: 'Scheduled',
+      services: appointmentServices
     };
 
-    createAppointmentMutation.mutate({
-      appointmentData: completeAppointmentData,
-      services: selectedServices
-    });
+    createAppointmentMutation.mutate(appointmentData);
   };
 
-  const calculateEndTime = (startTime: string, durationMinutes: number) => {
+  const calculateEndTime = (startTime: string, duration: number) => {
     const [hours, minutes] = startTime.split(':').map(Number);
-    const startDate = new Date();
-    startDate.setHours(hours, minutes);
-    startDate.setMinutes(startDate.getMinutes() + durationMinutes);
-    return startDate.toTimeString().slice(0, 5);
+    const totalMinutes = hours * 60 + minutes + duration;
+    const endHours = Math.floor(totalMinutes / 60);
+    const endMinutes = totalMinutes % 60;
+    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
   };
-
-  const handleClose = () => {
-    setAppointmentData({
-      client_id: '',
-      client_name: '',
-      client_phone: '',
-      staff_id: '',
-      date: initialDate || '',
-      start_time: initialTime || '',
-      notes: ''
-    });
-    setSelectedServices([]);
-    setAvailableServiceId('');
-    onClose();
-  };
-
-  const { totalPrice, totalDuration } = calculateTotals();
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Multi-Service Appointment</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Scissors className="w-5 h-5" />
+            Multi-Service Appointment
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Column - Appointment Details */}
-          <div className="space-y-4">
-            <div>
-              <Label>Client *</Label>
-              <Select value={appointmentData.client_id} onValueChange={handleClientSelect}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients?.data?.map(client => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name} - {client.phone}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Left Column - Client & Appointment Details */}
+          <div className="space-y-6">
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Client Information
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="client">Select Client</Label>
+                    <Select value={clientId} onValueChange={setClientId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose existing client" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clients.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name} - {client.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="text-center text-sm text-muted-foreground">or</div>
+                  
+                  <div>
+                    <Label htmlFor="clientName">New Client Name</Label>
+                    <Input
+                      id="clientName"
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                      placeholder="Enter client name"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="clientPhone">Phone Number</Label>
+                    <Input
+                      id="clientPhone"
+                      value={clientPhone}
+                      onChange={(e) => setClientPhone(e.target.value)}
+                      placeholder="Enter phone number"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Client Name *</Label>
-                <Input
-                  value={appointmentData.client_name}
-                  onChange={(e) => setAppointmentData(prev => ({ ...prev, client_name: e.target.value }))}
-                  placeholder="Enter client name"
-                />
-              </div>
-              <div>
-                <Label>Client Phone</Label>
-                <Input
-                  value={appointmentData.client_phone}
-                  onChange={(e) => setAppointmentData(prev => ({ ...prev, client_phone: e.target.value }))}
-                  placeholder="Phone number"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label>Staff Member</Label>
-              <Select value={appointmentData.staff_id} onValueChange={(value) => setAppointmentData(prev => ({ ...prev, staff_id: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select staff member" />
-                </SelectTrigger>
-                <SelectContent>
-                  {staff?.map(member => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Date *</Label>
-                <Input
-                  type="date"
-                  value={appointmentData.date}
-                  onChange={(e) => setAppointmentData(prev => ({ ...prev, date: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label>Start Time *</Label>
-                <Input
-                  type="time"
-                  value={appointmentData.start_time}
-                  onChange={(e) => setAppointmentData(prev => ({ ...prev, start_time: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label>Notes</Label>
-              <Input
-                value={appointmentData.notes}
-                onChange={(e) => setAppointmentData(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="Additional notes..."
-              />
-            </div>
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Appointment Details
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="date">Date</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={appointmentDate}
+                      onChange={(e) => setAppointmentDate(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="time">Start Time</Label>
+                    <Input
+                      id="time"
+                      type="time"
+                      value={appointmentTime}
+                      onChange={(e) => setAppointmentTime(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label>Total Duration</Label>
+                    <div className="text-sm text-muted-foreground">
+                      {calculateTotalDuration()} minutes
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="notes">Notes</Label>
+                    <Textarea
+                      id="notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Additional notes..."
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Right Column - Services */}
-          <div className="space-y-4">
-            <div>
-              <Label>Add Services</Label>
-              <div className="flex gap-2">
-                <Select value={availableServiceId} onValueChange={setAvailableServiceId}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select service to add" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {services?.data?.map(service => (
-                      <SelectItem key={service.id} value={service.id}>
-                        {service.name} - ${Number(service.price).toFixed(2)} ({service.duration}min)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button onClick={addService} disabled={!availableServiceId}>
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+          <div className="space-y-6">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Scissors className="w-4 h-4" />
+                    Services
+                  </h3>
+                  <Button onClick={addService} variant="outline" size="sm">
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Service
+                  </Button>
+                </div>
 
-            {/* Selected Services */}
-            <div>
-              <Label>Selected Services ({selectedServices.length})</Label>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {selectedServices.map(service => (
-                  <Card key={service.id}>
-                    <CardContent className="p-3">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className="font-medium">{service.name}</h4>
-                          <div className="flex gap-4 text-sm text-muted-foreground mt-1">
-                            <span className="flex items-center gap-1">
-                              <DollarSign className="w-3 h-3" />
-                              ${service.price.toFixed(2)}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {service.duration}min
-                            </span>
-                          </div>
-                        </div>
+                <div className="space-y-4">
+                  {selectedServices.map((selectedService, index) => (
+                    <div key={index} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">Service {index + 1}</span>
                         <Button
+                          onClick={() => removeService(index)}
                           variant="ghost"
                           size="sm"
-                          onClick={() => removeService(service.id)}
                         >
                           <X className="w-4 h-4" />
                         </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      
+                      <div>
+                        <Label>Service</Label>
+                        <Select
+                          value={selectedService.serviceId}
+                          onValueChange={(value) => updateService(index, 'serviceId', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose service" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {services.map((service) => (
+                              <SelectItem key={service.id} value={service.id}>
+                                {service.name} - ${service.price} ({service.duration}min)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label>Staff Member</Label>
+                        <Select
+                          value={selectedService.staffId}
+                          onValueChange={(value) => updateService(index, 'staffId', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose staff member" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {staff.map((member) => (
+                              <SelectItem key={member.id} value={member.id}>
+                                {member.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                        <div>Price: ${selectedService.price}</div>
+                        <div>Duration: {selectedService.duration}min</div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {selectedServices.length === 0 && (
+                    <div className="text-center text-muted-foreground py-8">
+                      Click "Add Service" to start building your appointment
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-                {selectedServices.length === 0 && (
-                  <div className="text-center text-muted-foreground py-8">
-                    No services selected. Add services from the dropdown above.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Summary */}
             {selectedServices.length > 0 && (
-              <Card className="bg-muted/50">
+              <Card>
                 <CardContent className="p-4">
-                  <h4 className="font-medium mb-2">Appointment Summary</h4>
-                  <div className="space-y-1 text-sm">
+                  <h3 className="font-semibold mb-2">Appointment Summary</h3>
+                  <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>Total Services:</span>
-                      <Badge variant="secondary">{selectedServices.length}</Badge>
+                      <span>{selectedServices.length}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Total Duration:</span>
-                      <span>{totalDuration} minutes</span>
+                      <span>{calculateTotalDuration()} minutes</span>
                     </div>
-                    <div className="flex justify-between font-medium">
+                    <div className="flex justify-between font-semibold">
                       <span>Total Price:</span>
-                      <span>${totalPrice.toFixed(2)}</span>
+                      <span>${calculateTotal().toFixed(2)}</span>
                     </div>
-                    {appointmentData.start_time && (
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>Estimated End Time:</span>
-                        <span>{calculateEndTime(appointmentData.start_time, totalDuration)}</span>
-                      </div>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -374,16 +434,15 @@ export const MultiServiceAppointmentDialog: React.FC<MultiServiceAppointmentDial
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={handleClose}>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button 
-            onClick={handleSubmit} 
+            onClick={handleSubmit}
             disabled={createAppointmentMutation.isPending || selectedServices.length === 0}
           >
-            {createAppointmentMutation.isPending ? "Creating..." : "Create Appointment"}
+            {createAppointmentMutation.isPending ? 'Creating...' : 'Create Appointment'}
           </Button>
         </div>
       </DialogContent>

@@ -37,8 +37,17 @@ export const EnhancedReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({
     try {
       const template = templateId || defaultTemplate?.id;
       const data = await receiptApi.generateReceiptData(appointmentId, template);
-      setReceiptData(data);
-      return data;
+      
+      // Calculate total from services or use appointment price
+      const total = data.services?.length > 0 
+        ? data.services.reduce((sum: number, service: any) => sum + Number(service.service_price || 0), 0)
+        : Number(data.appointment?.price || 0);
+      
+      setReceiptData({
+        ...data,
+        total
+      });
+      return { ...data, total };
     } catch (error: any) {
       toast({
         title: "Error",
@@ -78,28 +87,33 @@ export const EnhancedReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({
             <body>
               <div class="receipt">
                 <div class="header">
-                  <h2>${data.salon.name}</h2>
-                  <p>${data.salon.address}</p>
-                  <p>${data.salon.phone}</p>
+                  <h2>${data.salon?.salon_name || data.salon?.full_name || 'Salon'}</h2>
+                  <p>${data.salon?.address || ''}</p>
+                  <p>${data.salon?.phone || ''}</p>
                 </div>
                 <hr>
-                <p><strong>Date:</strong> ${data.appointment.date}</p>
-                <p><strong>Time:</strong> ${data.appointment.time}</p>
-                <p><strong>Client:</strong> ${data.appointment.client_name}</p>
-                <p><strong>Staff:</strong> ${data.appointment.staff_name}</p>
+                <p><strong>Date:</strong> ${data.appointment?.date || ''}</p>
+                <p><strong>Time:</strong> ${data.appointment?.start_time || ''}</p>
+                <p><strong>Client:</strong> ${data.appointment?.client_name || ''}</p>
+                <p><strong>Staff:</strong> ${data.staff?.name || 'N/A'}</p>
                 <hr>
-                ${data.services.map((service: any) => `
+                ${data.services?.map((service: any) => `
                   <div class="line-item">
-                    <span>${service.name}</span>
-                    <span>$${service.price.toFixed(2)}</span>
+                    <span>${service.service_name || service.name}</span>
+                    <span>$${Number(service.service_price || service.price || 0).toFixed(2)}</span>
                   </div>
-                `).join('')}
+                `).join('') || `
+                  <div class="line-item">
+                    <span>${data.appointment?.service || 'Service'}</span>
+                    <span>$${Number(data.appointment?.price || 0).toFixed(2)}</span>
+                  </div>
+                `}
                 <div class="line-item total">
                   <span>Total:</span>
                   <span>$${data.total.toFixed(2)}</span>
                 </div>
                 <div class="footer">
-                  <p>Thank you for visiting ${data.salon.name}!</p>
+                  <p>Thank you for visiting ${data.salon?.salon_name || data.salon?.full_name || 'our salon'}!</p>
                 </div>
               </div>
             </body>
@@ -116,21 +130,22 @@ export const EnhancedReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({
     if (data) {
       // Create a simple text receipt for download
       const receiptText = `
-${data.salon.name}
-${data.salon.address}
-${data.salon.phone}
+${data.salon?.salon_name || data.salon?.full_name || 'Salon'}
+${data.salon?.address || ''}
+${data.salon?.phone || ''}
 
-Date: ${data.appointment.date}
-Time: ${data.appointment.time}
-Client: ${data.appointment.client_name}
-Staff: ${data.appointment.staff_name}
+Date: ${data.appointment?.date || ''}
+Time: ${data.appointment?.start_time || ''}
+Client: ${data.appointment?.client_name || ''}
+Staff: ${data.staff?.name || 'N/A'}
 
 Services:
-${data.services.map((service: any) => `${service.name} - $${service.price.toFixed(2)}`).join('\n')}
+${data.services?.map((service: any) => `${service.service_name || service.name} - $${Number(service.service_price || service.price || 0).toFixed(2)}`).join('\n') || 
+  `${data.appointment?.service || 'Service'} - $${Number(data.appointment?.price || 0).toFixed(2)}`}
 
 Total: $${data.total.toFixed(2)}
 
-Thank you for choosing ${data.salon.name}!
+Thank you for choosing ${data.salon?.salon_name || data.salon?.full_name || 'our salon'}!
       `;
 
       const blob = new Blob([receiptText], { type: 'text/plain' });
@@ -178,32 +193,39 @@ Thank you for choosing ${data.salon.name}!
           {receiptData && (
             <div className="space-y-4 p-4 border rounded">
               <div className="text-center">
-                <h3 className="font-bold">{receiptData.salon.name}</h3>
-                <p className="text-sm">{receiptData.salon.address}</p>
-                <p className="text-sm">{receiptData.salon.phone}</p>
+                <h3 className="font-bold">{receiptData.salon?.salon_name || receiptData.salon?.full_name || 'Salon'}</h3>
+                <p className="text-sm">{receiptData.salon?.address || ''}</p>
+                <p className="text-sm">{receiptData.salon?.phone || ''}</p>
               </div>
               <hr />
               <div className="space-y-1">
-                <p><strong>Date:</strong> {receiptData.appointment.date}</p>
-                <p><strong>Time:</strong> {receiptData.appointment.time}</p>
-                <p><strong>Client:</strong> {receiptData.appointment.client_name}</p>
-                <p><strong>Staff:</strong> {receiptData.appointment.staff_name}</p>
+                <p><strong>Date:</strong> {receiptData.appointment?.date || ''}</p>
+                <p><strong>Time:</strong> {receiptData.appointment?.start_time || ''}</p>
+                <p><strong>Client:</strong> {receiptData.appointment?.client_name || ''}</p>
+                <p><strong>Staff:</strong> {receiptData.staff?.name || 'N/A'}</p>
               </div>
               <hr />
               <div className="space-y-2">
-                {receiptData.services.map((service: any, index: number) => (
-                  <div key={index} className="flex justify-between">
-                    <span>{service.name}</span>
-                    <span>${service.price.toFixed(2)}</span>
+                {receiptData.services?.length > 0 ? (
+                  receiptData.services.map((service: any, index: number) => (
+                    <div key={index} className="flex justify-between">
+                      <span>{service.service_name || service.name}</span>
+                      <span>${Number(service.service_price || service.price || 0).toFixed(2)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex justify-between">
+                    <span>{receiptData.appointment?.service || 'Service'}</span>
+                    <span>${Number(receiptData.appointment?.price || 0).toFixed(2)}</span>
                   </div>
-                ))}
+                )}
                 <div className="flex justify-between font-bold border-t pt-2">
                   <span>Total:</span>
                   <span>${receiptData.total.toFixed(2)}</span>
                 </div>
               </div>
               <div className="text-center text-sm">
-                <p>Thank you for visiting {receiptData.salon.name}!</p>
+                <p>Thank you for visiting {receiptData.salon?.salon_name || receiptData.salon?.full_name || 'our salon'}!</p>
               </div>
             </div>
           )}

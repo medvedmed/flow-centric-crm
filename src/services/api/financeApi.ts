@@ -85,7 +85,10 @@ export const financeApi = {
     if (error) throw error;
 
     return {
-      data: data || [],
+      data: (data || []).map(item => ({
+        ...item,
+        transaction_type: item.transaction_type as 'income' | 'expense'
+      })),
       count: count || 0
     };
   },
@@ -105,7 +108,10 @@ export const financeApi = {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      transaction_type: data.transaction_type as 'income' | 'expense'
+    };
   },
 
   async updateTransaction(id: string, updates: Partial<CreateTransaction>): Promise<FinancialTransaction> {
@@ -117,7 +123,10 @@ export const financeApi = {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      transaction_type: data.transaction_type as 'income' | 'expense'
+    };
   },
 
   async deleteTransaction(id: string): Promise<void> {

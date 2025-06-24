@@ -22,8 +22,8 @@ export default function Finance() {
     end: format(endOfMonth(new Date()), 'yyyy-MM-dd')
   });
   const [filters, setFilters] = useState({
-    type: '',
-    category: ''
+    type: 'all',
+    category: 'all'
   });
 
   const [newTransaction, setNewTransaction] = useState<CreateTransaction>({
@@ -49,8 +49,8 @@ export default function Finance() {
     queryFn: () => financeApi.getTransactions(
       dateRange.start,
       dateRange.end,
-      filters.type as 'income' | 'expense' || undefined,
-      filters.category || undefined
+      filters.type === 'all' ? undefined : filters.type as 'income' | 'expense',
+      filters.category === 'all' ? undefined : filters.category
     )
   });
 
@@ -330,7 +330,7 @@ export default function Finance() {
                   <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
                   <SelectItem value="income">Income</SelectItem>
                   <SelectItem value="expense">Expense</SelectItem>
                 </SelectContent>

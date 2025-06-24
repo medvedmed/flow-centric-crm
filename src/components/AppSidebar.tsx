@@ -121,15 +121,16 @@ export const AppSidebar: React.FC = () => {
       <aside
         data-sidebar="true"
         className={`fixed left-0 top-0 z-50 flex h-full flex-col overflow-y-auto border-r bg-white shadow-lg transition-transform duration-300 ease-in-out ${
-          isOpen ? 'w-64 translate-x-0' : '-translate-x-full w-0'
-        } lg:translate-x-0 lg:w-64 lg:shadow-none`}
+          isOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full'
+        } lg:translate-x-0 lg:shadow-none lg:relative lg:z-auto`}
       >
         <div className="flex h-16 shrink-0 items-center justify-between px-4 border-b">
-          <span className="font-semibold text-2xl text-teal-600">Salon CRM</span>
+          <span className="font-semibold text-xl md:text-2xl text-teal-600">Salon CRM</span>
           <button
             data-sidebar-toggle="true"
             onClick={toggleSidebar}
-            className="lg:hidden p-2 hover:bg-gray-100 rounded-md"
+            className="lg:hidden p-2 hover:bg-gray-100 rounded-md transition-colors"
+            aria-label="Close sidebar"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -151,7 +152,7 @@ export const AppSidebar: React.FC = () => {
           {isLoading ? (
             <>
               {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-9 rounded-md" />
+                <Skeleton key={i} className="h-12 rounded-md" />
               ))}
             </>
           ) : (

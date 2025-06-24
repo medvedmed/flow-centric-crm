@@ -13,12 +13,14 @@ export const useSidebar = () => {
     });
   };
 
-  // Close sidebar on mobile when clicking outside
+  // Initialize sidebar state based on screen size
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
+        // Desktop: sidebar open by default
         setIsOpen(true);
       } else {
+        // Mobile/tablet: sidebar closed by default
         setIsOpen(false);
       }
     };
@@ -36,7 +38,9 @@ export const useSidebar = () => {
       }
     };
 
+    // Initialize on mount
     handleResize();
+    
     window.addEventListener('resize', handleResize);
     document.addEventListener('mousedown', handleClickOutside);
     

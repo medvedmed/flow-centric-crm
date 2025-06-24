@@ -38,7 +38,6 @@ const Appointments = () => {
     setSelectedDate(new Date());
   };
 
-  // FIXED: Dashboard navigation
   const goToDashboard = () => {
     console.log('Navigating to dashboard');
     navigate('/dashboard');
@@ -60,49 +59,56 @@ const Appointments = () => {
 
   return (
     <div className="min-h-screen w-full bg-gray-50 flex">
-      {/* Add Sidebar */}
+      {/* Sidebar */}
       <AppSidebar />
       
-      {/* Add Mobile Toggle */}
+      {/* Mobile Toggle */}
       <SidebarToggle />
       
-      {/* Main Content */}
-      <div className="flex-1 lg:ml-64 flex flex-col">
-        {/* FIXED: Date Navigation Header with Dashboard button */}
-        <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      {/* Main Content - Responsive layout */}
+      <div className="flex-1 lg:ml-0 flex flex-col min-w-0">
+        {/* Date Navigation Header - Mobile optimized */}
+        <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={goToDashboard}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 flex-shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
-              Dashboard
+              <span className="hidden sm:inline">Dashboard</span>
             </Button>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-gray-600" />
-              <h1 className="text-lg font-semibold text-gray-900">
-                {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+            <div className="flex items-center gap-2 min-w-0">
+              <Calendar className="w-5 h-5 text-gray-600 flex-shrink-0" />
+              <h1 className="text-sm md:text-lg font-semibold text-gray-900 truncate">
+                {format(selectedDate, 'EEEE, MMM d, yyyy')}
               </h1>
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
             <Button variant="outline" size="sm" onClick={goToPreviousDay}>
-              Previous
+              <span className="hidden sm:inline">Previous</span>
+              <span className="sm:hidden">←</span>
             </Button>
-            <Button variant="outline" size="sm" onClick={goToToday}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={goToToday}
+              className="bg-teal-50 border-teal-200 text-teal-700 hover:bg-teal-100"
+            >
               Today
             </Button>
             <Button variant="outline" size="sm" onClick={goToNextDay}>
-              Next
+              <span className="hidden sm:inline">Next</span>
+              <span className="sm:hidden">→</span>
             </Button>
           </div>
         </div>
 
-        {/* Main Scheduler */}
-        <div className="flex-1 overflow-hidden p-4">
+        {/* Main Scheduler - Mobile optimized */}
+        <div className="flex-1 overflow-hidden p-2 md:p-4">
           <AppointmentScheduler
             selectedDate={selectedDate}
             onAppointmentMove={handleAppointmentMove}

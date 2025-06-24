@@ -17,7 +17,9 @@ export const SidebarToggle: React.FC = () => {
         console.log('Sidebar toggle clicked');
         toggleSidebar();
       }}
-      className="md:hidden fixed top-4 left-4 z-50 h-10 w-10 p-0 bg-white border shadow-sm hover:bg-gray-50"
+      data-sidebar-toggle="true"
+      className="lg:hidden fixed top-4 left-4 z-50 h-10 w-10 p-0 bg-white border shadow-sm hover:bg-gray-50 transition-colors"
+      aria-label="Toggle sidebar"
     >
       {isOpen ? (
         <X className="h-5 w-5" />

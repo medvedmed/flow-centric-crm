@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
@@ -20,14 +21,31 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   const dateString = format(selectedDate, 'yyyy-MM-dd');
   const { staff, appointments, isLoading, error, staffError, appointmentsError } = useAppointmentData(dateString);
 
-  console.log('AppointmentScheduler - Data:', {
+  // Enhanced data mapping with proper property normalization
+  console.log('AppointmentScheduler - Raw Data:', {
     dateString,
     staffCount: staff?.length || 0,
     appointmentCount: appointments?.length || 0,
     isLoading,
     error,
-    staff: staff?.map(s => ({ id: s.id, name: s.name })),
-    appointments: appointments?.map(a => ({ 
+    rawStaff: staff,
+    rawAppointments: appointments
+  });
+
+  // Normalize appointment data to ensure consistent property names
+  const normalizedAppointments = appointments?.map(apt => ({
+    ...apt,
+    // Ensure camelCase properties are available
+    clientName: apt.clientName || apt.client_name || 'Unknown Client',
+    startTime: apt.startTime || apt.start_time || '09:00',
+    endTime: apt.endTime || apt.end_time || '10:00',
+    staffId: apt.staffId || apt.staff_id || '',
+    clientPhone: apt.clientPhone || apt.client_phone || ''
+  })) || [];
+
+  console.log('AppointmentScheduler - Normalized Data:', {
+    normalizedCount: normalizedAppointments.length,
+    appointments: normalizedAppointments.map(a => ({ 
       id: a.id, 
       client: a.clientName, 
       time: a.startTime,
@@ -41,7 +59,6 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
   const handleAppointmentUpdate = () => {
     console.log('Appointment updated - triggering refresh');
-    // This will be called when appointments are updated to refresh the data
     if (onAppointmentMove) {
       // Trigger any parent refresh logic if needed
     }
@@ -103,7 +120,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     <AppointmentErrorBoundary>
       <EnhancedInteractiveScheduler
         staff={staff || []}
-        appointments={appointments || []}
+        appointments={normalizedAppointments}
         selectedDate={selectedDate}
         onAppointmentUpdate={handleAppointmentUpdate}
       />

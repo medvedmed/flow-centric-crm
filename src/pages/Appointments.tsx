@@ -2,18 +2,16 @@
 import React, { useState } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent } from '@/components/ui/card';
-import { Shield, Calendar, ArrowLeft } from 'lucide-react';
+import { Shield, Calendar } from 'lucide-react';
 import { AppointmentScheduler } from '@/components/AppointmentScheduler';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
 import { SidebarToggle } from '@/components/SidebarToggle';
 import { AppSidebar } from '@/components/AppSidebar';
 
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { hasPermissionSync } = usePermissions();
-  const navigate = useNavigate();
 
   const canViewAppointments = hasPermissionSync('appointments', 'view');
 
@@ -38,11 +36,6 @@ const Appointments = () => {
     setSelectedDate(new Date());
   };
 
-  const goToDashboard = () => {
-    console.log('Navigating to dashboard');
-    navigate('/dashboard');
-  };
-
   if (!canViewAppointments) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -65,20 +58,11 @@ const Appointments = () => {
       {/* Mobile Toggle */}
       <SidebarToggle />
       
-      {/* Main Content - Responsive layout */}
+      {/* Main Content */}
       <div className="flex-1 lg:ml-0 flex flex-col min-w-0">
-        {/* Date Navigation Header - Mobile optimized */}
+        {/* Date Navigation Header */}
         <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={goToDashboard}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 flex-shrink-0"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </Button>
             <div className="flex items-center gap-2 min-w-0">
               <Calendar className="w-5 h-5 text-gray-600 flex-shrink-0" />
               <h1 className="text-sm md:text-lg font-semibold text-gray-900 truncate">
@@ -107,7 +91,7 @@ const Appointments = () => {
           </div>
         </div>
 
-        {/* Main Scheduler - Mobile optimized */}
+        {/* Main Scheduler */}
         <div className="flex-1 overflow-hidden p-2 md:p-4">
           <AppointmentScheduler
             selectedDate={selectedDate}

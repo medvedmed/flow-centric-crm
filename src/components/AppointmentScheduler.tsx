@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
@@ -18,49 +19,20 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 }) => {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const dateString = format(selectedDate, 'yyyy-MM-dd');
-  const { staff, appointments, isLoading, error, staffError, appointmentsError } = useAppointmentData(dateString);
+  const { staff, appointments, isLoading, error } = useAppointmentData(dateString);
 
-  // Enhanced data mapping with proper property normalization
-  console.log('AppointmentScheduler - Raw Data:', {
+  console.log('AppointmentScheduler - Data:', {
     dateString,
     staffCount: staff?.length || 0,
     appointmentCount: appointments?.length || 0,
     isLoading,
-    error,
-    rawStaff: staff,
-    rawAppointments: appointments
+    error
   });
-
-  // Normalize appointment data to ensure consistent property names
-  const normalizedAppointments = appointments?.map(apt => ({
-    ...apt,
-    // Ensure camelCase properties are available (the interface already uses camelCase)
-    clientName: apt.clientName || 'Unknown Client',
-    startTime: apt.startTime || '09:00',
-    endTime: apt.endTime || '10:00',
-    staffId: apt.staffId || '',
-    clientPhone: apt.clientPhone || ''
-  })) || [];
-
-  console.log('AppointmentScheduler - Normalized Data:', {
-    normalizedCount: normalizedAppointments.length,
-    appointments: normalizedAppointments.map(a => ({ 
-      id: a.id, 
-      client: a.clientName, 
-      time: a.startTime,
-      staffId: a.staffId 
-    }))
-  });
-
-  const handleRefresh = () => {
-    window.location.reload();
-  };
 
   const handleAppointmentUpdate = () => {
     console.log('Appointment updated - triggering refresh');
-    if (onAppointmentMove) {
-      // Trigger any parent refresh logic if needed
-    }
+    // Simple refresh without complex logic
+    window.location.reload();
   };
 
   // Show loading if auth is still loading
@@ -106,9 +78,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {staffError ? 'Error loading staff data. ' : ''}
-            {appointmentsError ? 'Error loading appointment data. ' : ''}
-            Please try refreshing the page or contact support if the issue persists.
+            Error loading appointment data. Please try refreshing the page.
           </AlertDescription>
         </Alert>
       </div>
@@ -119,7 +89,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     <AppointmentErrorBoundary>
       <EnhancedInteractiveScheduler
         staff={staff || []}
-        appointments={normalizedAppointments}
+        appointments={appointments || []}
         selectedDate={selectedDate}
         onAppointmentUpdate={handleAppointmentUpdate}
       />

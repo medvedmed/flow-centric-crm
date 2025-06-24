@@ -13,6 +13,7 @@ interface AddAppointmentDialogProps {
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
 export const AddAppointmentDialog: React.FC<AddAppointmentDialogProps> = ({
@@ -21,7 +22,8 @@ export const AddAppointmentDialog: React.FC<AddAppointmentDialogProps> = ({
   selectedStaffId,
   trigger,
   open,
-  onOpenChange
+  onOpenChange,
+  onSuccess
 }) => {
   const [internalOpen, setInternalOpen] = useState(false);
 
@@ -38,6 +40,7 @@ export const AddAppointmentDialog: React.FC<AddAppointmentDialogProps> = ({
 
   const handleSuccess = () => {
     setDialogOpen(false);
+    onSuccess?.();
   };
 
   return (

@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -11,29 +12,6 @@ import { Appointment, Staff } from '@/services/types';
 import { format } from 'date-fns';
 import { AddAppointmentDialog } from './AddAppointmentDialog';
 import { useAppointmentOperations } from '@/hooks/useAppointmentOperations';
-
-interface Appointment {
-  id: string;
-  staffId: string;
-  startTime: string;
-  endTime: string;
-  clientName: string;
-  clientPhone: string;
-  service: string;
-  price: number;
-  status: string;
-  duration: number;
-}
-
-interface Staff {
-  id: string;
-  name: string;
-  image: string;
-  specialties: string[];
-  workingHours: { start: string; end: string };
-  efficiency: number;
-  rating: number;
-}
 
 interface TimeSlot {
   time: string;
@@ -277,7 +255,7 @@ const EnhancedInteractiveScheduler: React.FC<EnhancedInteractiveSchedulerProps> 
       if (targetAppointment) {
         moveAppointment({
           appointmentId: active.id as string,
-          newStaffId: targetAppointment.staffId,
+          newStaffId: targetAppointment.staffId || '',
           newTime: targetAppointment.startTime
         });
       }
@@ -390,12 +368,14 @@ const EnhancedInteractiveScheduler: React.FC<EnhancedInteractiveSchedulerProps> 
         </DragOverlay>
       </DndContext>
 
-      {/* FIXED: Add Appointment Dialog */}
+      {/* FIXED: Add Appointment Dialog with correct props */}
       <AddAppointmentDialog 
-        isOpen={isAddAppointmentOpen}
-        onClose={() => {
-          setIsAddAppointmentOpen(false);
-          setSelectedBookingSlot(null);
+        open={isAddAppointmentOpen}
+        onOpenChange={(open) => {
+          setIsAddAppointmentOpen(open);
+          if (!open) {
+            setSelectedBookingSlot(null);
+          }
         }}
         selectedDate={selectedDate}
         selectedTime={selectedBookingSlot?.time}

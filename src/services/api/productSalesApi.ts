@@ -103,7 +103,7 @@ export const productSalesApi = {
       .from('product_sales')
       .select(`
         *,
-        inventory_items!product_sales_inventory_item_id_fkey (
+        inventory_items (
           name,
           category,
           sku
@@ -144,7 +144,7 @@ export const productSalesApi = {
       .from('product_sales')
       .select(`
         *,
-        inventory_items!product_sales_inventory_item_id_fkey (
+        inventory_items (
           name,
           category
         )

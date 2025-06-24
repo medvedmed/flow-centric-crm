@@ -99,16 +99,10 @@ export const productSalesApi = {
   },
 
   async getSales(startDate?: string, endDate?: string, page = 1, pageSize = 50) {
+    // First get the sales
     let query = supabase
       .from('product_sales')
-      .select(`
-        *,
-        inventory_items (
-          name,
-          category,
-          sku
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (startDate) {
@@ -122,14 +116,37 @@ export const productSalesApi = {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
     
-    const { data, error, count } = await query
+    const { data: sales, error, count } = await query
       .range(from, to)
       .select('*', { count: 'exact' });
 
     if (error) throw error;
+
+    // Then get inventory items for each sale
+    if (sales && sales.length > 0) {
+      const inventoryIds = [...new Set(sales.map(sale => sale.inventory_item_id))];
+      const { data: inventoryItems } = await supabase
+        .from('inventory_items')
+        .select('id, name, category, sku')
+        .in('id', inventoryIds);
+
+      // Map inventory items to sales
+      const salesWithItems = sales.map(sale => ({
+        ...sale,
+        inventory_items: inventoryItems?.find(item => item.id === sale.inventory_item_id) || null
+      }));
+
+      return {
+        data: salesWithItems,
+        count: count || 0,
+        hasMore: (count || 0) > to + 1,
+        page,
+        pageSize
+      };
+    }
     
     return {
-      data: data || [],
+      data: sales || [],
       count: count || 0,
       hasMore: (count || 0) > to + 1,
       page,
@@ -140,20 +157,31 @@ export const productSalesApi = {
   async getTodaysSales() {
     const today = new Date().toISOString().split('T')[0];
     
-    const { data, error } = await supabase
+    // First get today's sales
+    const { data: sales, error } = await supabase
       .from('product_sales')
-      .select(`
-        *,
-        inventory_items (
-          name,
-          category
-        )
-      `)
+      .select('*')
       .eq('sale_date', today)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+
+    if (sales && sales.length > 0) {
+      // Then get inventory items for each sale
+      const inventoryIds = [...new Set(sales.map(sale => sale.inventory_item_id))];
+      const { data: inventoryItems } = await supabase
+        .from('inventory_items')
+        .select('id, name, category')
+        .in('id', inventoryIds);
+
+      // Map inventory items to sales
+      return sales.map(sale => ({
+        ...sale,
+        inventory_items: inventoryItems?.find(item => item.id === sale.inventory_item_id) || null
+      }));
+    }
+
+    return sales || [];
   },
 
   async getSalesStats(startDate?: string, endDate?: string) {

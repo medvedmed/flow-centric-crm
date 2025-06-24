@@ -30,10 +30,10 @@ const Dashboard = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Product sales stats query
+  // Product sales stats query - fix the function call to use no parameters for today's stats
   const { data: todayProductStats } = useQuery({
     queryKey: ['product-sales', 'stats', 'today'],
-    queryFn: () => {
+    queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
       return productSalesApi.getSalesStats(today, today);
     },

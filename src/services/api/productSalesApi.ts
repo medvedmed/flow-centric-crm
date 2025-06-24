@@ -20,6 +20,12 @@ export interface ProductSale {
   created_by?: string;
   created_at: string;
   updated_at: string;
+  inventory_items?: {
+    id: string;
+    name: string;
+    category: string;
+    sku?: string;
+  };
 }
 
 export interface CreateProductSale {
@@ -155,7 +161,7 @@ export const productSalesApi = {
     };
   },
 
-  async getTodaysSales() {
+  async getTodaysSales(): Promise<ProductSale[]> {
     const today = new Date().toISOString().split('T')[0];
     
     // First get today's sales
@@ -179,7 +185,7 @@ export const productSalesApi = {
       return sales.map(sale => ({
         ...sale,
         inventory_items: inventoryItems?.find(item => item.id === sale.inventory_item_id) || null
-      }));
+      })) as ProductSale[];
     }
 
     return sales || [];

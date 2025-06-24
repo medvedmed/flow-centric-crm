@@ -4,20 +4,18 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { useAppointmentData } from '@/hooks/useAppointmentData';
 import { useAuth } from '@/hooks/useAuth';
-import DragDropScheduler from './DragDropScheduler';
+import { SimpleScheduler } from './SimpleScheduler';
 import { AppointmentErrorBoundary } from './AppointmentErrorBoundary';
 import { format } from 'date-fns';
 import { Appointment } from '@/services/types';
 
 interface AppointmentSchedulerProps {
   selectedDate: Date;
-  onAppointmentMove?: (appointmentId: string, newStaffId: string, newTime: string) => void;
   onAppointmentClick?: (appointment: Appointment) => void;
 }
 
 export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   selectedDate,
-  onAppointmentMove,
   onAppointmentClick
 }) => {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -28,14 +26,6 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     window.location.reload();
   };
 
-  const handleAppointmentMove = (appointmentId: string, newStaffId: string, newTime: string) => {
-    console.log('Appointment moved:', { appointmentId, newStaffId, newTime });
-    if (onAppointmentMove) {
-      onAppointmentMove(appointmentId, newStaffId, newTime);
-    }
-  };
-
-  // Show loading if auth is still loading
   if (authLoading) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-white">
@@ -47,7 +37,6 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     );
   }
 
-  // Show auth error if not authenticated
   if (!isAuthenticated) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-white p-8">
@@ -89,13 +78,11 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
   return (
     <AppointmentErrorBoundary>
-      <DragDropScheduler
+      <SimpleScheduler
         staff={staff}
         appointments={appointments}
         selectedDate={selectedDate}
-        onAppointmentMove={handleAppointmentMove}
-        onRefresh={handleRefresh}
-        onAppointmentClick={onAppointmentClick}
+        onAppointmentClick={onAppointmentClick || (() => {})}
       />
     </AppointmentErrorBoundary>
   );

@@ -16,11 +16,6 @@ const Appointments = () => {
 
   const canViewAppointments = hasPermissionSync('appointments', 'view');
 
-  const handleAppointmentMove = (appointmentId: string, newStaffId: string, newTime: string) => {
-    console.log('Appointment move handled:', { appointmentId, newStaffId, newTime });
-    // The actual database update is now handled by the useAppointmentOperations hook
-  };
-
   const handleAppointmentClick = (appointment: Appointment) => {
     setEditingAppointment(appointment);
   };
@@ -85,7 +80,6 @@ const Appointments = () => {
       <div className="flex-1 overflow-hidden">
         <AppointmentScheduler
           selectedDate={selectedDate}
-          onAppointmentMove={handleAppointmentMove}
           onAppointmentClick={handleAppointmentClick}
         />
       </div>

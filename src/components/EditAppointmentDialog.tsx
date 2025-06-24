@@ -43,7 +43,7 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [extraServices, setExtraServices] = useState<ExtraService[]>([]);
-  const [paymentStatus, setPaymentStatus] = useState(appointment?.paymentStatus || 'unpaid');
+  const [paymentStatus, setPaymentStatus] = useState<'paid' | 'unpaid' | 'partial'>(appointment?.paymentStatus || 'unpaid');
   const [paymentMethod, setPaymentMethod] = useState(appointment?.paymentMethod || 'cash');
 
   const { data: services = [] } = useQuery({
@@ -446,7 +446,7 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
             <div className="grid grid-cols-2 gap-4 mt-2">
               <div>
                 <Label htmlFor="payment_status">Payment Status</Label>
-                <Select value={paymentStatus} onValueChange={setPaymentStatus}>
+                <Select value={paymentStatus} onValueChange={(value: 'paid' | 'unpaid' | 'partial') => setPaymentStatus(value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

@@ -45,6 +45,7 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
   const [extraServices, setExtraServices] = useState<ExtraService[]>([]);
   const [paymentStatus, setPaymentStatus] = useState<'paid' | 'unpaid' | 'partial'>(appointment?.paymentStatus || 'unpaid');
   const [paymentMethod, setPaymentMethod] = useState(appointment?.paymentMethod || 'cash');
+  const [basePrice, setBasePrice] = useState(appointment?.price || 0);
 
   const { data: services = [] } = useQuery({
     queryKey: ['services-for-appointment'],
@@ -78,7 +79,6 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
     enabled: !!user && isOpen,
   });
 
-  // Load existing extra services for the appointment
   const { data: existingExtraServices = [] } = useQuery({
     queryKey: ['appointment-extra-services', appointment?.id],
     queryFn: async () => {
@@ -102,30 +102,55 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
   });
 
   useEffect(() => {
-    if (existingExtraServices.length > 0) {
-      setExtraServices(existingExtraServices);
-    }
     if (appointment) {
+      setExtraServices(existingExtraServices);
       setPaymentStatus(appointment.paymentStatus || 'unpaid');
       setPaymentMethod(appointment.paymentMethod || 'cash');
+      setBasePrice(appointment.price || 0);
     }
-  }, [existingExtraServices, appointment]);
+  }, [appointment, existingExtraServices]);
 
   const updateAppointmentMutation = useMutation({
     mutationFn: async (appointmentData: any) => {
+      console.log('Updating appointment with data:', appointmentData);
+      
+      // Calculate total price properly
+      const totalExtraPrice = extraServices.reduce((sum, service) => sum + Number(service.price), 0);
+      const finalPrice = Number(appointmentData.price) + totalExtraPrice;
+      
+      console.log('Price calculation:', {
+        basePrice: appointmentData.price,
+        extraPrice: totalExtraPrice,
+        finalPrice
+      });
+
       const { data: updatedAppointment, error: appointmentError } = await supabase
         .from('appointments')
         .update({
-          ...appointmentData,
+          client_name: appointmentData.client_name,
+          client_phone: appointmentData.client_phone,
+          service: appointmentData.service,
+          staff_id: appointmentData.staff_id,
+          date: appointmentData.date,
+          start_time: appointmentData.start_time,
+          end_time: appointmentData.end_time,
+          price: finalPrice,
+          duration: appointmentData.duration + extraServices.reduce((sum, service) => sum + Number(service.duration), 0),
+          status: appointmentData.status,
+          notes: appointmentData.notes,
           payment_status: paymentStatus,
           payment_method: paymentMethod,
-          payment_date: paymentStatus === 'paid' ? new Date().toISOString() : null
+          payment_date: paymentStatus === 'paid' ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString()
         })
         .eq('id', appointment?.id)
         .select()
         .single();
       
-      if (appointmentError) throw appointmentError;
+      if (appointmentError) {
+        console.error('Appointment update error:', appointmentError);
+        throw appointmentError;
+      }
 
       // Handle extra services
       if (extraServices.length > 0) {
@@ -139,8 +164,8 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
         const serviceInserts = extraServices.map(service => ({
           appointment_id: appointment?.id,
           service_name: service.name,
-          service_price: service.price,
-          service_duration: service.duration,
+          service_price: Number(service.price),
+          service_duration: Number(service.duration),
           staff_id: appointmentData.staff_id
         }));
 
@@ -148,23 +173,21 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
           .from('appointment_services')
           .insert(serviceInserts);
         
-        if (servicesError) throw servicesError;
-
-        // Update appointment total price
-        const totalExtraPrice = extraServices.reduce((sum, service) => sum + service.price, 0);
-        const { error: priceUpdateError } = await supabase
-          .from('appointments')
-          .update({
-            price: appointmentData.price + totalExtraPrice
-          })
-          .eq('id', appointment?.id);
-        
-        if (priceUpdateError) throw priceUpdateError;
+        if (servicesError) {
+          console.error('Services insert error:', servicesError);
+          throw servicesError;
+        }
+      } else {
+        // Clean up extra services if none selected
+        await supabase
+          .from('appointment_services')
+          .delete()
+          .eq('appointment_id', appointment?.id);
       }
 
       // Create financial transaction if payment status changed to paid
       if (paymentStatus === 'paid' && appointment?.paymentStatus !== 'paid') {
-        const totalPrice = appointmentData.price + extraServices.reduce((sum, service) => sum + service.price, 0);
+        console.log('Creating financial transaction for payment');
         
         const { error: transactionError } = await supabase
           .from('financial_transactions')
@@ -172,7 +195,7 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
             salon_id: user?.id,
             transaction_type: 'income',
             category: 'Service Revenue',
-            amount: totalPrice,
+            amount: finalPrice,
             description: `Payment for ${appointmentData.service} - ${appointmentData.client_name}`,
             payment_method: paymentMethod,
             reference_id: appointment?.id,
@@ -189,6 +212,7 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
       return updatedAppointment;
     },
     onSuccess: () => {
+      console.log('Appointment updated successfully');
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['enhanced-schedule-appointments'] });
       queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
@@ -198,6 +222,7 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
       setExtraServices([]);
     },
     onError: (error) => {
+      console.error('Update appointment error:', error);
       toast({ title: "Error", description: "Failed to update appointment", variant: "destructive" });
     },
   });
@@ -221,6 +246,7 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
       notes: formData.get('notes') as string,
     };
 
+    console.log('Submitting appointment data:', appointmentData);
     updateAppointmentMutation.mutate(appointmentData);
   };
 
@@ -235,8 +261,10 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
     setExtraServices(prev => prev.filter(s => s.id !== serviceId));
   };
 
-  const totalExtraPrice = extraServices.reduce((sum, service) => sum + service.price, 0);
-  const totalExtraDuration = extraServices.reduce((sum, service) => sum + service.duration, 0);
+  // Calculate totals with proper number handling
+  const totalExtraPrice = extraServices.reduce((sum, service) => sum + Number(service.price || 0), 0);
+  const totalExtraDuration = extraServices.reduce((sum, service) => sum + Number(service.duration || 0), 0);
+  const finalTotalPrice = Number(basePrice || 0) + totalExtraPrice;
 
   if (!appointment) return null;
 
@@ -344,7 +372,8 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
                 name="price"
                 type="number"
                 step="0.01"
-                defaultValue={appointment.price}
+                value={basePrice}
+                onChange={(e) => setBasePrice(Number(e.target.value) || 0)}
                 required
               />
             </div>
@@ -412,7 +441,7 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary">${service.price}</Badge>
+                      <Badge variant="secondary">${Number(service.price).toFixed(2)}</Badge>
                       <Button
                         type="button"
                         variant="ghost"
@@ -485,15 +514,31 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
             />
           </div>
 
-          {/* Total Summary */}
+          {/* Total Summary - Fixed Calculator */}
           <div className="bg-blue-50 p-4 rounded-lg">
             <div className="flex justify-between items-center text-lg font-semibold">
               <span>Total Amount:</span>
-              <span>${(appointment.price + totalExtraPrice).toFixed(2)}</span>
+              <span>${finalTotalPrice.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center text-sm text-gray-600 mt-1">
+              <span>Base Price:</span>
+              <span>${Number(basePrice).toFixed(2)}</span>
+            </div>
+            {totalExtraPrice > 0 && (
+              <div className="flex justify-between items-center text-sm text-gray-600">
+                <span>Extra Services:</span>
+                <span>+${totalExtraPrice.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center text-sm text-gray-600 mt-1">
               <span>Total Duration:</span>
-              <span>{appointment.duration + totalExtraDuration} minutes</span>
+              <span>{(appointment.duration || 60) + totalExtraDuration} minutes</span>
+            </div>
+            <div className="flex justify-between items-center text-sm font-medium mt-2 pt-2 border-t">
+              <span>Payment Status:</span>
+              <Badge variant={paymentStatus === 'paid' ? 'default' : 'destructive'}>
+                {paymentStatus.toUpperCase()}
+              </Badge>
             </div>
           </div>
 

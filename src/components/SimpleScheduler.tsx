@@ -44,6 +44,12 @@ const statusColors = {
   'No Show': 'bg-orange-50 border-l-orange-500 text-orange-900'
 };
 
+const paymentStatusColors = {
+  'paid': 'bg-green-100 text-green-800',
+  'unpaid': 'bg-red-100 text-red-800',
+  'partial': 'bg-yellow-100 text-yellow-800'
+};
+
 export const SimpleScheduler: React.FC<SimpleSchedulerProps> = ({
   staff,
   appointments,
@@ -58,6 +64,11 @@ export const SimpleScheduler: React.FC<SimpleSchedulerProps> = ({
       const normalizedStartTime = normalizeTime(apt.startTime);
       return apt.staffId === staffId && normalizedStartTime === normalizedTime;
     });
+  };
+
+  const handleAppointmentClick = (appointment: Appointment) => {
+    console.log('Appointment clicked:', appointment);
+    onAppointmentClick(appointment);
   };
 
   if (staff.length === 0) {
@@ -148,7 +159,7 @@ export const SimpleScheduler: React.FC<SimpleSchedulerProps> = ({
                       {slotAppointments.map(appointment => (
                         <div
                           key={appointment.id}
-                          onClick={() => onAppointmentClick(appointment)}
+                          onClick={() => handleAppointmentClick(appointment)}
                           className={`cursor-pointer w-full rounded-md border-l-4 p-2 mb-1 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
                             statusColors[appointment.status as keyof typeof statusColors] || statusColors.Scheduled
                           }`}
@@ -175,7 +186,9 @@ export const SimpleScheduler: React.FC<SimpleSchedulerProps> = ({
                               <p className="text-xs text-gray-700 truncate flex-1">{appointment.service}</p>
                               <div className="flex items-center gap-1 flex-shrink-0 ml-2">
                                 <DollarSign className="w-3 h-3 text-green-600" />
-                                <span className="text-xs font-medium text-green-600">${appointment.price}</span>
+                                <span className="text-xs font-medium text-green-600">
+                                  ${Number(appointment.price || 0).toFixed(0)}
+                                </span>
                               </div>
                             </div>
 
@@ -183,6 +196,20 @@ export const SimpleScheduler: React.FC<SimpleSchedulerProps> = ({
                               <div className="flex items-center gap-1 min-w-0">
                                 <Phone className="w-3 h-3 text-gray-500 flex-shrink-0" />
                                 <span className="text-xs text-gray-500 truncate">{appointment.clientPhone}</span>
+                              </div>
+                            )}
+
+                            {/* Payment Status Indicator */}
+                            {appointment.paymentStatus && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-gray-500">Payment:</span>
+                                <Badge 
+                                  className={`text-xs px-1 py-0 ${
+                                    paymentStatusColors[appointment.paymentStatus as keyof typeof paymentStatusColors] || 'bg-gray-100 text-gray-800'
+                                  }`}
+                                >
+                                  {appointment.paymentStatus?.toUpperCase()}
+                                </Badge>
                               </div>
                             )}
                           </div>

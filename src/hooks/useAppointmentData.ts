@@ -62,12 +62,12 @@ export const useAppointmentData = (date: string) => {
       console.log('Processed staff data:', mappedStaff.length, 'staff members');
       return mappedStaff;
     },
-    staleTime: 30 * 1000, // Reduce to 30 seconds for more real-time feel
+    staleTime: 30 * 1000,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
-  // Fetch appointments with better filtering and error handling
+  // Fetch appointments with proper payment field mapping
   const { data: appointments = [], isLoading: appointmentsLoading, error: appointmentsError } = useQuery({
     queryKey: ['appointments', date],
     queryFn: async (): Promise<Appointment[]> => {
@@ -75,15 +75,6 @@ export const useAppointmentData = (date: string) => {
       if (!user) throw new Error('Not authenticated');
 
       console.log('Fetching appointments for date:', date, 'salon:', user.id);
-
-      // First, let's check what data exists
-      const { data: allAppointments } = await supabase
-        .from('appointments')
-        .select('*')
-        .eq('salon_id', user.id);
-      
-      console.log('Total appointments in database:', allAppointments?.length || 0);
-      console.log('Sample appointments:', allAppointments?.slice(0, 3));
 
       const { data, error } = await supabase
         .from('appointments')
@@ -114,6 +105,9 @@ export const useAppointmentData = (date: string) => {
         status: appointment.status as Appointment['status'],
         notes: appointment.notes,
         salonId: appointment.salon_id,
+        paymentStatus: appointment.payment_status || 'unpaid',
+        paymentMethod: appointment.payment_method,
+        paymentDate: appointment.payment_date,
         createdAt: appointment.created_at,
         updatedAt: appointment.updated_at
       })) || [];
@@ -121,7 +115,7 @@ export const useAppointmentData = (date: string) => {
       console.log('Final processed appointments:', mappedAppointments.length);
       return mappedAppointments;
     },
-    staleTime: 15 * 1000, // 15 seconds for more real-time updates
+    staleTime: 15 * 1000,
     refetchInterval: 30 * 1000,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),

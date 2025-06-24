@@ -13,20 +13,24 @@ import { format, isToday, isTomorrow } from 'date-fns';
 const Dashboard = () => {
   const { user } = useAuth();
 
-  const { data: dashboardStats, isLoading } = useQuery({
+  const { data: dashboardStats, isLoading, refetch } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
+      console.log('Fetching dashboard stats...');
       const today = new Date().toISOString().split('T')[0];
       const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-      // Get today's appointments
+      // Get today's appointments with all fields
       const { data: todayAppointments, error: todayError } = await supabase
         .from('appointments')
-        .select('*')
+        .select('*, staff!appointments_staff_id_fkey(name)')
         .eq('salon_id', user?.id)
         .eq('date', today);
 
-      if (todayError) throw todayError;
+      if (todayError) {
+        console.error('Today appointments error:', todayError);
+        throw todayError;
+      }
 
       // Get tomorrow's appointments
       const { data: tomorrowAppointments, error: tomorrowError } = await supabase
@@ -35,28 +39,35 @@ const Dashboard = () => {
         .eq('salon_id', user?.id)
         .eq('date', tomorrow);
 
-      if (tomorrowError) throw tomorrowError;
+      if (tomorrowError) {
+        console.error('Tomorrow appointments error:', tomorrowError);
+        throw tomorrowError;
+      }
 
-      // Get this month's revenue from completed appointments
+      // Get this month's revenue from financial transactions (more accurate)
       const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-      const { data: monthlyRevenue, error: revenueError } = await supabase
-        .from('appointments')
-        .select('price')
+      const { data: monthlyTransactions, error: revenueError } = await supabase
+        .from('financial_transactions')
+        .select('amount')
         .eq('salon_id', user?.id)
-        .eq('status', 'Completed')
-        .gte('date', startOfMonth);
+        .eq('transaction_type', 'income')
+        .gte('transaction_date', startOfMonth);
 
-      if (revenueError) throw revenueError;
+      if (revenueError) {
+        console.error('Monthly revenue error:', revenueError);
+      }
 
-      // Get pending payments
+      // Get pending payments (unpaid completed appointments)
       const { data: pendingPayments, error: pendingError } = await supabase
         .from('appointments')
-        .select('price, client_name')
+        .select('price, client_name, service, date')
         .eq('salon_id', user?.id)
         .eq('status', 'Completed')
         .eq('payment_status', 'unpaid');
 
-      if (pendingError) throw pendingError;
+      if (pendingError) {
+        console.error('Pending payments error:', pendingError);
+      }
 
       // Get total clients
       const { count: totalClients, error: clientsError } = await supabase
@@ -64,35 +75,61 @@ const Dashboard = () => {
         .select('*', { count: 'exact', head: true })
         .eq('salon_id', user?.id);
 
-      if (clientsError) throw clientsError;
+      if (clientsError) {
+        console.error('Clients count error:', clientsError);
+      }
 
       // Get low stock items
       const { data: lowStockItems, error: stockError } = await supabase
         .from('inventory_items')
         .select('*')
         .eq('salon_id', user?.id)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .lte('current_stock', 'minimum_stock');
 
-      if (stockError) throw stockError;
+      if (stockError) {
+        console.error('Low stock error:', stockError);
+      }
 
-      const lowStock = lowStockItems?.filter(item => 
-        item.current_stock <= item.minimum_stock
-      ) || [];
+      const lowStock = lowStockItems || [];
+
+      // Calculate today's revenue from completed appointments
+      const todayRevenue = todayAppointments
+        ?.filter(apt => apt.status === 'Completed')
+        ?.reduce((sum, apt) => sum + (Number(apt.price) || 0), 0) || 0;
+
+      // Calculate monthly revenue
+      const monthlyRevenue = monthlyTransactions?.reduce((sum, txn) => sum + (Number(txn.amount) || 0), 0) || 0;
+
+      // Calculate pending payments total
+      const totalPendingPayments = pendingPayments?.reduce((sum, payment) => sum + (Number(payment.price) || 0), 0) || 0;
+
+      console.log('Dashboard stats calculated:', {
+        todayAppointments: todayAppointments?.length || 0,
+        todayRevenue,
+        monthlyRevenue,
+        totalPendingPayments,
+        lowStockCount: lowStock.length
+      });
 
       return {
         todayAppointments: todayAppointments || [],
         tomorrowAppointments: tomorrowAppointments || [],
-        monthlyRevenue: monthlyRevenue?.reduce((sum, apt) => sum + (apt.price || 0), 0) || 0,
+        todayRevenue,
+        monthlyRevenue,
         pendingPayments: pendingPayments || [],
+        totalPendingPayments,
         totalClients: totalClients || 0,
         lowStockCount: lowStock.length,
-        lowStockItems: lowStock.slice(0, 3) // Show first 3 low stock items
+        lowStockItems: lowStock.slice(0, 3)
       };
     },
     enabled: !!user,
-    refetchInterval: 15000, // Refresh every 15 seconds for more real-time feel
+    refetchInterval: 15000, // Refresh every 15 seconds
+    staleTime: 5000, // Consider data stale after 5 seconds
   });
 
+  // Get upcoming appointments for the sidebar
   const { data: upcomingAppointments = [] } = useQuery({
     queryKey: ['upcoming-appointments'],
     queryFn: async () => {
@@ -100,9 +137,7 @@ const Dashboard = () => {
       
       const { data, error } = await supabase
         .from('appointments')
-        .select(`
-          *
-        `)
+        .select('*, staff!appointments_staff_id_fkey(name)')
         .eq('salon_id', user?.id)
         .gte('date', today)
         .in('status', ['Scheduled', 'Confirmed'])
@@ -110,28 +145,35 @@ const Dashboard = () => {
         .order('start_time')
         .limit(5);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Upcoming appointments error:', error);
+        throw error;
+      }
 
-      // Get staff names separately
-      const staffIds = [...new Set(data.map(apt => apt.staff_id).filter(Boolean))];
-      const { data: staffData } = await supabase
-        .from('staff')
-        .select('id, name')
-        .in('id', staffIds);
-
-      // Enrich appointments with staff names
-      const enrichedData = data.map(appointment => ({
-        ...appointment,
-        staff_name: staffData?.find(s => s.id === appointment.staff_id)?.name || 'Unassigned'
-      }));
-
-      return enrichedData;
+      return data || [];
     },
     enabled: !!user,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
-  const totalPendingPayments = dashboardStats?.pendingPayments?.reduce((sum, payment) => sum + (payment.price || 0), 0) || 0;
+  // Force refresh data when payment updates happen
+  React.useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => {
+        console.log('Appointment updated, refreshing dashboard...');
+        refetch();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'financial_transactions' }, () => {
+        console.log('Financial transaction updated, refreshing dashboard...');
+        refetch();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
 
   if (isLoading) {
     return (
@@ -190,7 +232,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${dashboardStats?.monthlyRevenue.toFixed(2) || '0.00'}
+              ${dashboardStats?.monthlyRevenue?.toFixed(2) || '0.00'}
             </div>
             <p className="text-xs text-muted-foreground">
               This month's earnings
@@ -205,7 +247,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-600">
-              ${totalPendingPayments.toFixed(2)}
+              ${dashboardStats?.totalPendingPayments?.toFixed(2) || '0.00'}
             </div>
             <p className="text-xs text-muted-foreground">
               {dashboardStats?.pendingPayments?.length || 0} unpaid appointments
@@ -242,7 +284,7 @@ const Dashboard = () => {
             {dashboardStats?.lowStockItems && dashboardStats.lowStockItems.length > 0 && (
               <div className="mt-2 text-xs text-red-600">
                 {dashboardStats.lowStockItems.map(item => item.name).join(', ')}
-                {dashboardStats.lowStockCount > 3 && ` +${dashboardStats.lowStockCount - 3} more`}
+                {(dashboardStats.lowStockCount || 0) > 3 && ` +${dashboardStats.lowStockCount - 3} more`}
               </div>
             )}
           </CardContent>
@@ -255,10 +297,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              ${dashboardStats?.todayAppointments
-                .filter(apt => apt.status === 'Completed')
-                .reduce((sum, apt) => sum + (apt.price || 0), 0)
-                .toFixed(2) || '0.00'}
+              ${dashboardStats?.todayRevenue?.toFixed(2) || '0.00'}
             </div>
             <p className="text-xs text-muted-foreground">
               From completed appointments
@@ -291,7 +330,7 @@ const Dashboard = () => {
                     <div>
                       <div className="font-medium">{appointment.client_name}</div>
                       <div className="text-sm text-muted-foreground">
-                        {appointment.service} with {appointment.staff_name}
+                        {appointment.service} with {appointment.staff?.name || 'Unassigned'}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {format(new Date(appointment.date), 'MMM dd')} at {appointment.start_time}
@@ -309,7 +348,7 @@ const Dashboard = () => {
                         )}
                       </div>
                       <div className="text-sm font-medium">
-                        ${appointment.price?.toFixed(2) || '0.00'}
+                        ${Number(appointment.price || 0).toFixed(2)}
                       </div>
                     </div>
                   </div>

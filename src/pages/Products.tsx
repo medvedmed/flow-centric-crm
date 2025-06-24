@@ -56,10 +56,10 @@ const Products = () => {
   });
 
   const createProductMutation = useMutation({
-    mutationFn: async (productData: Partial<Product>) => {
+    mutationFn: async (productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
       const { data, error } = await supabase
         .from('products')
-        .insert([{ ...productData, salon_id: user?.id }])
+        .insert({ ...productData, salon_id: user?.id })
         .select()
         .single();
       
@@ -125,6 +125,7 @@ const Products = () => {
       maximum_stock: parseInt(formData.get('maximum_stock') as string) || null,
       supplier_name: formData.get('supplier_name') as string,
       supplier_contact: formData.get('supplier_contact') as string,
+      is_active: true,
     };
 
     if (editingProduct) {

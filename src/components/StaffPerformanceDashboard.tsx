@@ -30,19 +30,30 @@ export const StaffPerformanceDashboard = () => {
       const { data, error } = await supabase
         .from('staff_performance')
         .select(`
-          *,
-          staff!inner(name)
+          *
         `)
         .eq('salon_id', user?.id)
         .eq('month', currentMonth)
         .order('total_revenue', { ascending: false });
       
       if (error) throw error;
-      
-      return data.map(item => ({
+
+      // Get staff names separately
+      const staffIds = data.map(item => item.staff_id);
+      const { data: staffData, error: staffError } = await supabase
+        .from('staff')
+        .select('id, name')
+        .in('id', staffIds);
+
+      if (staffError) throw staffError;
+
+      // Combine the data
+      const enrichedData = data.map(item => ({
         ...item,
-        staff_name: item.staff.name
-      })) as StaffPerformance[];
+        staff_name: staffData.find(s => s.id === item.staff_id)?.name || 'Unknown'
+      }));
+
+      return enrichedData as StaffPerformance[];
     },
     enabled: !!user,
   });
@@ -59,8 +70,7 @@ export const StaffPerformanceDashboard = () => {
           staff_id,
           client_id,
           client_name,
-          date,
-          staff!inner(name)
+          date
         `)
         .eq('salon_id', user?.id)
         .eq('status', 'Completed')
@@ -69,13 +79,20 @@ export const StaffPerformanceDashboard = () => {
 
       if (error) throw error;
 
+      // Get staff names
+      const staffIds = [...new Set(data.map(item => item.staff_id))];
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('id, name')
+        .in('id', staffIds);
+
       // Categorize clients by staff
       const staffClientMap = new Map();
       
       data.forEach(appointment => {
         const staffId = appointment.staff_id;
         const clientId = appointment.client_id;
-        const staffName = appointment.staff.name;
+        const staffName = staffData?.find(s => s.id === staffId)?.name || 'Unknown';
         
         if (!staffClientMap.has(staffId)) {
           staffClientMap.set(staffId, {
@@ -87,26 +104,26 @@ export const StaffPerformanceDashboard = () => {
           });
         }
         
-        const staffData = staffClientMap.get(staffId);
+        const staffData_item = staffClientMap.get(staffId);
         
-        if (!staffData.clients.has(clientId)) {
-          staffData.clients.set(clientId, {
+        if (!staffData_item.clients.has(clientId)) {
+          staffData_item.clients.set(clientId, {
             name: appointment.client_name,
             visits: 0,
             first_visit: appointment.date
           });
         }
         
-        staffData.clients.get(clientId).visits++;
+        staffData_item.clients.get(clientId).visits++;
       });
 
       // Calculate categorization
       const result = [];
-      for (const [staffId, staffData] of staffClientMap) {
+      for (const [staffId, staffData_item] of staffClientMap) {
         let newClients = 0;
         let regularClients = 0;
         
-        for (const [clientId, clientData] of staffData.clients) {
+        for (const [clientId, clientData] of staffData_item.clients) {
           if (clientData.visits === 1) {
             newClients++;
           } else {
@@ -116,8 +133,8 @@ export const StaffPerformanceDashboard = () => {
         
         result.push({
           staff_id: staffId,
-          staff_name: staffData.staff_name,
-          total_clients: staffData.clients.size,
+          staff_name: staffData_item.staff_name,
+          total_clients: staffData_item.clients.size,
           new_clients: newClients,
           regular_clients: regularClients
         });
@@ -161,6 +178,11 @@ export const StaffPerformanceDashboard = () => {
                 </div>
               </div>
             ))}
+            {performanceData.length === 0 && (
+              <p className="text-center text-muted-foreground py-4">
+                No performance data available for this month
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -192,6 +214,11 @@ export const StaffPerformanceDashboard = () => {
                 </div>
               </div>
             ))}
+            {clientCategorizationData.length === 0 && (
+              <p className="text-center text-muted-foreground py-4">
+                No client data available for the last 30 days
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

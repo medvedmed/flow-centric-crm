@@ -7,15 +7,18 @@ import { useAuth } from '@/hooks/useAuth';
 import DragDropScheduler from './DragDropScheduler';
 import { AppointmentErrorBoundary } from './AppointmentErrorBoundary';
 import { format } from 'date-fns';
+import { Appointment } from '@/services/types';
 
 interface AppointmentSchedulerProps {
   selectedDate: Date;
   onAppointmentMove?: (appointmentId: string, newStaffId: string, newTime: string) => void;
+  onAppointmentClick?: (appointment: Appointment) => void;
 }
 
 export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   selectedDate,
-  onAppointmentMove
+  onAppointmentMove,
+  onAppointmentClick
 }) => {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const dateString = format(selectedDate, 'yyyy-MM-dd');
@@ -92,6 +95,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         selectedDate={selectedDate}
         onAppointmentMove={handleAppointmentMove}
         onRefresh={handleRefresh}
+        onAppointmentClick={onAppointmentClick}
       />
     </AppointmentErrorBoundary>
   );

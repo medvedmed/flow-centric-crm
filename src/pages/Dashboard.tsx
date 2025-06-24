@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -88,8 +89,7 @@ const Dashboard = () => {
       const { data, error } = await supabase
         .from('appointments')
         .select(`
-          *,
-          staff!inner(name)
+          *
         `)
         .eq('salon_id', user?.id)
         .gte('date', today)
@@ -99,7 +99,21 @@ const Dashboard = () => {
         .limit(5);
 
       if (error) throw error;
-      return data;
+
+      // Get staff names separately
+      const staffIds = [...new Set(data.map(apt => apt.staff_id).filter(Boolean))];
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('id, name')
+        .in('id', staffIds);
+
+      // Enrich appointments with staff names
+      const enrichedData = data.map(appointment => ({
+        ...appointment,
+        staff_name: staffData?.find(s => s.id === appointment.staff_id)?.name || 'Unassigned'
+      }));
+
+      return enrichedData;
     },
     enabled: !!user,
   });
@@ -207,7 +221,7 @@ const Dashboard = () => {
                     <div>
                       <div className="font-medium">{appointment.client_name}</div>
                       <div className="text-sm text-muted-foreground">
-                        {appointment.service} with {appointment.staff?.name}
+                        {appointment.service} with {appointment.staff_name}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {format(new Date(appointment.date), 'MMM dd')} at {appointment.start_time}

@@ -1,264 +1,171 @@
-
+import React from 'react';
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-} from "@/components/ui/sidebar";
-import { Badge } from "@/components/ui/badge";
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  Users, 
-  Scissors,
-  Package,
+  Home,
+  Calendar,
+  Users,
   UserCheck,
-  FileText,
+  Package,
+  BarChart3,
   Settings,
   HelpCircle,
-  Sparkles,
-  Shield
-} from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
-import { usePermissions } from "@/hooks/usePermissions";
-import { PermissionArea } from "@/services/permissionApi";
+  DollarSign,
+  Package2
+} from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import { useSidebar } from '@/hooks/useSidebar';
+import { useAuth } from '@/hooks/useAuth';
+import { Skeleton } from "@/components/ui/skeleton"
+import PermissionGate from "./PermissionGate";
 
-interface NavItem {
+interface NavItemProps {
   title: string;
   url: string;
-  icon: React.ComponentType<{ className?: string }>;
-  requiredArea: PermissionArea;
-  requiredAction: 'view' | 'create' | 'edit' | 'delete';
-  roles?: string[]; // Optional: restrict to specific roles
+  icon: React.ComponentType<any>;
+  requiredPermission: {
+    area:
+      | "dashboard"
+      | "appointments"
+      | "clients"
+      | "staff_management"
+      | "services"
+      | "inventory"
+      | "reports"
+      | "settings"
+      | "schedule_management"
+      | "time_off_requests";
+    action: "view" | "create" | "edit" | "delete";
+  };
 }
 
-const mainMenuItems: NavItem[] = [
+const navigationItems = [
   {
     title: "Dashboard",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-    requiredArea: "dashboard",
-    requiredAction: "view"
+    url: "/",
+    icon: Home,
+    requiredPermission: { area: "dashboard" as const, action: "view" as const }
   },
   {
     title: "Appointments",
-    url: "/appointments",
+    url: "/appointments", 
     icon: Calendar,
-    requiredArea: "appointments",
-    requiredAction: "view"
+    requiredPermission: { area: "appointments" as const, action: "view" as const }
   },
   {
-    title: "Clients", 
+    title: "Clients",
     url: "/clients",
     icon: Users,
-    requiredArea: "clients",
-    requiredAction: "view"
-  },
-  {
-    title: "Services",
-    url: "/services", 
-    icon: Scissors,
-    requiredArea: "services",
-    requiredAction: "view",
-    roles: ["salon_owner", "manager"] // Hide from staff/receptionist
+    requiredPermission: { area: "clients" as const, action: "view" as const }
   },
   {
     title: "Staff",
     url: "/staff",
     icon: UserCheck,
-    requiredArea: "staff_management",
-    requiredAction: "view",
-    roles: ["salon_owner", "manager"] // Only owners and managers
+    requiredPermission: { area: "staff_management" as const, action: "view" as const }
+  },
+  {
+    title: "Services",
+    url: "/services",
+    icon: Package,
+    requiredPermission: { area: "services" as const, action: "view" as const }
+  },
+  {
+    title: "Finance",
+    url: "/finance",
+    icon: DollarSign,
+    requiredPermission: { area: "reports" as const, action: "view" as const }
   },
   {
     title: "Inventory",
     url: "/inventory",
-    icon: Package,
-    requiredArea: "inventory",
-    requiredAction: "view",
-    roles: ["salon_owner", "manager"] // Hide from staff/receptionist
+    icon: Package2,
+    requiredPermission: { area: "inventory" as const, action: "view" as const }
   },
   {
     title: "Reports",
     url: "/reports",
-    icon: FileText,
-    requiredArea: "reports",
-    requiredAction: "view",
-    roles: ["salon_owner", "manager", "receptionist"] // Staff can't see reports
+    icon: BarChart3,
+    requiredPermission: { area: "reports" as const, action: "view" as const }
   },
-];
-
-const adminMenuItems: NavItem[] = [
   {
     title: "Settings",
     url: "/settings",
     icon: Settings,
-    requiredArea: "settings",
-    requiredAction: "view",
-    roles: ["salon_owner", "manager"] // Only owners and managers
+    requiredPermission: { area: "settings" as const, action: "view" as const }
   },
   {
-    title: "Help & Support",
+    title: "Help",
     url: "/help",
     icon: HelpCircle,
-    requiredArea: "dashboard",
-    requiredAction: "view"
-  },
+    requiredPermission: { area: "dashboard" as const, action: "view" as const }
+  }
 ];
 
-const getRoleBadgeColor = (role: string) => {
-  switch (role) {
-    case 'salon_owner':
-      return 'bg-gradient-to-r from-purple-500 to-purple-600 text-white';
-    case 'manager':
-      return 'bg-gradient-to-r from-blue-500 to-blue-600 text-white';
-    case 'staff':
-      return 'bg-gradient-to-r from-green-500 to-green-600 text-white';
-    case 'receptionist':
-      return 'bg-gradient-to-r from-orange-500 to-orange-600 text-white';
-    default:
-      return 'bg-gray-500 text-white';
-  }
-};
-
-const getRoleDisplayName = (role: string) => {
-  switch (role) {
-    case 'salon_owner':
-      return 'Owner';
-    case 'manager':
-      return 'Manager';
-    case 'staff':
-      return 'Staff';
-    case 'receptionist':
-      return 'Receptionist';
-    default:
-      return 'User';
-  }
-};
-
-export function AppSidebar() {
-  const location = useLocation();
-  const { hasPermissionSync, userRole, roleLoading } = usePermissions();
-
-  const getAccessibleItems = (items: NavItem[]) => {
-    if (roleLoading) return [];
-    return items.filter(item => {
-      // Check permission first
-      const hasPermission = hasPermissionSync(item.requiredArea, item.requiredAction);
-      if (!hasPermission) return false;
-      
-      // Check role restriction if specified
-      if (item.roles && userRole) {
-        return item.roles.includes(userRole);
-      }
-      
-      return true;
-    });
-  };
-
-  const accessibleMainItems = getAccessibleItems(mainMenuItems);
-  const accessibleAdminItems = getAccessibleItems(adminMenuItems);
+export const AppSidebar: React.FC = () => {
+  const { isOpen, toggleSidebar } = useSidebar();
+  const { isLoading } = useAuth();
 
   return (
-    <Sidebar className="border-r bg-white/95 backdrop-blur-sm">
-      <SidebarHeader className="border-b p-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center">
-            <Sparkles className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-teal-500 to-cyan-600 bg-clip-text text-transparent">
-              Aura Platform
-            </h1>
-            <p className="text-sm text-muted-foreground">Salon Management</p>
-          </div>
-        </div>
-      </SidebarHeader>
-      
-      <SidebarContent className="p-4">
-        {accessibleMainItems.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              {userRole === 'staff' ? 'My Work' : 
-               userRole === 'receptionist' ? 'Front Desk' : 
-               'Salon Management'}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {accessibleMainItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton 
-                      asChild 
-                      isActive={location.pathname === item.url}
-                      className="hover:bg-teal-50 hover:text-teal-700 data-[state=open]:bg-teal-50 data-[state=open]:text-teal-700"
-                    >
-                      <Link to={item.url} className="flex items-center gap-3">
-                        <item.icon className="w-5 h-5" />
-                        <span className="font-medium">{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+    <aside
+      className={`fixed left-0 top-0 z-50 flex h-full flex-col overflow-y-auto border-r bg-secondary transition-transform duration-300 ease-in-out ${
+        isOpen ? 'w-64 translate-x-0' : '-translate-x-full w-0'
+      } lg:translate-x-0 lg:w-64`}
+    >
+      <div className="flex h-16 shrink-0 items-center px-4">
+        <button
+          onClick={toggleSidebar}
+          className="mr-2 inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:bg-muted lg:hidden"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-6 w-6"
+          >
+            <path d="M3 6h18" />
+            <path d="M3 12h18" />
+            <path d="M3 18h18" />
+          </svg>
+          <span className="sr-only">Toggle Menu</span>
+        </button>
+        <span className="font-semibold text-2xl">CRM</span>
+      </div>
+      <nav className="flex flex-1 flex-col space-y-1 p-2">
+        {isLoading ? (
+          <>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-9 rounded-md" />
+            ))}
+          </>
+        ) : (
+          <>
+            {navigationItems.map((item) => (
+              <PermissionGate
+                key={item.title}
+                area={item.requiredPermission.area}
+                action={item.requiredPermission.action}
+              >
+                <NavLink
+                  to={item.url}
+                  className={({ isActive }) =>
+                    `flex items-center space-x-2 rounded-md p-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground ${
+                      isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                    }`
+                  }
+                >
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.title}</span>
+                </NavLink>
+              </PermissionGate>
+            ))}
+          </>
         )}
-
-        {accessibleAdminItems.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Administration
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {accessibleAdminItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton 
-                      asChild 
-                      isActive={location.pathname === item.url}
-                      className="hover:bg-teal-50 hover:text-teal-700 data-[state=open]:bg-teal-50 data-[state=open]:text-teal-700"
-                    >
-                      <Link to={item.url} className="flex items-center gap-3">
-                        <item.icon className="w-5 h-5" />
-                        <span className="font-medium">{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-      </SidebarContent>
-
-      <SidebarFooter className="border-t p-4">
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-gradient-to-r from-teal-50 to-cyan-50">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center">
-            <Shield className="text-white font-semibold text-sm w-4 h-4" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">
-              {userRole === 'salon_owner' ? 'Salon Owner' : 
-               userRole === 'manager' ? 'Manager' :
-               userRole === 'staff' ? 'Staff Member' :
-               userRole === 'receptionist' ? 'Receptionist' : 'User'}
-            </p>
-            <div className="flex items-center gap-2 mt-1">
-              {userRole && (
-                <Badge className={`text-xs px-2 py-0.5 ${getRoleBadgeColor(userRole)}`}>
-                  {getRoleDisplayName(userRole)}
-                </Badge>
-              )}
-            </div>
-          </div>
-        </div>
-      </SidebarFooter>
-    </Sidebar>
+      </nav>
+    </aside>
   );
-}
+};

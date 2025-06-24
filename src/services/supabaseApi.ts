@@ -1,4 +1,3 @@
-
 // Re-export all types
 export * from './types';
 
@@ -16,6 +15,12 @@ export { staffAvailabilityApi } from './api/staffAvailabilityApi';
 
 // Re-export reminder API
 export { reminderApi } from './api/reminderApi';
+
+// Re-export new APIs
+export { inventoryApi } from './api/inventoryApi';
+export { financeApi } from './api/financeApi';
+export { enhancedAppointmentApi } from './api/enhancedAppointmentApi';
+export { receiptApi } from './api/receiptApi';
 
 // Create the main supabaseApi object that maintains the existing interface
 export const supabaseApi = {
@@ -92,5 +97,49 @@ export const supabaseApi = {
   getServicePopularity: () => import('./api/reportsApi').then(m => m.reportsApi.getServicePopularity()),
   getStaffPerformance: () => import('./api/reportsApi').then(m => m.reportsApi.getStaffPerformance()),
   getClientMetrics: () => import('./api/reportsApi').then(m => m.reportsApi.getClientMetrics()),
-  exportReport: (type: 'revenue' | 'services' | 'staff' | 'clients') => import('./api/reportsApi').then(m => m.reportsApi.exportReport(type))
+  exportReport: (type: 'revenue' | 'services' | 'staff' | 'clients') => import('./api/reportsApi').then(m => m.reportsApi.exportReport(type)),
+
+  // Inventory functions
+  getInventoryItems: (category?: string, lowStock?: boolean) => 
+    import('./api/inventoryApi').then(m => m.inventoryApi.getItems(category, lowStock)),
+  getInventoryItem: (id: string) => import('./api/inventoryApi').then(m => m.inventoryApi.getItem(id)),
+  createInventoryItem: (item: any) => import('./api/inventoryApi').then(m => m.inventoryApi.createItem(item)),
+  updateInventoryItem: (id: string, updates: any) => import('./api/inventoryApi').then(m => m.inventoryApi.updateItem(id, updates)),
+  deleteInventoryItem: (id: string) => import('./api/inventoryApi').then(m => m.inventoryApi.deleteItem(id)),
+  updateInventoryStock: (id: string, quantity: number, operation: 'add' | 'subtract' | 'set') =>
+    import('./api/inventoryApi').then(m => m.inventoryApi.updateStock(id, quantity, operation)),
+  getInventoryCategories: () => import('./api/inventoryApi').then(m => m.inventoryApi.getCategories()),
+  getLowStockItems: () => import('./api/inventoryApi').then(m => m.inventoryApi.getLowStockItems()),
+
+  // Finance functions
+  getFinancialTransactions: (startDate?: string, endDate?: string, type?: 'income' | 'expense', category?: string, page?: number, pageSize?: number) =>
+    import('./api/financeApi').then(m => m.financeApi.getTransactions(startDate, endDate, type, category, page, pageSize)),
+  createFinancialTransaction: (transaction: any) => import('./api/financeApi').then(m => m.financeApi.createTransaction(transaction)),
+  updateFinancialTransaction: (id: string, updates: any) => import('./api/financeApi').then(m => m.financeApi.updateTransaction(id, updates)),
+  deleteFinancialTransaction: (id: string) => import('./api/financeApi').then(m => m.financeApi.deleteTransaction(id)),
+  getFinancialSummary: (startDate?: string, endDate?: string) => 
+    import('./api/financeApi').then(m => m.financeApi.getFinancialSummary(startDate, endDate)),
+  getCategorySummary: (type: 'income' | 'expense', startDate?: string, endDate?: string) =>
+    import('./api/financeApi').then(m => m.financeApi.getCategorySummary(type, startDate, endDate)),
+
+  // Enhanced appointment functions
+  getAppointmentServices: (appointmentId: string) => 
+    import('./api/enhancedAppointmentApi').then(m => m.enhancedAppointmentApi.getAppointmentServices(appointmentId)),
+  addServiceToAppointment: (appointmentId: string, service: any) =>
+    import('./api/enhancedAppointmentApi').then(m => m.enhancedAppointmentApi.addServiceToAppointment(appointmentId, service)),
+  removeServiceFromAppointment: (serviceId: string) =>
+    import('./api/enhancedAppointmentApi').then(m => m.enhancedAppointmentApi.removeServiceFromAppointment(serviceId)),
+  getAppointmentWithServices: (appointmentId: string) =>
+    import('./api/enhancedAppointmentApi').then(m => m.enhancedAppointmentApi.getAppointmentWithServices(appointmentId)),
+  createMultiServiceAppointment: (appointmentData: any, services: any[]) =>
+    import('./api/enhancedAppointmentApi').then(m => m.enhancedAppointmentApi.createMultiServiceAppointment(appointmentData, services)),
+
+  // Receipt functions
+  getReceiptTemplates: () => import('./api/receiptApi').then(m => m.receiptApi.getTemplates()),
+  getDefaultReceiptTemplate: () => import('./api/receiptApi').then(m => m.receiptApi.getDefaultTemplate()),
+  createReceiptTemplate: (template: any) => import('./api/receiptApi').then(m => m.receiptApi.createTemplate(template)),
+  updateReceiptTemplate: (id: string, updates: any) => import('./api/receiptApi').then(m => m.receiptApi.updateTemplate(id, updates)),
+  deleteReceiptTemplate: (id: string) => import('./api/receiptApi').then(m => m.receiptApi.deleteTemplate(id)),
+  generateReceiptData: (appointmentId: string, templateId?: string) =>
+    import('./api/receiptApi').then(m => m.receiptApi.generateReceiptData(appointmentId, templateId))
 };

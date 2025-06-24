@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
@@ -30,9 +29,9 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     staff: staff?.map(s => ({ id: s.id, name: s.name })),
     appointments: appointments?.map(a => ({ 
       id: a.id, 
-      client: a.clientName || a.client_name, 
-      time: a.startTime || a.start_time,
-      staffId: a.staffId || a.staff_id 
+      client: a.clientName, 
+      time: a.startTime,
+      staffId: a.staffId 
     }))
   });
 

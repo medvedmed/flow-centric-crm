@@ -153,10 +153,10 @@ const GridCell: React.FC<{
   appointments: Appointment[];
   onBookSlot: (slot: BookingSlot) => void;
 }> = ({ timeSlot, staff, appointments, onBookSlot }) => {
-  // Fix the appointment filtering to handle both time formats
+  // Fix the appointment filtering to use correct property names
   const cellAppointments = appointments.filter(apt => {
-    const isMatchingStaff = apt.staffId === staff.id || apt.staff_id === staff.id;
-    const appointmentTime = apt.startTime || apt.start_time;
+    const isMatchingStaff = apt.staffId === staff.id;
+    const appointmentTime = apt.startTime;
     const isMatchingTime = appointmentTime === timeSlot.time || 
                           (appointmentTime && appointmentTime.substring(0, 5) === timeSlot.time);
     
@@ -164,7 +164,7 @@ const GridCell: React.FC<{
       appointmentTime,
       isMatchingStaff,
       isMatchingTime,
-      clientName: apt.clientName || apt.client_name
+      clientName: apt.clientName
     });
     
     return isMatchingStaff && isMatchingTime;
@@ -211,9 +211,9 @@ const EnhancedInteractiveScheduler: React.FC<EnhancedInteractiveSchedulerProps> 
     selectedDate: format(selectedDate, 'yyyy-MM-dd'),
     appointments: appointments.map(apt => ({
       id: apt.id,
-      clientName: apt.clientName || apt.client_name,
-      startTime: apt.startTime || apt.start_time,
-      staffId: apt.staffId || apt.staff_id
+      clientName: apt.clientName,
+      startTime: apt.startTime,
+      staffId: apt.staffId
     }))
   });
 
@@ -277,8 +277,8 @@ const EnhancedInteractiveScheduler: React.FC<EnhancedInteractiveSchedulerProps> 
       if (targetAppointment) {
         moveAppointment({
           appointmentId: active.id as string,
-          newStaffId: targetAppointment.staffId || targetAppointment.staff_id || '',
-          newTime: targetAppointment.startTime || targetAppointment.start_time || ''
+          newStaffId: targetAppointment.staffId || '',
+          newTime: targetAppointment.startTime || ''
         });
       }
     }

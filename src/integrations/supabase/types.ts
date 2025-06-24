@@ -94,6 +94,9 @@ export type Database = {
           end_time: string
           id: string
           notes: string | null
+          payment_date: string | null
+          payment_method: string | null
+          payment_status: string | null
           price: number | null
           salon_id: string | null
           service: string
@@ -112,6 +115,9 @@ export type Database = {
           end_time: string
           id?: string
           notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
           price?: number | null
           salon_id?: string | null
           service: string
@@ -130,6 +136,9 @@ export type Database = {
           end_time?: string
           id?: string
           notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
           price?: number | null
           salon_id?: string | null
           service?: string
@@ -333,6 +342,7 @@ export type Database = {
           description: string | null
           id: string
           payment_method: string | null
+          product_sale_id: string | null
           reference_id: string | null
           reference_type: string | null
           salon_id: string
@@ -348,6 +358,7 @@ export type Database = {
           description?: string | null
           id?: string
           payment_method?: string | null
+          product_sale_id?: string | null
           reference_id?: string | null
           reference_type?: string | null
           salon_id: string
@@ -363,6 +374,7 @@ export type Database = {
           description?: string | null
           id?: string
           payment_method?: string | null
+          product_sale_id?: string | null
           reference_id?: string | null
           reference_type?: string | null
           salon_id?: string
@@ -370,11 +382,20 @@ export type Database = {
           transaction_type?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "financial_transactions_product_sale_id_fkey"
+            columns: ["product_sale_id"]
+            isOneToOne: false
+            referencedRelation: "product_sales"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       inventory_items: {
         Row: {
           category: string
+          cost_price: number | null
           created_at: string
           current_stock: number
           description: string | null
@@ -385,6 +406,7 @@ export type Database = {
           minimum_stock: number
           name: string
           salon_id: string
+          selling_price: number | null
           sku: string | null
           supplier_contact: string | null
           supplier_name: string | null
@@ -393,6 +415,7 @@ export type Database = {
         }
         Insert: {
           category?: string
+          cost_price?: number | null
           created_at?: string
           current_stock?: number
           description?: string | null
@@ -403,6 +426,7 @@ export type Database = {
           minimum_stock?: number
           name: string
           salon_id: string
+          selling_price?: number | null
           sku?: string | null
           supplier_contact?: string | null
           supplier_name?: string | null
@@ -411,6 +435,7 @@ export type Database = {
         }
         Update: {
           category?: string
+          cost_price?: number | null
           created_at?: string
           current_stock?: number
           description?: string | null
@@ -421,6 +446,7 @@ export type Database = {
           minimum_stock?: number
           name?: string
           salon_id?: string
+          selling_price?: number | null
           sku?: string | null
           supplier_contact?: string | null
           supplier_name?: string | null
@@ -428,6 +454,77 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      product_sales: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          id: string
+          inventory_item_id: string
+          notes: string | null
+          payment_method: string | null
+          profit: number
+          quantity: number
+          sale_date: string
+          salon_id: string
+          total_cost: number
+          total_revenue: number
+          transaction_id: string | null
+          unit_cost: number
+          unit_selling_price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          inventory_item_id: string
+          notes?: string | null
+          payment_method?: string | null
+          profit?: number
+          quantity?: number
+          sale_date?: string
+          salon_id: string
+          total_cost?: number
+          total_revenue?: number
+          transaction_id?: string | null
+          unit_cost?: number
+          unit_selling_price?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          inventory_item_id?: string
+          notes?: string | null
+          payment_method?: string | null
+          profit?: number
+          quantity?: number
+          sale_date?: string
+          salon_id?: string
+          total_cost?: number
+          total_revenue?: number
+          transaction_id?: string | null
+          unit_cost?: number
+          unit_selling_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_sales_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -924,6 +1021,105 @@ export type Database = {
           },
         ]
       }
+      whatsapp_contacts: {
+        Row: {
+          client_id: string | null
+          contact_name: string | null
+          created_at: string | null
+          id: string
+          is_blocked: boolean | null
+          is_business: boolean | null
+          last_seen: string | null
+          phone_number: string
+          profile_pic_url: string | null
+          salon_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          id?: string
+          is_blocked?: boolean | null
+          is_business?: boolean | null
+          last_seen?: string | null
+          phone_number: string
+          profile_pic_url?: string | null
+          salon_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          id?: string
+          is_blocked?: boolean | null
+          is_business?: boolean | null
+          last_seen?: string | null
+          phone_number?: string
+          profile_pic_url?: string | null
+          salon_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_message_queue: {
+        Row: {
+          appointment_id: string | null
+          attempts: number | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          max_attempts: number | null
+          message_content: string
+          message_type: string | null
+          priority: number | null
+          recipient_phone: string
+          reminder_type: string | null
+          salon_id: string
+          scheduled_for: string | null
+          sent_at: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          attempts?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          message_content: string
+          message_type?: string | null
+          priority?: number | null
+          recipient_phone: string
+          reminder_type?: string | null
+          salon_id: string
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          attempts?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          message_content?: string
+          message_type?: string | null
+          priority?: number | null
+          recipient_phone?: string
+          reminder_type?: string | null
+          salon_id?: string
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       whatsapp_messages: {
         Row: {
           appointment_id: string | null
@@ -981,63 +1177,108 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_session_logs: {
+        Row: {
+          created_at: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          salon_id: string
+          severity: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          salon_id: string
+          severity?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          salon_id?: string
+          severity?: string | null
+        }
+        Relationships: []
+      }
       whatsapp_sessions: {
         Row: {
           access_token: string | null
           business_account_id: string | null
+          client_info: Json | null
           connection_state: string | null
           created_at: string | null
           id: string
           is_connected: boolean | null
+          last_activity: string | null
           last_connected_at: string | null
           last_seen: string | null
           max_verification_attempts: number | null
+          messages_sent_today: number | null
           phone_number: string | null
           phone_verified: boolean | null
+          rate_limit_reset: string | null
           salon_id: string
           session_data: Json | null
           updated_at: string | null
           verification_attempts: number | null
           verification_code: string | null
           verification_expires_at: string | null
+          webhook_url: string | null
+          webjs_session_data: Json | null
         }
         Insert: {
           access_token?: string | null
           business_account_id?: string | null
+          client_info?: Json | null
           connection_state?: string | null
           created_at?: string | null
           id?: string
           is_connected?: boolean | null
+          last_activity?: string | null
           last_connected_at?: string | null
           last_seen?: string | null
           max_verification_attempts?: number | null
+          messages_sent_today?: number | null
           phone_number?: string | null
           phone_verified?: boolean | null
+          rate_limit_reset?: string | null
           salon_id: string
           session_data?: Json | null
           updated_at?: string | null
           verification_attempts?: number | null
           verification_code?: string | null
           verification_expires_at?: string | null
+          webhook_url?: string | null
+          webjs_session_data?: Json | null
         }
         Update: {
           access_token?: string | null
           business_account_id?: string | null
+          client_info?: Json | null
           connection_state?: string | null
           created_at?: string | null
           id?: string
           is_connected?: boolean | null
+          last_activity?: string | null
           last_connected_at?: string | null
           last_seen?: string | null
           max_verification_attempts?: number | null
+          messages_sent_today?: number | null
           phone_number?: string | null
           phone_verified?: boolean | null
+          rate_limit_reset?: string | null
           salon_id?: string
           session_data?: Json | null
           updated_at?: string | null
           verification_attempts?: number | null
           verification_code?: string | null
           verification_expires_at?: string | null
+          webhook_url?: string | null
+          webjs_session_data?: Json | null
         }
         Relationships: []
       }
@@ -1063,6 +1304,10 @@ export type Database = {
         }[]
       }
       cleanup_expired_verification_codes: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      cleanup_old_whatsapp_logs: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
@@ -1183,6 +1428,10 @@ export type Database = {
           action: string
         }
         Returns: boolean
+      }
+      reset_daily_message_counts: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       update_reminder_settings: {
         Args: {

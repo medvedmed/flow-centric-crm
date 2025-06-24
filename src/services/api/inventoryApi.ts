@@ -46,7 +46,12 @@ export const inventoryApi = {
     }
 
     if (lowStock) {
-      query = query.lt('current_stock', supabase.raw('minimum_stock'));
+      // Simple comparison instead of using .raw()
+      const { data: allItems, error: fetchError } = await query;
+      if (fetchError) throw fetchError;
+      
+      const lowStockItems = allItems?.filter(item => item.current_stock < item.minimum_stock) || [];
+      return lowStockItems;
     }
 
     const { data, error } = await query;

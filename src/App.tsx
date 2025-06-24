@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -23,6 +24,7 @@ import Settings from "./pages/Settings"
 import Help from "./pages/Help"
 import NotFound from "./pages/NotFound"
 import InviteAccept from "./pages/InviteAccept"
+import WebhookTest from "./pages/WebhookTest"
 import "./App.css"
 import Finance from "@/pages/Finance";
 
@@ -32,26 +34,85 @@ function App() {
   return (
     <Router>
       <QueryClientProvider client={queryClient}>
-        <div className="min-h-screen bg-background">
-          <Routes>
-            <Route path="/" element={<AppWithRealTime />}>
-              <Route index element={<Dashboard />} />
-              <Route path="appointments" element={<Appointments />} />
-              <Route path="clients" element={<Clients />} />
-              <Route path="staff" element={<Staff />} />
-              <Route path="services" element={<Services />} />
-              <Route path="finance" element={<Finance />} />
-              <Route path="inventory" element={<Inventory />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="help" element={<Help />} />
-              <Route path="webhook-test" element={<WebhookTest />} />
-              <Route path="invite/:inviteToken" element={<InviteAccept />} />
-              <Route path="*" element={<NotFound />} />
-            </Route>
-          </Routes>
-        </div>
+        <AuthProvider>
+          <StaffAuthProvider>
+            <LanguageProvider>
+              <TooltipProvider>
+                <SidebarProvider>
+                  <div className="min-h-screen bg-background flex w-full">
+                    <AppSidebar />
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                      <AppHeader />
+                      <main className="flex-1 overflow-auto">
+                        <Routes>
+                          <Route path="/" element={
+                            <AppWithRealTime>
+                              <Dashboard />
+                            </AppWithRealTime>
+                          } />
+                          <Route path="/appointments" element={
+                            <AppWithRealTime>
+                              <Appointments />
+                            </AppWithRealTime>
+                          } />
+                          <Route path="/clients" element={
+                            <AppWithRealTime>
+                              <Clients />
+                            </AppWithRealTime>
+                          } />
+                          <Route path="/staff" element={
+                            <AppWithRealTime>
+                              <Staff />
+                            </AppWithRealTime>
+                          } />
+                          <Route path="/services" element={
+                            <AppWithRealTime>
+                              <Services />
+                            </AppWithRealTime>
+                          } />
+                          <Route path="/finance" element={
+                            <AppWithRealTime>
+                              <Finance />
+                            </AppWithRealTime>
+                          } />
+                          <Route path="/inventory" element={
+                            <AppWithRealTime>
+                              <Inventory />
+                            </AppWithRealTime>
+                          } />
+                          <Route path="/reports" element={
+                            <AppWithRealTime>
+                              <Reports />
+                            </AppWithRealTime>
+                          } />
+                          <Route path="/settings" element={
+                            <AppWithRealTime>
+                              <Settings />
+                            </AppWithRealTime>
+                          } />
+                          <Route path="/help" element={
+                            <AppWithRealTime>
+                              <Help />
+                            </AppWithRealTime>
+                          } />
+                          <Route path="/webhook-test" element={
+                            <AppWithRealTime>
+                              <WebhookTest />
+                            </AppWithRealTime>
+                          } />
+                          <Route path="/invite/:inviteToken" element={<InviteAccept />} />
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </main>
+                    </div>
+                  </div>
+                </SidebarProvider>
+              </TooltipProvider>
+            </LanguageProvider>
+          </StaffAuthProvider>
+        </AuthProvider>
         <Toaster />
+        <Sonner />
       </QueryClientProvider>
     </Router>
   );

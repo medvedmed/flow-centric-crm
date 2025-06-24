@@ -2,14 +2,16 @@
 import React, { useState } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent } from '@/components/ui/card';
-import { Shield, Calendar } from 'lucide-react';
+import { Shield, Calendar, ArrowLeft } from 'lucide-react';
 import { AppointmentScheduler } from '@/components/AppointmentScheduler';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { hasPermissionSync } = usePermissions();
+  const navigate = useNavigate();
 
   const canViewAppointments = hasPermissionSync('appointments', 'view');
 
@@ -34,6 +36,11 @@ const Appointments = () => {
     setSelectedDate(new Date());
   };
 
+  // FIXED: Dashboard navigation
+  const goToDashboard = () => {
+    navigate('/');
+  };
+
   if (!canViewAppointments) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -50,9 +57,18 @@ const Appointments = () => {
 
   return (
     <div className="h-screen w-full overflow-hidden bg-white flex flex-col">
-      {/* Date Navigation Header */}
+      {/* FIXED: Date Navigation Header with Dashboard button */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={goToDashboard}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Dashboard
+          </Button>
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-gray-600" />
             <h1 className="text-lg font-semibold text-gray-900">

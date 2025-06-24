@@ -240,17 +240,17 @@ export const EnhancedAppointmentForm: React.FC<EnhancedAppointmentFormProps> = (
         />
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex gap-3 pt-4">
+      {/* FIXED: Action Buttons with proper Save functionality */}
+      <div className="flex gap-3 pt-6 border-t">
         <Button
           type="submit"
           disabled={createAppointmentMutation.isPending || selectedServices.length === 0 || isClientDataLoading}
-          className="flex-1"
+          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
         >
-          {createAppointmentMutation.isPending ? "Creating..." : "Book Multi-Service Appointment"}
+          {createAppointmentMutation.isPending ? "Saving Appointment..." : "Save Appointment"}
         </Button>
         {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} className="px-6">
             Cancel
           </Button>
         )}

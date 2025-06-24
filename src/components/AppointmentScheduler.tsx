@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { useAppointmentData } from '@/hooks/useAppointmentData';
 import { useAuth } from '@/hooks/useAuth';
-import EnhancedDragDropScheduler from './EnhancedDragDropScheduler';
+import EnhancedInteractiveScheduler from './EnhancedInteractiveScheduler';
 import { AppointmentErrorBoundary } from './AppointmentErrorBoundary';
 import { format } from 'date-fns';
 
@@ -25,10 +25,10 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     window.location.reload();
   };
 
-  const handleAppointmentMove = (appointmentId: string, newStaffId: string, newTime: string) => {
-    console.log('Appointment moved:', { appointmentId, newStaffId, newTime });
+  const handleAppointmentUpdate = () => {
+    // This will be called when appointments are updated to refresh the data
     if (onAppointmentMove) {
-      onAppointmentMove(appointmentId, newStaffId, newTime);
+      // Trigger any parent refresh logic if needed
     }
   };
 
@@ -86,12 +86,11 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
   return (
     <AppointmentErrorBoundary>
-      <EnhancedDragDropScheduler
+      <EnhancedInteractiveScheduler
         staff={staff}
         appointments={appointments}
         selectedDate={selectedDate}
-        onAppointmentMove={handleAppointmentMove}
-        onRefresh={handleRefresh}
+        onAppointmentUpdate={handleAppointmentUpdate}
       />
     </AppointmentErrorBoundary>
   );

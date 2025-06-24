@@ -1,9 +1,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import StaffScheduleManager from "@/components/StaffScheduleManager";
 import StaffOverview from "@/components/StaffOverview";
 import AddStaffDialog from "@/components/AddStaffDialog";
+import RealTimeStaffScheduleManager from "@/components/staff/RealTimeStaffScheduleManager";
 
 const Staff = () => {
   return (
@@ -22,7 +22,7 @@ const Staff = () => {
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="schedule">Schedule Management</TabsTrigger>
+          <TabsTrigger value="schedule">Real-Time Schedule</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
         </TabsList>
 
@@ -31,7 +31,7 @@ const Staff = () => {
         </TabsContent>
 
         <TabsContent value="schedule">
-          <StaffScheduleManager />
+          <RealTimeStaffScheduleManager />
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-6">

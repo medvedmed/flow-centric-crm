@@ -9,6 +9,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/profile/useProfileHooks";
 import { useDashboardStats } from "@/hooks/dashboard/useDashboardData";
 import { AddAppointmentDialog } from "@/components/AddAppointmentDialog";
+import { DashboardQuickPayment } from "@/components/DashboardQuickPayment";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -248,48 +249,54 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card className="border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Button 
-              variant="outline" 
-              className="h-20 flex-col gap-2 hover:bg-teal-50 hover:border-teal-300"
-              onClick={handleNewAppointment}
-            >
-              <Plus className="w-6 h-6 text-teal-600" />
-              <span>New Appointment</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-20 flex-col gap-2 hover:bg-cyan-50 hover:border-cyan-300"
-              onClick={handleAddClient}
-            >
-              <Users className="w-6 h-6 text-cyan-600" />
-              <span>Add Client</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-20 flex-col gap-2 hover:bg-blue-50 hover:border-blue-300"
-              onClick={handleViewSchedule}
-            >
-              <Calendar className="w-6 h-6 text-blue-600" />
-              <span>View Schedule</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-20 flex-col gap-2 hover:bg-green-50 hover:border-green-300"
-              onClick={handleViewReports}
-            >
-              <DollarSign className="w-6 h-6 text-green-600" />
-              <span>View Reports</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Quick Payment and Quick Actions Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Quick Payment Section */}
+        <DashboardQuickPayment />
+
+        {/* Quick Actions */}
+        <Card className="border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Button 
+                variant="outline" 
+                className="h-20 flex-col gap-2 hover:bg-teal-50 hover:border-teal-300"
+                onClick={handleNewAppointment}
+              >
+                <Plus className="w-6 h-6 text-teal-600" />
+                <span>New Appointment</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="h-20 flex-col gap-2 hover:bg-cyan-50 hover:border-cyan-300"
+                onClick={handleAddClient}
+              >
+                <Users className="w-6 h-6 text-cyan-600" />
+                <span>Add Client</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="h-20 flex-col gap-2 hover:bg-blue-50 hover:border-blue-300"
+                onClick={handleViewSchedule}
+              >
+                <Calendar className="w-6 h-6 text-blue-600" />
+                <span>View Schedule</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="h-20 flex-col gap-2 hover:bg-green-50 hover:border-green-300"
+                onClick={handleViewReports}
+              >
+                <DollarSign className="w-6 h-6 text-green-600" />
+                <span>View Reports</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Real-time Status */}
       <div className="text-xs text-gray-500 text-center">

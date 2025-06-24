@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { useAppointmentData } from '@/hooks/useAppointmentData';
 import { useAuth } from '@/hooks/useAuth';
-import DragDropScheduler from './DragDropScheduler';
+import EnhancedDragDropScheduler from './EnhancedDragDropScheduler';
 import { AppointmentErrorBoundary } from './AppointmentErrorBoundary';
 import { format } from 'date-fns';
 
@@ -86,7 +86,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
   return (
     <AppointmentErrorBoundary>
-      <DragDropScheduler
+      <EnhancedDragDropScheduler
         staff={staff}
         appointments={appointments}
         selectedDate={selectedDate}

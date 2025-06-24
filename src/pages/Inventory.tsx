@@ -60,7 +60,7 @@ const Inventory = () => {
 
   const { data: lowStockItems = [] } = useQuery({
     queryKey: ['low-stock-items'],  
-    queryFn: () => inventoryApi.getLowStockItems()
+    queryFn: inventoryApi.getLowStockItems
   });
 
   const createMutation = useMutation({

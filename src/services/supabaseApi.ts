@@ -62,20 +62,18 @@ export const supabaseApi = {
   updateTimeOffRequest: (id: string, request: any) => import('./api/timeOffApi').then(m => m.timeOffApi.updateTimeOffRequest(id, request)),
   deleteTimeOffRequest: (id: string) => import('./api/timeOffApi').then(m => m.timeOffApi.deleteTimeOffRequest(id)),
 
-  // Staff availability functions (enhanced)
+  // Staff availability functions
   getStaffAvailability: (staffId?: string, date?: string, startDate?: string, endDate?: string, page?: number, pageSize?: number) => 
     import('./api/staffAvailabilityApi').then(m => m.staffAvailabilityApi.getStaffAvailability(staffId, date, startDate, endDate, page, pageSize)),
+  getAvailabilityById: (id: string) => import('./api/staffAvailabilityApi').then(m => m.staffAvailabilityApi.getAvailabilityById(id)),
+  getAvailabilityRange: (staffId: string, startDate: string, endDate: string) => 
+    import('./api/staffAvailabilityApi').then(m => m.staffAvailabilityApi.getAvailabilityRange(staffId, startDate, endDate)),
+  checkAvailability: (staffId: string, date: string, startTime?: string, endTime?: string) => 
+    import('./api/staffAvailabilityApi').then(m => m.staffAvailabilityApi.checkAvailability(staffId, date, startTime, endTime)),
   createStaffAvailability: (availability: any) => import('./api/staffAvailabilityApi').then(m => m.staffAvailabilityApi.createStaffAvailability(availability)),
   updateStaffAvailability: (id: string, availability: any) => import('./api/staffAvailabilityApi').then(m => m.staffAvailabilityApi.updateStaffAvailability(id, availability)),
   deleteStaffAvailability: (id: string) => import('./api/staffAvailabilityApi').then(m => m.staffAvailabilityApi.deleteStaffAvailability(id)),
   bulkCreateAvailability: (records: any[]) => import('./api/staffAvailabilityApi').then(m => m.staffAvailabilityApi.bulkCreateAvailability(records)),
-  checkAvailability: (staffId: string, date: string, startTime?: string, endTime?: string) => 
-    import('./api/staffAvailabilityApi').then(m => m.staffAvailabilityApi.checkAvailability(staffId, date, startTime, endTime)),
-
-  // Legacy availability functions (for backward compatibility)
-  createStaffAvailability: (availability: any) => import('./api/availabilityApi').then(m => m.availabilityApi.createStaffAvailability(availability)),
-  updateStaffAvailability: (id: string, availability: any) => import('./api/availabilityApi').then(m => m.availabilityApi.updateStaffAvailability(id, availability)),
-  deleteStaffAvailability: (id: string) => import('./api/availabilityApi').then(m => m.availabilityApi.deleteStaffAvailability(id)),
 
   // Reminder functions
   getReminderSettings: () => import('./api/reminderApi').then(m => m.reminderApi.getReminderSettings()),

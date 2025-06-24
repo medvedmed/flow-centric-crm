@@ -227,6 +227,42 @@ export type Database = {
         }
         Relationships: []
       }
+      client_payments: {
+        Row: {
+          amount: number
+          appointment_id: string | null
+          client_id: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          payment_date: string | null
+          payment_method: string | null
+          salon_id: string
+        }
+        Insert: {
+          amount: number
+          appointment_id?: string | null
+          client_id: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          salon_id: string
+        }
+        Update: {
+          amount?: number
+          appointment_id?: string | null
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          salon_id?: string
+        }
+        Relationships: []
+      }
       client_sessions: {
         Row: {
           client_id: string
@@ -525,6 +561,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      products: {
+        Row: {
+          category: string
+          cost_price: number | null
+          created_at: string | null
+          current_stock: number
+          description: string | null
+          id: string
+          is_active: boolean
+          maximum_stock: number | null
+          minimum_stock: number | null
+          name: string
+          salon_id: string
+          selling_price: number
+          sku: string | null
+          supplier_contact: string | null
+          supplier_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string
+          cost_price?: number | null
+          created_at?: string | null
+          current_stock?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          maximum_stock?: number | null
+          minimum_stock?: number | null
+          name: string
+          salon_id: string
+          selling_price?: number
+          sku?: string | null
+          supplier_contact?: string | null
+          supplier_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          cost_price?: number | null
+          created_at?: string | null
+          current_stock?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          maximum_stock?: number | null
+          minimum_stock?: number | null
+          name?: string
+          salon_id?: string
+          selling_price?: number
+          sku?: string | null
+          supplier_contact?: string | null
+          supplier_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -912,6 +1005,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      staff_performance: {
+        Row: {
+          appointments_completed: number | null
+          created_at: string | null
+          id: string
+          month: string
+          new_clients: number | null
+          regular_clients: number | null
+          salon_id: string
+          staff_id: string
+          total_clients: number | null
+          total_revenue: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          appointments_completed?: number | null
+          created_at?: string | null
+          id?: string
+          month: string
+          new_clients?: number | null
+          regular_clients?: number | null
+          salon_id: string
+          staff_id: string
+          total_clients?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          appointments_completed?: number | null
+          created_at?: string | null
+          id?: string
+          month?: string
+          new_clients?: number | null
+          regular_clients?: number | null
+          salon_id?: string
+          staff_id?: string
+          total_clients?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       time_off_requests: {
         Row: {

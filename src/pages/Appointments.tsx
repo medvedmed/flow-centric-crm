@@ -4,11 +4,14 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Shield, Calendar } from 'lucide-react';
 import { AppointmentScheduler } from '@/components/AppointmentScheduler';
+import { EditAppointmentDialog } from '@/components/EditAppointmentDialog';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
+import { Appointment } from '@/services/types';
 
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const { hasPermissionSync } = usePermissions();
 
   const canViewAppointments = hasPermissionSync('appointments', 'view');
@@ -16,6 +19,10 @@ const Appointments = () => {
   const handleAppointmentMove = (appointmentId: string, newStaffId: string, newTime: string) => {
     console.log('Appointment move handled:', { appointmentId, newStaffId, newTime });
     // The actual database update is now handled by the useAppointmentOperations hook
+  };
+
+  const handleAppointmentClick = (appointment: Appointment) => {
+    setEditingAppointment(appointment);
   };
 
   const goToPreviousDay = () => {
@@ -79,8 +86,16 @@ const Appointments = () => {
         <AppointmentScheduler
           selectedDate={selectedDate}
           onAppointmentMove={handleAppointmentMove}
+          onAppointmentClick={handleAppointmentClick}
         />
       </div>
+
+      {/* Edit Appointment Dialog */}
+      <EditAppointmentDialog
+        appointment={editingAppointment}
+        isOpen={!!editingAppointment}
+        onClose={() => setEditingAppointment(null)}
+      />
     </div>
   );
 };

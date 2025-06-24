@@ -1,300 +1,238 @@
-
-import { usePermissions } from "@/hooks/usePermissions";
-import StaffDashboard from "@/components/StaffDashboard";
-import ReceptionistDashboard from "@/components/ReceptionistDashboard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Users, Calendar, Plus, ArrowUp, ArrowDown, DollarSign, Loader2 } from "lucide-react";
-import { Navigate, useNavigate } from "react-router-dom";
-import { useProfile } from "@/hooks/profile/useProfileHooks";
-import { useDashboardStats } from "@/hooks/dashboard/useDashboardData";
-import { AddAppointmentDialog } from "@/components/AddAppointmentDialog";
-import { useToast } from "@/hooks/use-toast";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, Users, DollarSign, TrendingUp, Clock, Star } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { QuickPaymentSection } from '@/components/QuickPaymentSection';
+import { StaffPerformanceDashboard } from '@/components/StaffPerformanceDashboard';
+import { format, isToday, isTomorrow } from 'date-fns';
 
 const Dashboard = () => {
-  const { userRole, roleLoading } = usePermissions();
-  const { data: profile, isLoading: profileLoading } = useProfile();
-  const { data: stats, isLoading: statsLoading, error: statsError, refetch } = useDashboardStats();
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  const { user } = useAuth();
 
-  if (roleLoading || profileLoading) {
+  const { data: dashboardStats, isLoading } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      // Get today's appointments
+      const { data: todayAppointments, error: todayError } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('salon_id', user?.id)
+        .eq('date', today);
+
+      if (todayError) throw todayError;
+
+      // Get tomorrow's appointments
+      const { data: tomorrowAppointments, error: tomorrowError } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('salon_id', user?.id)
+        .eq('date', tomorrow);
+
+      if (tomorrowError) throw tomorrowError;
+
+      // Get this month's revenue
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+      const { data: monthlyRevenue, error: revenueError } = await supabase
+        .from('appointments')
+        .select('price')
+        .eq('salon_id', user?.id)
+        .eq('status', 'Completed')
+        .gte('date', startOfMonth);
+
+      if (revenueError) throw revenueError;
+
+      // Get total clients
+      const { count: totalClients, error: clientsError } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true })
+        .eq('salon_id', user?.id);
+
+      if (clientsError) throw clientsError;
+
+      // Get low stock items
+      const { data: lowStockItems, error: stockError } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('salon_id', user?.id)
+        .eq('is_active', true);
+
+      if (stockError) throw stockError;
+
+      const lowStock = lowStockItems?.filter(item => 
+        item.current_stock <= item.minimum_stock
+      ) || [];
+
+      return {
+        todayAppointments: todayAppointments || [],
+        tomorrowAppointments: tomorrowAppointments || [],
+        monthlyRevenue: monthlyRevenue?.reduce((sum, apt) => sum + (apt.price || 0), 0) || 0,
+        totalClients: totalClients || 0,
+        lowStockCount: lowStock.length
+      };
+    },
+    enabled: !!user,
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  const { data: upcomingAppointments = [] } = useQuery({
+    queryKey: ['upcoming-appointments'],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          staff!inner(name)
+        `)
+        .eq('salon_id', user?.id)
+        .gte('date', today)
+        .in('status', ['Scheduled', 'Confirmed'])
+        .order('date')
+        .order('start_time')
+        .limit(5);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-6 w-6 animate-spin text-teal-500" />
-          <span className="text-gray-600">Loading dashboard...</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Staff should not have access to dashboard - redirect to appointments
-  if (userRole === 'staff') {
-    return <Navigate to="/appointments" replace />;
-  }
-
-  if (userRole === 'receptionist') {
-    return <ReceptionistDashboard />;
-  }
-
-  // Get salon name or fallback
-  const salonName = profile?.salon_name;
-  const dashboardTitle = salonName ? `${salonName} Dashboard` : 'Salon Dashboard';
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const formatGrowthPercentage = (growth: number) => {
-    const absGrowth = Math.abs(growth);
-    return absGrowth.toFixed(1);
-  };
-
-  const handleNewAppointment = () => {
-    toast({
-      title: "Navigating",
-      description: "Opening appointment scheduler...",
-    });
-    navigate('/appointments');
-  };
-
-  const handleAddClient = () => {
-    toast({
-      title: "Navigating",
-      description: "Opening client management...",
-    });
-    navigate('/clients');
-  };
-
-  const handleViewSchedule = () => {
-    toast({
-      title: "Navigating",
-      description: "Opening appointment schedule...",
-    });
-    navigate('/appointments');
-  };
-
-  const handleViewReports = () => {
-    toast({
-      title: "Navigating",
-      description: "Opening reports dashboard...",
-    });
-    navigate('/reports');
-  };
-
-  const handleRefreshData = () => {
-    toast({
-      title: "Refreshing",
-      description: "Updating dashboard data...",
-    });
-    refetch();
-  };
-
-  // Show error state if stats fail to load
-  if (statsError) {
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-500 to-cyan-600 bg-clip-text text-transparent">
-              {dashboardTitle}
-            </h1>
-            <p className="text-muted-foreground mt-1">Welcome back! Here's what's happening at your salon today.</p>
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-32 bg-gray-200 rounded"></div>
+            ))}
           </div>
         </div>
-
-        <Alert variant="destructive">
-          <AlertDescription>
-            Failed to load dashboard data. Please try refreshing the page.
-            <Button variant="outline" size="sm" onClick={handleRefreshData} className="ml-2">
-              Refresh
-            </Button>
-          </AlertDescription>
-        </Alert>
       </div>
     );
   }
 
-  // Default to owner/manager dashboard
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-500 to-cyan-600 bg-clip-text text-transparent">
-            {dashboardTitle}
-          </h1>
-          <p className="text-muted-foreground mt-1">Welcome back! Here's what's happening at your salon today.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleRefreshData} disabled={statsLoading}>
-            {statsLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              "Refresh"
-            )}
-          </Button>
-          <AddAppointmentDialog
-            selectedDate={new Date()}
-            trigger={
-              <Button className="bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700">
-                <Plus className="w-4 h-4 mr-2" />
-                New Appointment
-              </Button>
-            }
-          />
-        </div>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <p className="text-muted-foreground">Welcome back! Here's what's happening at your salon.</p>
       </div>
 
-      {/* Key Metrics - 3 Column Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-teal-50 to-teal-100">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-teal-700">Today's Appointments</CardTitle>
-            <Calendar className="h-4 w-4 text-teal-600" />
+            <CardTitle className="text-sm font-medium">Today's Appointments</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {statsLoading ? (
-              <div className="animate-pulse">
-                <div className="h-8 bg-teal-200 rounded w-16 mb-2"></div>
-                <div className="h-3 bg-teal-200 rounded w-20"></div>
-              </div>
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-teal-900">{stats?.todayAppointments || 0}</div>
-                <p className="text-xs text-teal-600 flex items-center mt-1">
-                  {stats?.appointmentGrowth && stats.appointmentGrowth >= 0 ? (
-                    <ArrowUp className="w-3 h-3 mr-1" />
-                  ) : (
-                    <ArrowDown className="w-3 h-3 mr-1" />
-                  )}
-                  {stats?.appointmentGrowth 
-                    ? `${formatGrowthPercentage(stats.appointmentGrowth)}% from yesterday`
-                    : 'No change from yesterday'
-                  }
-                </p>
-              </>
-            )}
+            <div className="text-2xl font-bold">{dashboardStats?.todayAppointments.length || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              {dashboardStats?.todayAppointments.filter(apt => apt.status === 'Completed').length || 0} completed
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-cyan-50 to-cyan-100">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-cyan-700">Total Clients</CardTitle>
-            <Users className="h-4 w-4 text-cyan-600" />
+            <CardTitle className="text-sm font-medium">Tomorrow's Bookings</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {statsLoading ? (
-              <div className="animate-pulse">
-                <div className="h-8 bg-cyan-200 rounded w-20 mb-2"></div>
-                <div className="h-3 bg-cyan-200 rounded w-24"></div>
-              </div>
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-cyan-900">{stats?.totalClients || 0}</div>
-                <p className="text-xs text-cyan-600 flex items-center mt-1">
-                  {stats?.clientGrowth && stats.clientGrowth >= 0 ? (
-                    <ArrowUp className="w-3 h-3 mr-1" />
-                  ) : (
-                    <ArrowDown className="w-3 h-3 mr-1" />
-                  )}
-                  {stats?.clientGrowth 
-                    ? `${formatGrowthPercentage(stats.clientGrowth)}% this month`
-                    : 'No change this month'
-                  }
-                </p>
-              </>
-            )}
+            <div className="text-2xl font-bold">{dashboardStats?.tomorrowAppointments.length || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Scheduled for tomorrow
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-700">Monthly Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {statsLoading ? (
-              <div className="animate-pulse">
-                <div className="h-8 bg-green-200 rounded w-24 mb-2"></div>
-                <div className="h-3 bg-green-200 rounded w-28"></div>
-              </div>
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-green-900">
-                  {formatCurrency(stats?.monthlyRevenue || 0)}
-                </div>
-                <p className="text-xs text-green-600 flex items-center mt-1">
-                  {stats?.revenueGrowth && stats.revenueGrowth >= 0 ? (
-                    <ArrowUp className="w-3 h-3 mr-1" />
-                  ) : (
-                    <ArrowDown className="w-3 h-3 mr-1" />
-                  )}
-                  {stats?.revenueGrowth 
-                    ? `${formatGrowthPercentage(stats.revenueGrowth)}% from last month`
-                    : 'No change from last month'
-                  }
-                </p>
-              </>
-            )}
+            <div className="text-2xl font-bold">
+              ${dashboardStats?.monthlyRevenue.toFixed(2) || '0.00'}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This month's earnings
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dashboardStats?.totalClients || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              {dashboardStats?.lowStockCount ? `${dashboardStats.lowStockCount} low stock items` : 'Stock levels good'}
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card className="border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Button 
-              variant="outline" 
-              className="h-20 flex-col gap-2 hover:bg-teal-50 hover:border-teal-300"
-              onClick={handleNewAppointment}
-            >
-              <Plus className="w-6 h-6 text-teal-600" />
-              <span>New Appointment</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-20 flex-col gap-2 hover:bg-cyan-50 hover:border-cyan-300"
-              onClick={handleAddClient}
-            >
-              <Users className="w-6 h-6 text-cyan-600" />
-              <span>Add Client</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-20 flex-col gap-2 hover:bg-blue-50 hover:border-blue-300"
-              onClick={handleViewSchedule}
-            >
-              <Calendar className="w-6 h-6 text-blue-600" />
-              <span>View Schedule</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-20 flex-col gap-2 hover:bg-green-50 hover:border-green-300"
-              onClick={handleViewReports}
-            >
-              <DollarSign className="w-6 h-6 text-green-600" />
-              <span>View Reports</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Quick Payment Section */}
+        <QuickPaymentSection />
 
-      {/* Real-time Status */}
-      <div className="text-xs text-gray-500 text-center">
-        Last updated: {new Date().toLocaleTimeString()} • Auto-refresh every 2 minutes
+        {/* Upcoming Appointments */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              Upcoming Appointments
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {upcomingAppointments.length === 0 ? (
+                <p className="text-muted-foreground text-center py-4">
+                  No upcoming appointments
+                </p>
+              ) : (
+                upcomingAppointments.map((appointment) => (
+                  <div key={appointment.id} className="flex justify-between items-center p-3 border rounded-lg">
+                    <div>
+                      <div className="font-medium">{appointment.client_name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {appointment.service} with {appointment.staff?.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {format(new Date(appointment.date), 'MMM dd')} at {appointment.start_time}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge 
+                        variant={appointment.status === 'Confirmed' ? 'default' : 'secondary'}
+                      >
+                        {appointment.status}
+                      </Badge>
+                      <div className="text-sm font-medium mt-1">
+                        ${appointment.price?.toFixed(2) || '0.00'}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Staff Performance Dashboard */}
+      <StaffPerformanceDashboard />
     </div>
   );
 };

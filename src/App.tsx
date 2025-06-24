@@ -17,6 +17,7 @@ import Appointments from "./pages/Appointments"
 import Clients from "./pages/Clients"
 import Services from "./pages/Services"
 import Staff from "./pages/Staff"
+import Products from "./pages/Products"
 import Inventory from "./pages/Inventory"
 import Reports from "./pages/Reports"
 import Settings from "./pages/Settings"
@@ -75,6 +76,13 @@ function App() {
                     <ProtectedRoute>
                       <AppLayout>
                         <Services />
+                      </AppLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/products" element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Products />
                       </AppLayout>
                     </ProtectedRoute>
                   } />

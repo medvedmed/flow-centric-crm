@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,11 +37,13 @@ const StaffAvailability: React.FC<StaffAvailabilityProps> = ({ staffId, staffNam
     reason: ''
   });
 
-  // Fetch staff availability
-  const { data: availability = [], isLoading: availabilityLoading } = useQuery({
+  // Fetch staff availability with better error handling
+  const { data: availability = [], isLoading: availabilityLoading, error: availabilityError } = useQuery({
     queryKey: ['staff-availability', staffId],
     queryFn: () => availabilityApi.getStaffAvailability(staffId),
     enabled: !!staffId,
+    retry: 2,
+    staleTime: 2 * 60 * 1000,
   });
 
   // Fetch time off requests
@@ -167,6 +168,16 @@ const StaffAvailability: React.FC<StaffAvailabilityProps> = ({ staffId, staffNam
       return;
     }
 
+    // Validate time range
+    if (newAvailability.startTime >= newAvailability.endTime) {
+      toast({
+        title: "Validation Error",
+        description: "End time must be after start time.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     createAvailabilityMutation.mutate({
       staffId,
       date: newAvailability.date,
@@ -174,7 +185,7 @@ const StaffAvailability: React.FC<StaffAvailabilityProps> = ({ staffId, staffNam
       endTime: newAvailability.endTime,
       isAvailable: newAvailability.isAvailable,
       reason: newAvailability.reason,
-      salonId: '', // Will be set by the API
+      salonId: '',
       id: '',
       createdAt: '',
       updatedAt: ''
@@ -213,6 +224,20 @@ const StaffAvailability: React.FC<StaffAvailabilityProps> = ({ staffId, staffNam
           <div className="h-8 bg-gray-200 rounded w-1/3"></div>
           <div className="h-96 bg-gray-200 rounded"></div>
         </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (availabilityError) {
+    return (
+      <div className="space-y-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Error loading availability data: {availabilityError.message}
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -300,10 +325,14 @@ const StaffAvailability: React.FC<StaffAvailabilityProps> = ({ staffId, staffNam
         <CardContent>
           <div className="space-y-3">
             {availability.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No availability records found. Add some to get started.</p>
+              <div className="text-center py-8">
+                <Clock className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-muted-foreground">No availability records found.</p>
+                <p className="text-sm text-gray-500 mt-2">Add some to get started.</p>
+              </div>
             ) : (
               availability.map(avail => (
-                <div key={avail.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={avail.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                   <div className="flex items-center gap-4">
                     <span className="font-medium">{avail.date}</span>
                     <Badge variant={avail.isAvailable ? "default" : "secondary"}>

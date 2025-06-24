@@ -6,16 +6,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Staff } from '@/services/types';
-import StaffAvailability from './StaffAvailability';
+import StaffAvailabilityManager from './StaffAvailabilityManager';
 import StaffCalendarView from './StaffCalendarView';
-import { Calendar, Clock, Users, Settings, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, Users, Settings, AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const StaffScheduleManager = () => {
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
 
   // Fetch real staff data
-  const { data: staff = [], isLoading, error } = useQuery({
+  const { data: staff = [], isLoading, error, refetch } = useQuery({
     queryKey: ['staff-schedule-manager'],
     queryFn: async (): Promise<Staff[]> => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -94,7 +94,11 @@ const StaffScheduleManager = () => {
 
   const handleAddEvent = (newEvent: any) => {
     console.log('Adding new event:', newEvent);
-    // This would integrate with appointment creation
+    // This woul integrate with appointment creation
+  };
+
+  const handleRefresh = () => {
+    refetch();
   };
 
   if (isLoading) {
@@ -126,11 +130,15 @@ const StaffScheduleManager = () => {
             </h1>
             <p className="text-muted-foreground mt-1">Error loading staff data</p>
           </div>
+          <Button onClick={handleRefresh} variant="outline">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Retry
+          </Button>
         </div>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Unable to load staff schedule data. Please refresh the page or contact support.
+            Unable to load staff schedule data: {error.message}
           </AlertDescription>
         </Alert>
       </div>
@@ -146,6 +154,10 @@ const StaffScheduleManager = () => {
           </h1>
           <p className="text-muted-foreground mt-1">Manage staff availability, time-off, and scheduling.</p>
         </div>
+        <Button onClick={handleRefresh} variant="outline">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Refresh Data
+        </Button>
       </div>
 
       <Tabs defaultValue="calendar" className="space-y-4">
@@ -217,7 +229,7 @@ const StaffScheduleManager = () => {
                 </div>
 
                 {selectedStaffId && (
-                  <StaffAvailability
+                  <StaffAvailabilityManager
                     staffId={selectedStaffId}
                     staffName={staff.find(s => s.id === selectedStaffId)?.name || ''}
                   />

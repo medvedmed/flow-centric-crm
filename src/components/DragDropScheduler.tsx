@@ -1,188 +1,17 @@
+
 import React, { useState } from 'react';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, useDroppable } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { Badge } from '@/components/ui/badge';
-import { Clock, User, DollarSign, Plus, Phone, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Staff, Appointment } from '@/services/types';
-import { AddAppointmentDialog } from './AddAppointmentDialog';
+import { Appointment } from '@/services/types';
 import { useAppointmentOperations } from '@/hooks/useAppointmentOperations';
 import { useToast } from '@/hooks/use-toast';
-
-interface TimeSlot {
-  time: string;
-  hour: number;
-  minute: number;
-}
-
-interface DragDropSchedulerProps {
-  staff: Staff[];
-  appointments: Appointment[];
-  selectedDate: Date;
-  onAppointmentMove?: (appointmentId: string, newStaffId: string, newTime: string) => void;
-  onRefresh?: () => void;
-  onAppointmentClick?: (appointment: Appointment) => void;
-}
-
-// Utility function to normalize time format for comparison
-const normalizeTime = (time: string): string => {
-  if (!time) return '';
-  // Handle both HH:MM and HH:MM:SS formats
-  const parts = time.split(':');
-  return `${parts[0]}:${parts[1]}`;
-};
-
-// Droppable Time Slot Component with conflict detection
-const DroppableTimeSlot: React.FC<{
-  staffId: string;
-  time: string;
-  children: React.ReactNode;
-  hasConflict?: boolean;
-}> = ({ staffId, time, children, hasConflict = false }) => {
-  const dropId = `${staffId}-${time}`;
-  const { isOver, setNodeRef } = useDroppable({
-    id: dropId,
-    data: {
-      staffId,
-      time,
-      type: 'timeSlot'
-    }
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`relative min-h-[60px] transition-all duration-200 ${
-        isOver 
-          ? hasConflict 
-            ? 'bg-red-50 border-2 border-red-300 border-dashed rounded' 
-            : 'bg-blue-50 border-2 border-blue-300 border-dashed rounded'
-          : ''
-      }`}
-    >
-      {children}
-      {isOver && hasConflict && (
-        <div className="absolute inset-0 flex items-center justify-center bg-red-50/90 rounded">
-          <div className="flex items-center gap-1 text-red-600 text-xs font-medium">
-            <AlertTriangle className="w-3 h-3" />
-            Slot Occupied
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Enhanced Appointment Block Component
-const AppointmentBlock: React.FC<{
-  appointment: Appointment;
-  isDragging?: boolean;
-}> = ({ appointment, isDragging = false }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging: isSortableDragging,
-  } = useSortable({ 
-    id: appointment.id,
-    data: {
-      appointment,
-      type: 'appointment'
-    }
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging || isSortableDragging ? 0.8 : 1,
-  };
-
-  const statusColors = {
-    'Scheduled': 'bg-blue-50 border-l-blue-500 text-blue-900',
-    'Confirmed': 'bg-green-50 border-l-green-500 text-green-900', 
-    'In Progress': 'bg-purple-50 border-l-purple-500 text-purple-900',
-    'Completed': 'bg-gray-50 border-l-gray-500 text-gray-900',
-    'Cancelled': 'bg-red-50 border-l-red-500 text-red-900',
-    'No Show': 'bg-orange-50 border-l-orange-500 text-orange-900'
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className={`cursor-grab active:cursor-grabbing w-full rounded-md border-l-4 p-2 mb-1 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
-        statusColors[appointment.status as keyof typeof statusColors] || statusColors.Scheduled
-      } ${isDragging ? 'z-50 rotate-2 scale-105 shadow-lg' : ''}`}
-    >
-      <div className="space-y-1 overflow-hidden">
-        {/* Time and Status Row */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1 min-w-0 flex-1">
-            <Clock className="w-3 h-3 flex-shrink-0" />
-            <span className="text-xs font-semibold truncate">
-              {normalizeTime(appointment.startTime)}-{normalizeTime(appointment.endTime)}
-            </span>
-          </div>
-          <Badge variant="secondary" className="text-xs px-1 py-0 flex-shrink-0">
-            {appointment.status}
-          </Badge>
-        </div>
-        
-        {/* Client Name */}
-        <div className="flex items-center gap-1 min-w-0">
-          <User className="w-3 h-3 text-gray-600 flex-shrink-0" />
-          <p className="font-medium text-sm truncate">{appointment.clientName}</p>
-        </div>
-        
-        {/* Service and Price Row */}
-        <div className="flex items-center justify-between min-w-0">
-          <p className="text-xs text-gray-700 truncate flex-1">{appointment.service}</p>
-          <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-            <DollarSign className="w-3 h-3 text-green-600" />
-            <span className="text-xs font-medium text-green-600">${appointment.price}</span>
-          </div>
-        </div>
-
-        {/* Phone if available */}
-        {appointment.clientPhone && (
-          <div className="flex items-center gap-1 min-w-0">
-            <Phone className="w-3 h-3 text-gray-500 flex-shrink-0" />
-            <span className="text-xs text-gray-500 truncate">{appointment.clientPhone}</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Empty Time Slot Component
-const EmptyTimeSlot: React.FC<{
-  staffId: string;
-  time: string;
-  selectedDate: Date;
-}> = ({ staffId, time, selectedDate }) => {
-  return (
-    <div className="h-16 w-full flex items-center justify-center hover:bg-gray-50/50 transition-colors rounded">
-      <AddAppointmentDialog
-        selectedDate={selectedDate}
-        selectedTime={time}
-        selectedStaffId={staffId}
-        trigger={
-          <Button size="sm" variant="ghost" className="h-6 w-6 p-0 hover:bg-gray-200/60">
-            <Plus className="w-3 h-3 text-gray-400" />
-          </Button>
-        }
-      />
-    </div>
-  );
-};
+import { DragDropSchedulerProps } from './scheduler/types';
+import { DroppableTimeSlot } from './scheduler/DroppableTimeSlot';
+import { AppointmentBlock } from './scheduler/AppointmentBlock';
+import { EmptyTimeSlot } from './scheduler/EmptyTimeSlot';
+import { normalizeTime, getInitials, generateTimeSlots } from './scheduler/utils';
 
 const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
   staff,
@@ -205,18 +34,7 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
     selectedDate: selectedDate.toISOString().split('T')[0]
   });
 
-  // Generate time slots from 8 AM to 8 PM
-  const timeSlots: TimeSlot[] = [];
-  for (let hour = 8; hour < 20; hour++) {
-    for (let minute = 0; minute < 60; minute += 30) {
-      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-      timeSlots.push({
-        time: timeString,
-        hour,
-        minute
-      });
-    }
-  }
+  const timeSlots = generateTimeSlots();
 
   // Check for conflicts when dragging
   const checkConflicts = (staffId: string, time: string, excludeAppointmentId?: string) => {
@@ -313,7 +131,6 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
     const normalizedTime = normalizeTime(time);
     const staffAppointments = appointments.filter(apt => {
       const normalizedStartTime = normalizeTime(apt.startTime);
-      // Also check if staff_id matches (handle both string and null cases)
       const staffMatches = apt.staffId === staffId;
       const timeMatches = normalizedStartTime === normalizedTime;
       
@@ -330,10 +147,6 @@ const DragDropScheduler: React.FC<DragDropSchedulerProps> = ({
     });
     
     return staffAppointments;
-  };
-
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   if (staff.length === 0) {

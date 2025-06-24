@@ -1,11 +1,11 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, DragOverEvent, useDndMonitor } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, DragOverEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { useSortable, useDroppable } from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Clock, User, DollarSign, Plus, Calendar } from 'lucide-react';
 import { Appointment, Staff } from '@/services/types';

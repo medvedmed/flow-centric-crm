@@ -7,6 +7,23 @@ export const useRealTimeUpdates = () => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    // Subscribe to services changes
+    const servicesChannel = supabase
+      .channel('services-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'services'
+        },
+        (payload) => {
+          console.log('Services change:', payload);
+          queryClient.invalidateQueries({ queryKey: ['services'] });
+        }
+      )
+      .subscribe();
+
     // Subscribe to appointments changes
     const appointmentsChannel = supabase
       .channel('appointments-changes')
@@ -19,7 +36,6 @@ export const useRealTimeUpdates = () => {
         },
         (payload) => {
           console.log('Appointments change:', payload);
-          // Invalidate relevant queries
           queryClient.invalidateQueries({ queryKey: ['appointments'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
         }
@@ -61,6 +77,24 @@ export const useRealTimeUpdates = () => {
       )
       .subscribe();
 
+    // Subscribe to staff availability changes
+    const staffAvailabilityChannel = supabase
+      .channel('staff-availability-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'staff_availability'
+        },
+        (payload) => {
+          console.log('Staff availability change:', payload);
+          queryClient.invalidateQueries({ queryKey: ['staff-availability'] });
+          queryClient.invalidateQueries({ queryKey: ['availability'] });
+        }
+      )
+      .subscribe();
+
     // Subscribe to reminder changes
     const remindersChannel = supabase
       .channel('reminders-changes')
@@ -96,9 +130,11 @@ export const useRealTimeUpdates = () => {
       .subscribe();
 
     return () => {
+      supabase.removeChannel(servicesChannel);
       supabase.removeChannel(appointmentsChannel);
       supabase.removeChannel(clientsChannel);
       supabase.removeChannel(staffChannel);
+      supabase.removeChannel(staffAvailabilityChannel);
       supabase.removeChannel(remindersChannel);
       supabase.removeChannel(analyticsChannel);
     };

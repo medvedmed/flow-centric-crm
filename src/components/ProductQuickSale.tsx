@@ -169,7 +169,7 @@ export const ProductQuickSale: React.FC = () => {
             <div className="space-y-1 max-h-32 overflow-y-auto">
               {todaysSales.slice(0, 5).map((sale) => (
                 <div key={sale.id} className="text-xs bg-gray-50 p-2 rounded flex justify-between">
-                  <span>{sale.inventory_items?.name} x{sale.quantity}</span>
+                  <span>{sale.inventory_items?.name || 'Unknown Product'} x{sale.quantity}</span>
                   <span className="font-medium">${sale.total_revenue}</span>
                 </div>
               ))}

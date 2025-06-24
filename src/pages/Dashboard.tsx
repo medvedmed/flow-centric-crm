@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Users, DollarSign, TrendingUp, Package, ShoppingCart } from 'lucide-react';
@@ -10,19 +10,20 @@ import { SidebarToggle } from '@/components/SidebarToggle';
 import { QuickPaymentInterface } from '@/components/QuickPaymentInterface';
 import { ProductQuickSale } from '@/components/ProductQuickSale';
 import { MiniCalendar } from '@/components/MiniCalendar';
-import { StaffOverview } from '@/components/StaffOverview';
-import { ReceptionistDashboard } from '@/components/ReceptionistDashboard';
-import { StaffDashboard } from '@/components/StaffDashboard';
-import { RoleBasedWelcome } from '@/components/RoleBasedWelcome';
-import { useDashboardData } from '@/hooks/dashboard/useDashboardData';
+import StaffOverview from '@/components/StaffOverview';
+import ReceptionistDashboard from '@/components/ReceptionistDashboard';
+import StaffDashboard from '@/components/StaffDashboard';
+import RoleBasedWelcome from '@/components/RoleBasedWelcome';
+import { useDashboardStats } from '@/hooks/dashboard/useDashboardData';
 import { useRoleBasedUI } from '@/hooks/useRoleBasedUI';
 import { Navigate } from 'react-router-dom';
 import { productSalesApi } from '@/services/api/productSalesApi';
 
 const Dashboard = () => {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const { currentRole, isLoading: roleLoading } = useRoleBasedUI();
-  const { stats, isLoading: statsLoading } = useDashboardData();
+  const { userRole, isLoading: roleLoading } = useRoleBasedUI();
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   // Redirect to login if not authenticated
   if (!authLoading && !isAuthenticated) {
@@ -48,11 +49,11 @@ const Dashboard = () => {
   }
 
   // Role-specific dashboard views
-  if (currentRole === 'receptionist') {
+  if (userRole === 'receptionist') {
     return <ReceptionistDashboard />;
   }
 
-  if (currentRole === 'staff') {
+  if (userRole === 'staff') {
     return <StaffDashboard />;
   }
 
@@ -127,7 +128,10 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Calendar and Staff */}
             <div className="space-y-6">
-              <MiniCalendar />
+              <MiniCalendar 
+                selectedDate={selectedDate}
+                onDateSelect={setSelectedDate}
+              />
               <StaffOverview />
             </div>
 

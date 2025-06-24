@@ -109,7 +109,8 @@ export const QuickPaymentInterface: React.FC = () => {
       category: 'Service Revenue',
       amount,
       description: serviceDescription,
-      payment_method: servicePaymentMethod
+      payment_method: servicePaymentMethod,
+      transaction_date: new Date().toISOString().split('T')[0]
     });
   };
 

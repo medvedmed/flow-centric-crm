@@ -3,9 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { LogOut, User, Settings } from 'lucide-react';
+import { LogOut, User, Settings, Menu } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useSidebar } from '@/hooks/useSidebar';
 
 const getRoleBadgeColor = (role: string) => {
   switch (role) {
@@ -55,6 +56,7 @@ const getWelcomeMessage = (role: string) => {
 const AppHeader = () => {
   const { user, signOut } = useAuth();
   const { userRole } = usePermissions();
+  const { toggleSidebar } = useSidebar();
 
   const handleSignOut = async () => {
     await signOut();
@@ -64,6 +66,14 @@ const AppHeader = () => {
     <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-40">
       <div className="flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleSidebar}
+            className="lg:hidden"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
           <h1 className="text-xl font-bold bg-gradient-to-r from-teal-500 to-cyan-600 bg-clip-text text-transparent">
             {getWelcomeMessage(userRole || '')}
           </h1>

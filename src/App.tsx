@@ -45,30 +45,28 @@ function App() {
                     <Route path="/*" element={
                       <ProtectedRoute>
                         <AppWithRealTime>
-                          <SidebarProvider>
-                            <div className="flex min-h-screen w-full">
-                              <AppSidebar />
-                              <div className="flex-1 flex flex-col">
-                                <AppHeader />
-                                <main className="flex-1 p-6">
-                                  <Routes>
-                                    <Route path="/dashboard" element={<Dashboard />} />
-                                    <Route path="/appointments" element={<Appointments />} />
-                                    <Route path="/clients" element={<Clients />} />
-                                    <Route path="/staff" element={<Staff />} />
-                                    <Route path="/services" element={<Services />} />
-                                    <Route path="/finance" element={<Finance />} />
-                                    <Route path="/inventory" element={<Inventory />} />
-                                    <Route path="/reports" element={<Reports />} />
-                                    <Route path="/settings" element={<Settings />} />
-                                    <Route path="/help" element={<Help />} />
-                                    <Route path="/webhook-test" element={<WebhookTest />} />
-                                    <Route path="*" element={<NotFound />} />
-                                  </Routes>
-                                </main>
-                              </div>
+                          <div className="flex min-h-screen w-full">
+                            <AppSidebar />
+                            <div className="flex-1 flex flex-col lg:ml-64">
+                              <AppHeader />
+                              <main className="flex-1 p-6">
+                                <Routes>
+                                  <Route path="/dashboard" element={<Dashboard />} />
+                                  <Route path="/appointments" element={<Appointments />} />
+                                  <Route path="/clients" element={<Clients />} />
+                                  <Route path="/staff" element={<Staff />} />
+                                  <Route path="/services" element={<Services />} />
+                                  <Route path="/finance" element={<Finance />} />
+                                  <Route path="/inventory" element={<Inventory />} />
+                                  <Route path="/reports" element={<Reports />} />
+                                  <Route path="/settings" element={<Settings />} />
+                                  <Route path="/help" element={<Help />} />
+                                  <Route path="/webhook-test" element={<WebhookTest />} />
+                                  <Route path="*" element={<NotFound />} />
+                                </Routes>
+                              </main>
                             </div>
-                          </SidebarProvider>
+                          </div>
                         </AppWithRealTime>
                       </ProtectedRoute>
                     } />

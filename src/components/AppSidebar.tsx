@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Home,
@@ -40,7 +41,7 @@ interface NavItemProps {
 const navigationItems = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/dashboard",
     icon: Home,
     requiredPermission: { area: "dashboard" as const, action: "view" as const }
   },

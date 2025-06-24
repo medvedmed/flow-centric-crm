@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -9,12 +10,16 @@ const corsHeaders = {
 interface WhatsAppSession {
   id: string
   salon_id: string
-  session_data: any
-  qr_code?: string
-  qr_image_data?: string
-  connection_state: string
   phone_number?: string
+  connection_state: string
   is_connected: boolean
+  verification_code?: string
+  verification_expires_at?: string
+  verification_attempts: number
+  max_verification_attempts: number
+  phone_verified: boolean
+  business_account_id?: string
+  access_token?: string
 }
 
 serve(async (req) => {
@@ -45,18 +50,20 @@ serve(async (req) => {
     const action = url.searchParams.get('action')
 
     switch (action) {
-      case 'init-session':
-        return await initWhatsAppSession(supabaseClient, user.id)
+      case 'request-verification':
+        const { phoneNumber } = await req.json()
+        return await requestVerificationCode(supabaseClient, user.id, phoneNumber)
       
-      case 'get-qr':
-        return await getQRCode(supabaseClient, user.id)
+      case 'verify-code':
+        const { phoneNumber: phone, code } = await req.json()
+        return await verifyCode(supabaseClient, user.id, phone, code)
       
       case 'check-connection':
         return await checkConnection(supabaseClient, user.id)
       
       case 'send-message':
-        const { phone, message, appointmentId } = await req.json()
-        return await sendMessage(supabaseClient, user.id, phone, message, appointmentId)
+        const { phone: messagePhone, message, appointmentId } = await req.json()
+        return await sendMessage(supabaseClient, user.id, messagePhone, message, appointmentId)
       
       case 'reset-session':
         return await resetSession(supabaseClient, user.id)
@@ -79,79 +86,81 @@ serve(async (req) => {
   }
 })
 
-async function resetSession(supabase: any, userId: string) {
+async function requestVerificationCode(supabase: any, userId: string, phoneNumber: string) {
   try {
-    console.log('Resetting WhatsApp session for user:', userId)
+    console.log('Requesting verification code for user:', userId, 'phone:', phoneNumber)
     
-    // Delete existing sessions to start fresh
-    await supabase
+    // Clean up phone number
+    const cleanPhone = phoneNumber.replace(/\D/g, '')
+    const formattedPhone = cleanPhone.startsWith('1') ? `+${cleanPhone}` : `+1${cleanPhone}`
+    
+    // Generate a 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes from now
+    
+    // Check if session exists and update or create
+    const { data: existingSession } = await supabase
       .from('whatsapp_sessions')
-      .delete()
+      .select('*')
       .eq('salon_id', userId)
-    
-    console.log('WhatsApp session reset successfully')
-
-    return new Response(
-      JSON.stringify({ success: true }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
-      }
-    )
-  } catch (error) {
-    console.error('Error in resetSession:', error)
-    throw new Error(`Failed to reset WhatsApp session: ${error.message}`)
-  }
-}
-
-async function initWhatsAppSession(supabase: any, userId: string) {
-  try {
-    console.log('Initializing WhatsApp session for user:', userId)
-    
-    // Clean up any existing sessions for this user to avoid duplicates
-    await supabase
-      .from('whatsapp_sessions')
-      .delete()
-      .eq('salon_id', userId)
-    
-    // Generate a realistic QR code data
-    const qrCode = generateRealisticQRCode(userId)
-    const qrImageData = generateQRImageData(qrCode)
-    
-    // Create new WhatsApp session with QR image data
-    const { data, error } = await supabase
-      .from('whatsapp_sessions')
-      .insert({
-        salon_id: userId,
-        qr_code: qrCode,
-        qr_image_data: qrImageData,
-        connection_state: 'waiting_for_scan',
-        is_connected: false,
-        session_data: { 
-          initialized_at: new Date().toISOString(),
-          qr_expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes
-        },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
       .single()
 
-    if (error) {
-      console.error('Database error in initWhatsAppSession:', error)
-      throw error
+    if (existingSession) {
+      // Check rate limiting
+      if (existingSession.verification_attempts >= existingSession.max_verification_attempts) {
+        throw new Error('Too many verification attempts. Please wait before trying again.')
+      }
+
+      // Update existing session
+      const { error } = await supabase
+        .from('whatsapp_sessions')
+        .update({
+          phone_number: formattedPhone,
+          verification_code: verificationCode,
+          verification_expires_at: expiresAt.toISOString(),
+          verification_attempts: existingSession.verification_attempts + 1,
+          connection_state: 'verification_pending',
+          is_connected: false,
+          phone_verified: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('salon_id', userId)
+
+      if (error) throw error
+    } else {
+      // Create new session
+      const { error } = await supabase
+        .from('whatsapp_sessions')
+        .insert({
+          salon_id: userId,
+          phone_number: formattedPhone,
+          verification_code: verificationCode,
+          verification_expires_at: expiresAt.toISOString(),
+          verification_attempts: 1,
+          max_verification_attempts: 3,
+          connection_state: 'verification_pending',
+          is_connected: false,
+          phone_verified: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+
+      if (error) throw error
     }
 
-    console.log('WhatsApp session initialized successfully:', data.id)
+    // In a real implementation, you would send the SMS/WhatsApp message here
+    // For now, we'll simulate it by logging the code
+    console.log(`Verification code for ${formattedPhone}: ${verificationCode}`)
+    
+    // TODO: Integrate with WhatsApp Business API to send actual verification message
+    // await sendWhatsAppVerification(formattedPhone, verificationCode)
 
     return new Response(
       JSON.stringify({ 
-        success: true, 
-        qr_code: qrCode,
-        qr_image_data: qrImageData,
-        session_id: data.id 
+        success: true,
+        message: 'Verification code sent successfully',
+        // In development, include the code for testing
+        ...(Deno.env.get('ENVIRONMENT') === 'development' && { code: verificationCode })
       }),
       { 
         headers: { 
@@ -161,68 +170,71 @@ async function initWhatsAppSession(supabase: any, userId: string) {
       }
     )
   } catch (error) {
-    console.error('Error in initWhatsAppSession:', error)
-    throw new Error(`Failed to initialize WhatsApp session: ${error.message}`)
+    console.error('Error in requestVerificationCode:', error)
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
+      }),
+      { 
+        status: 400,
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
+      }
+    )
   }
 }
 
-async function getQRCode(supabase: any, userId: string) {
+async function verifyCode(supabase: any, userId: string, phoneNumber: string, code: string) {
   try {
-    const { data, error } = await supabase
+    console.log('Verifying code for user:', userId, 'phone:', phoneNumber, 'code:', code)
+    
+    // Get the session
+    const { data: session, error: sessionError } = await supabase
       .from('whatsapp_sessions')
-      .select('qr_code, qr_image_data, connection_state, session_data')
+      .select('*')
       .eq('salon_id', userId)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+      .single()
 
-    if (error) {
-      console.error('Database error in getQRCode:', error)
-      throw error
+    if (sessionError || !session) {
+      throw new Error('No verification session found')
     }
 
-    // Check if QR code has expired
-    if (data?.session_data?.qr_expires_at) {
-      const expiresAt = new Date(data.session_data.qr_expires_at)
-      if (new Date() > expiresAt) {
-        // QR code expired, generate a new one
-        const newQrCode = generateRealisticQRCode(userId)
-        const newQrImageData = generateQRImageData(newQrCode)
-        
-        await supabase
-          .from('whatsapp_sessions')
-          .update({
-            qr_code: newQrCode,
-            qr_image_data: newQrImageData,
-            session_data: {
-              ...data.session_data,
-              qr_expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString()
-            },
-            updated_at: new Date().toISOString()
-          })
-          .eq('salon_id', userId)
-        
-        return new Response(
-          JSON.stringify({ 
-            qr_code: newQrCode,
-            qr_image_data: newQrImageData,
-            connection_state: data?.connection_state || 'disconnected'
-          }),
-          { 
-            headers: { 
-              ...corsHeaders, 
-              'Content-Type': 'application/json' 
-            } 
-          }
-        )
-      }
+    // Check if code has expired
+    if (new Date() > new Date(session.verification_expires_at)) {
+      throw new Error('Verification code has expired')
     }
+
+    // Check if code matches
+    if (session.verification_code !== code) {
+      throw new Error('Invalid verification code')
+    }
+
+    // Verify the phone number and establish connection
+    const { error } = await supabase
+      .from('whatsapp_sessions')
+      .update({
+        phone_verified: true,
+        is_connected: true,
+        connection_state: 'connected',
+        verification_code: null,
+        verification_expires_at: null,
+        verification_attempts: 0,
+        last_connected_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('salon_id', userId)
+
+    if (error) throw error
+
+    console.log('Phone verification successful for:', phoneNumber)
 
     return new Response(
       JSON.stringify({ 
-        qr_code: data?.qr_code,
-        qr_image_data: data?.qr_image_data,
-        connection_state: data?.connection_state || 'disconnected'
+        success: true,
+        message: 'Phone number verified successfully'
       }),
       { 
         headers: { 
@@ -232,8 +244,20 @@ async function getQRCode(supabase: any, userId: string) {
       }
     )
   } catch (error) {
-    console.error('Error in getQRCode:', error)
-    throw new Error(`Failed to get QR code: ${error.message}`)
+    console.error('Error in verifyCode:', error)
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
+      }),
+      { 
+        status: 400,
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
+      }
+    )
   }
 }
 
@@ -257,7 +281,7 @@ async function checkConnection(supabase: any, userId: string) {
       return new Response(
         JSON.stringify({ 
           is_connected: false,
-          connection_state: 'disconnected',
+          connection_state: 'phone_required',
           phone_number: null
         }),
         { 
@@ -269,49 +293,12 @@ async function checkConnection(supabase: any, userId: string) {
       )
     }
 
-    // Enhanced connection simulation - more realistic behavior
-    let connectionState = data.connection_state || 'disconnected'
-    let isConnected = data.is_connected || false
-    let phoneNumber = data.phone_number
-
-    // Simulate connection process with better logic
-    if (connectionState === 'waiting_for_scan') {
-      // Check if QR code has expired
-      const qrExpiresAt = data.session_data?.qr_expires_at
-      if (qrExpiresAt && new Date() > new Date(qrExpiresAt)) {
-        connectionState = 'qr_expired'
-      } else {
-        // Random chance of connection (simulate user scanning)
-        const connectionChance = Math.random()
-        if (connectionChance > 0.85) { // 15% chance per check
-          connectionState = 'connected'
-          isConnected = true
-          phoneNumber = '+1234567890' // This would be the actual phone number from WhatsApp
-          
-          // Update the session
-          await supabase
-            .from('whatsapp_sessions')
-            .update({
-              connection_state: connectionState,
-              is_connected: isConnected,
-              phone_number: phoneNumber,
-              last_connected_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              session_data: {
-                ...data.session_data,
-                connected_at: new Date().toISOString()
-              }
-            })
-            .eq('salon_id', userId)
-        }
-      }
-    }
-
     return new Response(
       JSON.stringify({ 
-        is_connected: isConnected,
-        connection_state: connectionState,
-        phone_number: phoneNumber,
+        is_connected: data.is_connected && data.phone_verified,
+        connection_state: data.connection_state,
+        phone_number: data.phone_number,
+        phone_verified: data.phone_verified,
         last_connected_at: data.last_connected_at
       }),
       { 
@@ -329,10 +316,10 @@ async function checkConnection(supabase: any, userId: string) {
 
 async function sendMessage(supabase: any, userId: string, phone: string, message: string, appointmentId?: string) {
   try {
-    // Check if WhatsApp is connected
+    // Check if WhatsApp is connected and verified
     const { data: session, error: sessionError } = await supabase
       .from('whatsapp_sessions')
-      .select('is_connected, phone_number')
+      .select('is_connected, phone_verified, phone_number')
       .eq('salon_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -343,8 +330,8 @@ async function sendMessage(supabase: any, userId: string, phone: string, message
       throw sessionError
     }
 
-    if (!session?.is_connected) {
-      throw new Error('WhatsApp not connected')
+    if (!session?.is_connected || !session?.phone_verified) {
+      throw new Error('WhatsApp not connected or phone not verified')
     }
 
     // Log the message attempt
@@ -366,8 +353,9 @@ async function sendMessage(supabase: any, userId: string, phone: string, message
       throw logError
     }
 
-    // Enhanced message sending simulation
-    const success = Math.random() > 0.05 // 95% success rate
+    // TODO: Integrate with WhatsApp Business API to send actual message
+    // For now, simulate message sending
+    const success = Math.random() > 0.05 //  95% success rate
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
     if (success) {
@@ -432,10 +420,10 @@ async function disconnectSession(supabase: any, userId: string) {
       .update({
         is_connected: false,
         connection_state: 'disconnected',
-        qr_code: null,
-        qr_image_data: null,
-        phone_number: null,
-        session_data: null,
+        phone_verified: false,
+        verification_code: null,
+        verification_expires_at: null,
+        verification_attempts: 0,
         updated_at: new Date().toISOString()
       })
       .eq('salon_id', userId)
@@ -460,105 +448,29 @@ async function disconnectSession(supabase: any, userId: string) {
   }
 }
 
-function generateRealisticQRCode(userId: string): string {
-  // Generate a more realistic WhatsApp Web QR code format
-  const timestamp = Date.now()
-  const randomBytes = crypto.getRandomValues(new Uint8Array(16))
-  const randomString = Array.from(randomBytes, byte => byte.toString(16).padStart(2, '0')).join('')
-  
-  return `1@${randomString},${timestamp},${userId.substring(0, 8)},WhatsAppCRM`
-}
+async function resetSession(supabase: any, userId: string) {
+  try {
+    console.log('Resetting WhatsApp session for user:', userId)
+    
+    // Delete existing sessions to start fresh
+    await supabase
+      .from('whatsapp_sessions')
+      .delete()
+      .eq('salon_id', userId)
+    
+    console.log('WhatsApp session reset successfully')
 
-function generateQRImageData(qrText: string): string {
-  // Generate a high-quality QR code as SVG data URI with proper sizing
-  const size = 300
-  const cellSize = 6 // Fixed cell size for better control
-  const gridSize = 45 // 45x45 grid for high resolution
-  const padding = 30 // Padding around the QR code
-  const totalSize = size + (padding * 2)
-  
-  // Create a hash from the QR text for pattern generation
-  let hash = 0
-  for (let i = 0; i < qrText.length; i++) {
-    hash = ((hash << 5) - hash + qrText.charCodeAt(i)) & 0xffffffff
-  }
-  
-  let svg = `<svg width="${totalSize}" height="${totalSize}" xmlns="http://www.w3.org/2000/svg" style="background: white; border: 1px solid #e0e0e0;">`
-  
-  // Add padding background
-  svg += `<rect x="0" y="0" width="${totalSize}" height="${totalSize}" fill="white"/>`
-  
-  // Generate a more realistic QR pattern
-  for (let y = 0; y < gridSize; y++) {
-    for (let x = 0; x < gridSize; x++) {
-      // Create finder patterns (corners) - larger and more defined
-      const isTopLeftFinder = (x < 9 && y < 9)
-      const isTopRightFinder = (x >= 36 && y < 9)
-      const isBottomLeftFinder = (x < 9 && y >= 36)
-      
-      if (isTopLeftFinder || isTopRightFinder || isBottomLeftFinder) {
-        // Finder pattern logic
-        const localX = isTopRightFinder ? x - 36 : x
-        const localY = isBottomLeftFinder ? y - 36 : y
-        
-        const isOuterBorder = (localX === 0 || localX === 8 || localY === 0 || localY === 8)
-        const isInnerSquare = (localX >= 2 && localX <= 6 && localY >= 2 && localY <= 6)
-        const isCenterSquare = (localX >= 3 && localX <= 5 && localY >= 3 && localY <= 5)
-        
-        if (isOuterBorder || isCenterSquare) {
-          const svgX = padding + (x * cellSize)
-          const svgY = padding + (y * cellSize)
-          svg += `<rect x="${svgX}" y="${svgY}" width="${cellSize}" height="${cellSize}" fill="black"/>`
-        }
-      } else {
-        // Generate data pattern based on hash with better distribution
-        const patternHash = (hash + x * 31 + y * 17 + x * y * 7) & 0xffffffff
-        const shouldFill = (patternHash % 100) > 45 // Adjusted threshold for better pattern
-        
-        // Add some structure for timing patterns
-        if ((x === 6 && y > 8 && y < 36) || (y === 6 && x > 8 && x < 36)) {
-          if ((x + y) % 2 === 0) {
-            const svgX = padding + (x * cellSize)
-            const svgY = padding + (y * cellSize)
-            svg += `<rect x="${svgX}" y="${svgY}" width="${cellSize}" height="${cellSize}" fill="black"/>`
-          }
-        } else if (shouldFill) {
-          const svgX = padding + (x * cellSize)
-          const svgY = padding + (y * cellSize)
-          svg += `<rect x="${svgX}" y="${svgY}" width="${cellSize}" height="${cellSize}" fill="black"/>`
-        }
+    return new Response(
+      JSON.stringify({ success: true }),
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
       }
-    }
+    )
+  } catch (error) {
+    console.error('Error in resetSession:', error)
+    throw new Error(`Failed to reset WhatsApp session: ${error.message}`)
   }
-  
-  // Add alignment patterns
-  const alignmentPositions = [20, 24, 28]
-  for (const centerX of alignmentPositions) {
-    for (const centerY of alignmentPositions) {
-      // Skip if overlapping with finder patterns
-      if ((centerX < 15 && centerY < 15) || 
-          (centerX > 30 && centerY < 15) || 
-          (centerX < 15 && centerY > 30)) continue
-      
-      for (let dy = -2; dy <= 2; dy++) {
-        for (let dx = -2; dx <= 2; dx++) {
-          const x = centerX + dx
-          const y = centerY + dy
-          if (x >= 0 && x < gridSize && y >= 0 && y < gridSize) {
-            const isEdge = Math.abs(dx) === 2 || Math.abs(dy) === 2
-            const isCenter = dx === 0 && dy === 0
-            if (isEdge || isCenter) {
-              const svgX = padding + (x * cellSize)
-              const svgY = padding + (y * cellSize)
-              svg += `<rect x="${svgX}" y="${svgY}" width="${cellSize}" height="${cellSize}" fill="black"/>`
-            }
-          }
-        }
-      }
-    }
-  }
-  
-  svg += '</svg>'
-  
-  return `data:image/svg+xml;base64,${btoa(svg)}`
 }

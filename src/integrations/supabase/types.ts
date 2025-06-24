@@ -761,64 +761,61 @@ export type Database = {
       }
       whatsapp_sessions: {
         Row: {
-          client_id: string | null
-          client_token: string | null
+          access_token: string | null
+          business_account_id: string | null
           connection_state: string | null
           created_at: string | null
-          device_info: Json | null
-          encrypted_session: string | null
           id: string
           is_connected: boolean | null
           last_connected_at: string | null
           last_seen: string | null
+          max_verification_attempts: number | null
           phone_number: string | null
-          qr_code: string | null
-          qr_image_data: string | null
+          phone_verified: boolean | null
           salon_id: string
-          server_token: string | null
           session_data: Json | null
-          session_key: string | null
           updated_at: string | null
+          verification_attempts: number | null
+          verification_code: string | null
+          verification_expires_at: string | null
         }
         Insert: {
-          client_id?: string | null
-          client_token?: string | null
+          access_token?: string | null
+          business_account_id?: string | null
           connection_state?: string | null
           created_at?: string | null
-          device_info?: Json | null
-          encrypted_session?: string | null
           id?: string
           is_connected?: boolean | null
           last_connected_at?: string | null
           last_seen?: string | null
+          max_verification_attempts?: number | null
           phone_number?: string | null
-          qr_code?: string | null
-          qr_image_data?: string | null
+          phone_verified?: boolean | null
           salon_id: string
-          server_token?: string | null
           session_data?: Json | null
-          session_key?: string | null
           updated_at?: string | null
+          verification_attempts?: number | null
+          verification_code?: string | null
+          verification_expires_at?: string | null
         }
         Update: {
-          client_id?: string | null
-          client_token?: string | null
+          access_token?: string | null
+          business_account_id?: string | null
           connection_state?: string | null
           created_at?: string | null
-          device_info?: Json | null
-          encrypted_session?: string | null
           id?: string
           is_connected?: boolean | null
           last_connected_at?: string | null
           last_seen?: string | null
+          max_verification_attempts?: number | null
           phone_number?: string | null
-          qr_code?: string | null
-          qr_image_data?: string | null
+          phone_verified?: boolean | null
           salon_id?: string
-          server_token?: string | null
           session_data?: Json | null
-          session_key?: string | null
           updated_at?: string | null
+          verification_attempts?: number | null
+          verification_code?: string | null
+          verification_expires_at?: string | null
         }
         Relationships: []
       }
@@ -842,6 +839,10 @@ export type Database = {
         Returns: {
           id: string
         }[]
+      }
+      cleanup_expired_verification_codes: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       create_appointment_reminder: {
         Args: {

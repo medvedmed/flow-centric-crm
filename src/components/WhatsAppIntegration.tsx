@@ -8,15 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, Smartphone, QrCode, CheckCircle, AlertCircle, Send, Clock, Zap } from 'lucide-react';
+import { MessageSquare, Send, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-
-interface WhatsAppSession {
-  id: string;
-  isConnected: boolean;
-  phoneNumber?: string;
-  lastConnectedAt?: string;
-}
+import { PhoneWhatsAppClient } from './PhoneWhatsAppClient';
 
 interface AutomationSettings {
   autoSend: boolean;
@@ -29,9 +23,7 @@ interface AutomationSettings {
 
 export const WhatsAppIntegration: React.FC = () => {
   const { toast } = useToast();
-  const [session, setSession] = useState<WhatsAppSession | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showQR, setShowQR] = useState(false);
   const [settings, setSettings] = useState<AutomationSettings>({
     autoSend: false,
     optimalSendTime: '10:00',
@@ -42,29 +34,8 @@ export const WhatsAppIntegration: React.FC = () => {
   });
 
   useEffect(() => {
-    loadWhatsAppSession();
     loadAutomationSettings();
   }, []);
-
-  const loadWhatsAppSession = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('whatsapp_sessions')
-        .select('*')
-        .single();
-      
-      if (data) {
-        setSession({
-          id: data.id,
-          isConnected: data.is_connected,
-          phoneNumber: data.phone_number,
-          lastConnectedAt: data.last_connected_at
-        });
-      }
-    } catch (error) {
-      console.error('Error loading WhatsApp session:', error);
-    }
-  };
 
   const loadAutomationSettings = async () => {
     try {
@@ -85,59 +56,6 @@ export const WhatsAppIntegration: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading automation settings:', error);
-    }
-  };
-
-  const connectWhatsApp = async () => {
-    setLoading(true);
-    setShowQR(true);
-    
-    try {
-      // Simulate QR code generation and connection process
-      // In a real implementation, this would connect to WhatsApp Web API
-      setTimeout(() => {
-        setSession({
-          id: 'temp-id',
-          isConnected: true,
-          phoneNumber: '+1234567890',
-          lastConnectedAt: new Date().toISOString()
-        });
-        setShowQR(false);
-        toast({
-          title: "WhatsApp Connected!",
-          description: "Your WhatsApp account is now connected to the CRM.",
-        });
-      }, 3000);
-    } catch (error) {
-      toast({
-        title: "Connection Failed",
-        description: "Failed to connect WhatsApp. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const disconnectWhatsApp = async () => {
-    try {
-      await supabase
-        .from('whatsapp_sessions')
-        .update({ is_connected: false })
-        .eq('id', session?.id);
-      
-      setSession(prev => prev ? { ...prev, isConnected: false } : null);
-      
-      toast({
-        title: "WhatsApp Disconnected",
-        description: "Your WhatsApp account has been disconnected.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to disconnect WhatsApp.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -179,80 +97,8 @@ export const WhatsAppIntegration: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Connection Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            WhatsApp Connection
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${session?.isConnected ? 'bg-green-500' : 'bg-gray-500'}`}></div>
-              <div>
-                <p className="font-medium">
-                  {session?.isConnected ? 'Connected' : 'Not Connected'}
-                </p>
-                {session?.phoneNumber && (
-                  <p className="text-sm text-gray-600">{session.phoneNumber}</p>
-                )}
-              </div>
-            </div>
-            <Badge variant={session?.isConnected ? 'default' : 'secondary'}>
-              {session?.isConnected ? 'Active' : 'Inactive'}
-            </Badge>
-          </div>
-
-          {!session?.isConnected ? (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Connect your personal WhatsApp account to send automated messages directly from your phone.
-              </p>
-              <Button 
-                onClick={connectWhatsApp} 
-                disabled={loading}
-                className="w-full bg-green-600 hover:bg-green-700"
-              >
-                <QrCode className="w-4 h-4 mr-2" />
-                {loading ? "Connecting..." : "Connect WhatsApp"}
-              </Button>
-              
-              {showQR && (
-                <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
-                  <div className="w-48 h-48 mx-auto bg-gray-100 rounded-lg flex items-center justify-center mb-4">
-                    <QrCode className="w-16 h-16 text-gray-400" />
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    Scan this QR code with your WhatsApp mobile app
-                  </p>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Go to WhatsApp → Settings → Linked Devices → Link a Device
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-green-600">
-                  <CheckCircle className="w-4 h-4" />
-                  <span className="text-sm">WhatsApp Connected Successfully</span>
-                </div>
-                <Button variant="outline" size="sm" onClick={disconnectWhatsApp}>
-                  Disconnect
-                </Button>
-              </div>
-              {session.lastConnectedAt && (
-                <p className="text-xs text-gray-500">
-                  Last connected: {new Date(session.lastConnectedAt).toLocaleString()}
-                </p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Phone-based WhatsApp Connection */}
+      <PhoneWhatsAppClient />
 
       {/* Automation Settings */}
       <Card>
@@ -357,19 +203,19 @@ export const WhatsAppIntegration: React.FC = () => {
           <div className="space-y-3 text-sm text-gray-600">
             <div className="flex items-start gap-3">
               <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium">1</span>
-              <p>Connect your personal WhatsApp account using the QR code scanner on your phone</p>
+              <p>Enter your WhatsApp Business phone number to get started</p>
             </div>
             <div className="flex items-start gap-3">
               <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium">2</span>
-              <p>Configure your message templates and automation preferences</p>
+              <p>Verify your phone number with the code sent to your WhatsApp</p>
             </div>
             <div className="flex items-start gap-3">
               <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium">3</span>
-              <p>Messages will be sent automatically from your WhatsApp account at optimal times</p>
+              <p>Configure your message templates and automation preferences</p>
             </div>
             <div className="flex items-start gap-3">
               <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium">4</span>
-              <p>Clients will see messages coming from your personal number, building trust</p>
+              <p>Messages will be sent automatically from your WhatsApp Business account</p>
             </div>
           </div>
         </CardContent>

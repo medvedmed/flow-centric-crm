@@ -6,12 +6,16 @@ export interface WhatsAppSessionData {
   salon_id: string;
   phone_number?: string;
   is_connected: boolean;
-  connection_state: 'disconnected' | 'connecting' | 'waiting_for_scan' | 'connected' | 'qr_expired';
-  qr_code?: string;
-  qr_image_data?: string;
+  connection_state: 'phone_required' | 'verification_pending' | 'connected' | 'disconnected' | 'error';
+  verification_code?: string;
+  verification_expires_at?: string;
+  verification_attempts: number;
+  max_verification_attempts: number;
+  phone_verified: boolean;
+  business_account_id?: string;
+  access_token?: string;
   last_connected_at?: string;
   last_seen?: string;
-  device_info?: any;
 }
 
 export interface WhatsAppMessage {
@@ -58,13 +62,14 @@ class WhatsAppClientService {
     return response.json();
   }
 
-  async initializeSession(): Promise<{ success: boolean; qr_code: string; qr_image_data: string; session_id: string }> {
-    console.log('Initializing WhatsApp session...');
-    return this.makeRequest('init-session');
+  async requestVerificationCode(phoneNumber: string): Promise<{ success: boolean; error?: string }> {
+    console.log('Requesting verification code for:', phoneNumber);
+    return this.makeRequest('request-verification', { phoneNumber });
   }
 
-  async getQRCode(): Promise<{ qr_code?: string; qr_image_data?: string; connection_state: string }> {
-    return this.makeRequest('get-qr');
+  async verifyCode(phoneNumber: string, code: string): Promise<{ success: boolean; error?: string }> {
+    console.log('Verifying code for:', phoneNumber);
+    return this.makeRequest('verify-code', { phoneNumber, code });
   }
 
   async checkConnection(): Promise<{ is_connected: boolean; connection_state: string; phone_number?: string }> {

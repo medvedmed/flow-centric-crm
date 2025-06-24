@@ -12,6 +12,8 @@ export interface InventoryItem {
   minimum_stock: number;
   maximum_stock?: number;
   unit_price: number;
+  cost_price?: number;
+  selling_price?: number;
   supplier_name?: string;
   supplier_contact?: string;
   last_restocked_at?: string;
@@ -29,6 +31,8 @@ export interface CreateInventoryItem {
   minimum_stock: number;
   maximum_stock?: number;
   unit_price: number;
+  cost_price?: number;
+  selling_price?: number;
   supplier_name?: string;
   supplier_contact?: string;
 }
@@ -78,9 +82,17 @@ export const inventoryApi = {
     const { data: profile } = await supabase.auth.getUser();
     if (!profile.user) throw new Error('User not authenticated');
 
+    // Set default selling price if not provided
+    const sellingPrice = item.selling_price || (item.cost_price || item.unit_price) * 1.5;
+
     const { data, error } = await supabase
       .from('inventory_items')
-      .insert([{ ...item, salon_id: profile.user.id }])
+      .insert([{ 
+        ...item, 
+        salon_id: profile.user.id,
+        cost_price: item.cost_price || item.unit_price,
+        selling_price: sellingPrice
+      }])
       .select()
       .single();
     
@@ -89,6 +101,11 @@ export const inventoryApi = {
   },
 
   async updateItem(id: string, updates: Partial<CreateInventoryItem>) {
+    // If updating cost_price, also update selling_price if not explicitly provided
+    if (updates.cost_price && !updates.selling_price) {
+      updates.selling_price = updates.cost_price * 1.5;
+    }
+
     const { data, error } = await supabase
       .from('inventory_items')
       .update(updates)

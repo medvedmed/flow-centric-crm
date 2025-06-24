@@ -342,6 +342,7 @@ export type Database = {
           description: string | null
           id: string
           payment_method: string | null
+          product_sale_id: string | null
           reference_id: string | null
           reference_type: string | null
           salon_id: string
@@ -357,6 +358,7 @@ export type Database = {
           description?: string | null
           id?: string
           payment_method?: string | null
+          product_sale_id?: string | null
           reference_id?: string | null
           reference_type?: string | null
           salon_id: string
@@ -372,6 +374,7 @@ export type Database = {
           description?: string | null
           id?: string
           payment_method?: string | null
+          product_sale_id?: string | null
           reference_id?: string | null
           reference_type?: string | null
           salon_id?: string
@@ -379,11 +382,20 @@ export type Database = {
           transaction_type?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "financial_transactions_product_sale_id_fkey"
+            columns: ["product_sale_id"]
+            isOneToOne: false
+            referencedRelation: "product_sales"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       inventory_items: {
         Row: {
           category: string
+          cost_price: number | null
           created_at: string
           current_stock: number
           description: string | null
@@ -394,6 +406,7 @@ export type Database = {
           minimum_stock: number
           name: string
           salon_id: string
+          selling_price: number | null
           sku: string | null
           supplier_contact: string | null
           supplier_name: string | null
@@ -402,6 +415,7 @@ export type Database = {
         }
         Insert: {
           category?: string
+          cost_price?: number | null
           created_at?: string
           current_stock?: number
           description?: string | null
@@ -412,6 +426,7 @@ export type Database = {
           minimum_stock?: number
           name: string
           salon_id: string
+          selling_price?: number | null
           sku?: string | null
           supplier_contact?: string | null
           supplier_name?: string | null
@@ -420,6 +435,7 @@ export type Database = {
         }
         Update: {
           category?: string
+          cost_price?: number | null
           created_at?: string
           current_stock?: number
           description?: string | null
@@ -430,6 +446,7 @@ export type Database = {
           minimum_stock?: number
           name?: string
           salon_id?: string
+          selling_price?: number | null
           sku?: string | null
           supplier_contact?: string | null
           supplier_name?: string | null
@@ -437,6 +454,77 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      product_sales: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          id: string
+          inventory_item_id: string
+          notes: string | null
+          payment_method: string | null
+          profit: number
+          quantity: number
+          sale_date: string
+          salon_id: string
+          total_cost: number
+          total_revenue: number
+          transaction_id: string | null
+          unit_cost: number
+          unit_selling_price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          inventory_item_id: string
+          notes?: string | null
+          payment_method?: string | null
+          profit?: number
+          quantity?: number
+          sale_date?: string
+          salon_id: string
+          total_cost?: number
+          total_revenue?: number
+          transaction_id?: string | null
+          unit_cost?: number
+          unit_selling_price?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          inventory_item_id?: string
+          notes?: string | null
+          payment_method?: string | null
+          profit?: number
+          quantity?: number
+          sale_date?: string
+          salon_id?: string
+          total_cost?: number
+          total_revenue?: number
+          transaction_id?: string | null
+          unit_cost?: number
+          unit_selling_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_sales_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

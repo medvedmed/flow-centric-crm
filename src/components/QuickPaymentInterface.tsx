@@ -5,360 +5,382 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { Search, DollarSign, CreditCard, Banknote, Receipt, User } from 'lucide-react';
+import { CreditCard, DollarSign, Package, Plus, Minus, X } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { financeApi } from '@/services/api/financeApi';
+import { productSalesApi } from '@/services/api/productSalesApi';
+import { inventoryApi } from '@/services/api/inventoryApi';
+import { toast } from 'sonner';
 
-interface QuickPaymentInterfaceProps {
-  className?: string;
+interface ProductItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  stock: number;
 }
 
-interface SearchResults {
-  clients: any[];
-  appointments: any[];
-}
+export const QuickPaymentInterface: React.FC = () => {
+  // Service payment state
+  const [serviceAmount, setServiceAmount] = useState('');
+  const [serviceDescription, setServiceDescription] = useState('');
+  const [servicePaymentMethod, setServicePaymentMethod] = useState('cash');
 
-export const QuickPaymentInterface: React.FC<QuickPaymentInterfaceProps> = ({ className = '' }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedClient, setSelectedClient] = useState<any>(null);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('Service Payment');
+  // Product payment state
+  const [selectedProducts, setSelectedProducts] = useState<ProductItem[]>([]);
+  const [productPaymentMethod, setProductPaymentMethod] = useState('cash');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [productSearch, setProductSearch] = useState('');
 
   const queryClient = useQueryClient();
 
-  // Search for clients and appointments
-  const { data: searchResults, isLoading: isSearching } = useQuery({
-    queryKey: ['client-search', searchTerm],
-    queryFn: async (): Promise<SearchResults> => {
-      if (!searchTerm || searchTerm.length < 2) return { clients: [], appointments: [] };
-      
-      const { data: profile } = await supabase.auth.getUser();
-      if (!profile.user) throw new Error('User not authenticated');
-
-      // Search both clients and appointments
-      const [clientsResult, appointmentsResult] = await Promise.all([
-        supabase
-          .from('clients')
-          .select('*')
-          .eq('salon_id', profile.user.id)
-          .or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
-          .limit(5),
-        supabase
-          .from('appointments')
-          .select('*')
-          .eq('salon_id', profile.user.id)
-          .eq('status', 'Completed')
-          .or(`client_name.ilike.%${searchTerm}%,client_phone.ilike.%${searchTerm}%`)
-          .is('payment_status', null)
-          .limit(5)
-      ]);
-
-      if (clientsResult.error) throw clientsResult.error;
-      if (appointmentsResult.error) throw appointmentsResult.error;
-
-      return {
-        clients: clientsResult.data || [],
-        appointments: appointmentsResult.data || []
-      };
-    },
-    enabled: searchTerm.length >= 2,
+  const { data: inventory } = useQuery({
+    queryKey: ['inventory', 'active'],
+    queryFn: () => inventoryApi.getItems()
   });
 
-  // Process payment mutation
-  const processPaymentMutation = useMutation({
-    mutationFn: async (paymentData: any) => {
-      const { data: profile } = await supabase.auth.getUser();
-      if (!profile.user) throw new Error('User not authenticated');
-
-      // Create financial transaction
-      const { data: transaction, error: transactionError } = await supabase
-        .from('financial_transactions')
-        .insert([{
-          salon_id: profile.user.id,
-          transaction_type: 'income',
-          category: paymentData.category,
-          amount: paymentData.amount,
-          description: paymentData.description,
-          payment_method: paymentData.method,
-          reference_id: paymentData.referenceId,
-          reference_type: paymentData.referenceType,
-          transaction_date: new Date().toISOString().split('T')[0],
-          created_by: profile.user.id
-        }])
-        .select()
-        .single();
-
-      if (transactionError) throw transactionError;
-
-      // If this is for an appointment, update it
-      if (paymentData.referenceType === 'appointment' && paymentData.referenceId) {
-        const { error: updateError } = await supabase
-          .from('appointments')
-          .update({ 
-            notes: `Payment received: $${paymentData.amount} via ${paymentData.method}`
-          })
-          .eq('id', paymentData.referenceId);
-
-        if (updateError) console.warn('Failed to update appointment:', updateError);
-      }
-
-      return transaction;
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Payment Recorded",
-        description: `Payment of $${data.amount} recorded successfully!`,
-      });
+  const servicePaymentMutation = useMutation({
+    mutationFn: financeApi.createTransaction,
+    onSuccess: () => {
+      toast.success('Service payment recorded successfully!');
       queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['pending-payments'] });
-      resetForm();
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      setServiceAmount('');
+      setServiceDescription('');
+      setServicePaymentMethod('cash');
     },
-    onError: (error: any) => {
-      toast({
-        title: "Payment Failed",
-        description: error.message || "Failed to record payment",
-        variant: "destructive",
-      });
-    },
+    onError: (error) => {
+      console.error('Failed to record service payment:', error);
+      toast.error('Failed to record service payment');
+    }
   });
 
-  const resetForm = () => {
-    setSearchTerm('');
-    setSelectedClient(null);
-    setPaymentAmount('');
-    setPaymentMethod('cash');
-    setDescription('');
-    setCategory('Service Payment');
-  };
-
-  const handleSelectClient = (item: any, type: 'client' | 'appointment') => {
-    if (type === 'client') {
-      setSelectedClient({ ...item, type: 'client' });
-      setDescription(`Service payment for ${item.name}`);
-    } else {
-      setSelectedClient({ ...item, type: 'appointment' });
-      setPaymentAmount(item.price.toString());
-      setDescription(`Payment for ${item.service} - ${item.client_name}`);
+  const productPaymentMutation = useMutation({
+    mutationFn: async (products: ProductItem[]) => {
+      const sales = await Promise.all(
+        products.map(product => 
+          productSalesApi.createSale({
+            inventory_item_id: product.id,
+            quantity: product.quantity,
+            unit_selling_price: product.price,
+            payment_method: productPaymentMethod,
+            customer_name: customerName || undefined,
+            customer_phone: customerPhone || undefined
+          })
+        )
+      );
+      return sales;
+    },
+    onSuccess: () => {
+      toast.success('Product sales recorded successfully!');
+      queryClient.invalidateQueries({ queryKey: ['product-sales'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      setSelectedProducts([]);
+      setCustomerName('');
+      setCustomerPhone('');
+      setProductPaymentMethod('cash');
+    },
+    onError: (error) => {
+      console.error('Failed to record product sales:', error);
+      toast.error('Failed to record product sales');
     }
-    setSearchTerm('');
-  };
+  });
 
-  const handleProcessPayment = () => {
-    if (!paymentAmount || !description) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in payment amount and description",
-        variant: "destructive",
-      });
+  const handleServicePayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const amount = parseFloat(serviceAmount);
+    if (!amount || amount <= 0) {
+      toast.error('Please enter a valid amount');
       return;
     }
 
-    const paymentData = {
-      amount: parseFloat(paymentAmount),
-      method: paymentMethod,
-      description,
-      category,
-      referenceId: selectedClient?.type === 'appointment' ? selectedClient.id : null,
-      referenceType: selectedClient?.type === 'appointment' ? 'appointment' : 'manual'
-    };
+    if (!serviceDescription.trim()) {
+      toast.error('Please enter a description');
+      return;
+    }
 
-    processPaymentMutation.mutate(paymentData);
+    servicePaymentMutation.mutate({
+      transaction_type: 'income',
+      category: 'Service Revenue',
+      amount,
+      description: serviceDescription,
+      payment_method: servicePaymentMethod
+    });
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+  const handleProductPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (selectedProducts.length === 0) {
+      toast.error('Please select at least one product');
+      return;
+    }
+
+    // Check stock availability
+    const stockIssues = selectedProducts.filter(product => product.quantity > product.stock);
+    if (stockIssues.length > 0) {
+      toast.error('Not enough stock for selected quantities');
+      return;
+    }
+
+    productPaymentMutation.mutate(selectedProducts);
   };
+
+  const addProduct = (item: any) => {
+    const existingProduct = selectedProducts.find(p => p.id === item.id);
+    if (existingProduct) {
+      setSelectedProducts(products =>
+        products.map(p =>
+          p.id === item.id
+            ? { ...p, quantity: Math.min(p.quantity + 1, p.stock) }
+            : p
+        )
+      );
+    } else {
+      setSelectedProducts(products => [
+        ...products,
+        {
+          id: item.id,
+          name: item.name,
+          price: item.selling_price || item.unit_price,
+          quantity: 1,
+          stock: item.current_stock
+        }
+      ]);
+    }
+    setProductSearch('');
+  };
+
+  const updateProductQuantity = (id: string, quantity: number) => {
+    setSelectedProducts(products =>
+      products.map(p =>
+        p.id === id ? { ...p, quantity: Math.max(0, Math.min(quantity, p.stock)) } : p
+      ).filter(p => p.quantity > 0)
+    );
+  };
+
+  const removeProduct = (id: string) => {
+    setSelectedProducts(products => products.filter(p => p.id !== id));
+  };
+
+  const filteredInventory = inventory?.filter(item =>
+    item.current_stock > 0 &&
+    (item.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+     item.category.toLowerCase().includes(productSearch.toLowerCase()))
+  ) || [];
+
+  const productTotal = selectedProducts.reduce((sum, product) => sum + (product.price * product.quantity), 0);
 
   return (
-    <Card className={className}>
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <DollarSign className="w-5 h-5" />
-          Quick Payment Entry
+          <CreditCard className="w-5 h-5" />
+          Quick Payment
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Client/Appointment Search */}
-        <div className="space-y-2">
-          <Label htmlFor="search">Search Client or Appointment</Label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              id="search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Enter client name, phone, or appointment details..."
-              className="pl-10"
-            />
-          </div>
-          
-          {/* Search Results */}
-          {searchTerm.length >= 2 && (
-            <div className="border rounded-lg max-h-48 overflow-y-auto">
-              {isSearching ? (
-                <div className="p-3 text-center text-muted-foreground">Searching...</div>
-              ) : (
-                <div className="space-y-1">
-                  {searchResults?.clients?.map((client: any) => (
-                    <div
-                      key={`client-${client.id}`}
-                      onClick={() => handleSelectClient(client, 'client')}
-                      className="p-3 hover:bg-muted cursor-pointer border-b"
-                    >
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        <div>
-                          <div className="font-medium">{client.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {client.phone} • {client.email}
-                          </div>
-                        </div>
-                        <Badge variant="outline">Client</Badge>
-                      </div>
-                    </div>
-                  ))}
-                  {searchResults?.appointments?.map((appointment: any) => (
-                    <div
-                      key={`appointment-${appointment.id}`}
-                      onClick={() => handleSelectClient(appointment, 'appointment')}
-                      className="p-3 hover:bg-muted cursor-pointer border-b"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Receipt className="w-4 h-4" />
+      <CardContent>
+        <Tabs defaultValue="service" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="service" className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4" />
+              Service
+            </TabsTrigger>
+            <TabsTrigger value="products" className="flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Products
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="service" className="space-y-4">
+            <form onSubmit={handleServicePayment} className="space-y-4">
+              <div>
+                <Label htmlFor="service-amount">Amount</Label>
+                <Input
+                  id="service-amount"
+                  type="number"
+                  placeholder="0.00"
+                  value={serviceAmount}
+                  onChange={(e) => setServiceAmount(e.target.value)}
+                  step="0.01"
+                  min="0"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="service-description">Description</Label>
+                <Input
+                  id="service-description"
+                  placeholder="Service description"
+                  value={serviceDescription}
+                  onChange={(e) => setServiceDescription(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="service-payment-method">Payment Method</Label>
+                <Select value={servicePaymentMethod} onValueChange={setServicePaymentMethod}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="card">Card</SelectItem>
+                    <SelectItem value="digital">Digital</SelectItem>
+                    <SelectItem value="check">Check</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={servicePaymentMutation.isPending}
+              >
+                {servicePaymentMutation.isPending ? 'Recording...' : 'Record Payment'}
+              </Button>
+            </form>
+          </TabsContent>
+
+          <TabsContent value="products" className="space-y-4">
+            <form onSubmit={handleProductPayment} className="space-y-4">
+              {/* Product Search */}
+              <div>
+                <Label htmlFor="product-search">Search Products</Label>
+                <Input
+                  id="product-search"
+                  placeholder="Search products..."
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                />
+                {productSearch && filteredInventory.length > 0 && (
+                  <div className="mt-2 border rounded-lg max-h-40 overflow-y-auto">
+                    {filteredInventory.slice(0, 5).map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                        onClick={() => addProduct(item)}
+                      >
+                        <div className="flex justify-between items-center">
                           <div>
-                            <div className="font-medium">{appointment.client_name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {appointment.service} • {appointment.date}
+                            <span className="font-medium">{item.name}</span>
+                            <div className="text-xs text-gray-600">
+                              Stock: {item.current_stock} • ${item.selling_price || item.unit_price}
                             </div>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium">{formatCurrency(appointment.price)}</div>
-                          <Badge variant="outline">Unpaid</Badge>
+                          <Plus className="w-4 h-4 text-green-600" />
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  {(!searchResults?.clients?.length && !searchResults?.appointments?.length) && (
-                    <div className="p-3 text-center text-muted-foreground">
-                      No results found
-                    </div>
-                  )}
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Selected Products */}
+              {selectedProducts.length > 0 && (
+                <div>
+                  <Label>Selected Products</Label>
+                  <div className="space-y-2 mt-2">
+                    {selectedProducts.map((product) => (
+                      <div key={product.id} className="flex items-center justify-between p-2 border rounded-lg">
+                        <div className="flex-1">
+                          <div className="font-medium">{product.name}</div>
+                          <div className="text-sm text-gray-600">${product.price} each</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updateProductQuantity(product.id, product.quantity - 1)}
+                          >
+                            <Minus className="w-3 h-3" />
+                          </Button>
+                          <span className="w-8 text-center">{product.quantity}</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updateProductQuantity(product.id, product.quantity + 1)}
+                          >
+                            <Plus className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeProduct(product.id)}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
-            </div>
-          )}
-        </div>
 
-        {/* Selected Client/Appointment */}
-        {selectedClient && (
-          <div className="p-3 bg-muted rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium">
-                  {selectedClient.type === 'client' ? selectedClient.name : selectedClient.client_name}
+              {/* Customer Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="customer-name">Customer Name (Optional)</Label>
+                  <Input
+                    id="customer-name"
+                    placeholder="Customer name"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                  />
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {selectedClient.type === 'appointment' 
-                    ? `${selectedClient.service} • ${selectedClient.date}`
-                    : 'Manual payment entry'
-                  }
+                <div>
+                  <Label htmlFor="customer-phone">Customer Phone (Optional)</Label>
+                  <Input
+                    id="customer-phone"
+                    placeholder="Customer phone"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                  />
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedClient(null)}
+
+              <div>
+                <Label htmlFor="product-payment-method">Payment Method</Label>
+                <Select value={productPaymentMethod} onValueChange={setProductPaymentMethod}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="card">Card</SelectItem>
+                    <SelectItem value="digital">Digital</SelectItem>
+                    <SelectItem value="check">Check</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedProducts.length > 0 && (
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <div className="flex justify-between items-center font-medium">
+                    <span>Total:</span>
+                    <span className="text-lg">${productTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={productPaymentMutation.isPending || selectedProducts.length === 0}
               >
-                Clear
+                {productPaymentMutation.isPending ? 'Recording...' : 'Record Sales'}
               </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Payment Details */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="amount">Payment Amount</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              value={paymentAmount}
-              onChange={(e) => setPaymentAmount(e.target.value)}
-              placeholder="0.00"
-            />
-          </div>
-          <div>
-            <Label htmlFor="method">Payment Method</Label>
-            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cash">
-                  <div className="flex items-center gap-2">
-                    <Banknote className="w-4 h-4" />
-                    Cash
-                  </div>
-                </SelectItem>
-                <SelectItem value="card">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="w-4 h-4" />
-                    Credit/Debit Card
-                  </div>
-                </SelectItem>
-                <SelectItem value="mobile">Mobile Payment</SelectItem>
-                <SelectItem value="check">Check</SelectItem>
-                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div>
-          <Label htmlFor="category">Category</Label>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Service Payment">Service Payment</SelectItem>
-              <SelectItem value="Product Sale">Product Sale</SelectItem>
-              <SelectItem value="Package Sale">Package Sale</SelectItem>
-              <SelectItem value="Gift Card Sale">Gift Card Sale</SelectItem>
-              <SelectItem value="Other Income">Other Income</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Payment description..."
-            rows={2}
-          />
-        </div>
-
-        <Button
-          onClick={handleProcessPayment}
-          disabled={processPaymentMutation.isPending || !paymentAmount || !description}
-          className="w-full bg-green-600 hover:bg-green-700"
-        >
-          {processPaymentMutation.isPending ? 'Processing...' : 'Record Payment'}
-        </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );

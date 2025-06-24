@@ -21,6 +21,7 @@ export { inventoryApi } from './api/inventoryApi';
 export { financeApi } from './api/financeApi';
 export { enhancedAppointmentApi } from './api/enhancedAppointmentApi';
 export { receiptApi } from './api/receiptApi';
+export { productSalesApi } from './api/productSalesApi';
 
 // Create the main supabaseApi object that maintains the existing interface
 export const supabaseApi = {
@@ -99,7 +100,15 @@ export const supabaseApi = {
   getClientMetrics: () => import('./api/reportsApi').then(m => m.reportsApi.getClientMetrics()),
   exportReport: (type: 'revenue' | 'services' | 'staff' | 'clients') => import('./api/reportsApi').then(m => m.reportsApi.exportReport(type)),
 
-  // Inventory functions
+  // Product Sales functions
+  createProductSale: (saleData: any) => import('./api/productSalesApi').then(m => m.productSalesApi.createSale(saleData)),
+  getProductSales: (startDate?: string, endDate?: string, page?: number, pageSize?: number) =>
+    import('./api/productSalesApi').then(m => m.productSalesApi.getSales(startDate, endDate, page, pageSize)),
+  getTodaysProductSales: () => import('./api/productSalesApi').then(m => m.productSalesApi.getTodaysSales()),
+  getProductSalesStats: (startDate?: string, endDate?: string) =>
+    import('./api/productSalesApi').then(m => m.productSalesApi.getSalesStats(startDate, endDate)),
+
+  // Enhanced Inventory functions with sales
   getInventoryItems: (category?: string, lowStock?: boolean) => 
     import('./api/inventoryApi').then(m => m.inventoryApi.getItems(category, lowStock)),
   getInventoryItem: (id: string) => import('./api/inventoryApi').then(m => m.inventoryApi.getItem(id)),
@@ -111,7 +120,7 @@ export const supabaseApi = {
   getInventoryCategories: () => import('./api/inventoryApi').then(m => m.inventoryApi.getCategories()),
   getLowStockItems: () => import('./api/inventoryApi').then(m => m.inventoryApi.getLowStockItems()),
 
-  // Finance functions
+  // Enhanced Finance functions
   getFinancialTransactions: (startDate?: string, endDate?: string, type?: 'income' | 'expense', category?: string, page?: number, pageSize?: number) =>
     import('./api/financeApi').then(m => m.financeApi.getTransactions(startDate, endDate, type, category, page, pageSize)),
   createFinancialTransaction: (transaction: any) => import('./api/financeApi').then(m => m.financeApi.createTransaction(transaction)),

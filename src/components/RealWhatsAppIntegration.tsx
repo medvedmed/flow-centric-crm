@@ -102,7 +102,7 @@ const RealQRCodeDisplay: React.FC<{ qrData: string; onScan: () => void }> = ({ q
         <h3 className="font-semibold text-gray-900 mb-2">Scan with WhatsApp</h3>
         <div className="space-y-2 text-sm text-gray-600">
           <p>1. Open WhatsApp on your phone</p>
-          <p>2. Tap Menu (⋮) > Linked Devices</p>
+          <p>2. Tap Menu (⋮) &gt; Linked Devices</p>
           <p>3. Tap "Link a Device"</p>
           <p>4. Point your phone camera at this QR code</p>
         </div>

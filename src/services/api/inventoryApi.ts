@@ -46,7 +46,16 @@ export const inventoryApi = {
     }
 
     if (lowStock) {
-      query = query.lt('current_stock', supabase.raw('minimum_stock'));
+      // Use a subquery approach instead of raw SQL
+      const { data: allItems, error: allError } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('is_active', true);
+      
+      if (allError) throw allError;
+      
+      const filteredItems = allItems?.filter(item => item.current_stock <= item.minimum_stock) || [];
+      return filteredItems;
     }
 
     const { data, error } = await query;

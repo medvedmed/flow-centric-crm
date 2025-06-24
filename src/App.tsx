@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -23,6 +24,7 @@ import Settings from "./pages/Settings"
 import Help from "./pages/Help"
 import NotFound from "./pages/NotFound"
 import InviteAccept from "./pages/InviteAccept"
+import WebhookTest from "./pages/WebhookTest"
 import "./App.css"
 import Finance from "@/pages/Finance";
 
@@ -34,7 +36,11 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <div className="min-h-screen bg-background">
           <Routes>
-            <Route path="/" element={<AppWithRealTime />}>
+            <Route path="/" element={
+              <AppWithRealTime>
+                <Dashboard />
+              </AppWithRealTime>
+            }>
               <Route index element={<Dashboard />} />
               <Route path="appointments" element={<Appointments />} />
               <Route path="clients" element={<Clients />} />

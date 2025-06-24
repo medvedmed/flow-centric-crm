@@ -191,7 +191,11 @@ export default function Inventory() {
       return;
     }
 
-    stockUpdateMutation.mutate(stockUpdate);
+    stockUpdateMutation.mutate({
+      id: stockUpdate.itemId,
+      quantity: stockUpdate.quantity,
+      operation: stockUpdate.operation
+    });
   };
 
   const handleDeleteItem = (id: string) => {

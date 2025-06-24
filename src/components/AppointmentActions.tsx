@@ -22,6 +22,8 @@ interface SelectedService {
   staffId?: string;
 }
 
+type AppointmentStatus = "Scheduled" | "Confirmed" | "In Progress" | "Completed" | "Cancelled" | "No Show";
+
 interface AppointmentActionsProps {
   appointment: {
     id: string;
@@ -80,14 +82,14 @@ export const AppointmentActions: React.FC<AppointmentActionsProps> = ({
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async (status: string) => {
+    mutationFn: async (status: AppointmentStatus) => {
       return appointmentApi.updateAppointment(appointment.id, { status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       toast({
         title: "Status Updated",
-        description: `Appointment status changed to ${status}.`,
+        description: `Appointment status updated successfully.`,
       });
       onUpdate?.();
     },

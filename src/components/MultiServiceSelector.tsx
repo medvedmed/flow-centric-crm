@@ -154,7 +154,7 @@ export const MultiServiceSelector: React.FC<MultiServiceSelectorProps> = ({
                       value={service.staffId || ''} 
                       onValueChange={(staffId) => updateServiceStaff(service.id, staffId)}
                     >
-                      <SelectTrigger size="sm">
+                      <SelectTrigger className="h-8">
                         <SelectValue placeholder="Assign staff" />
                       </SelectTrigger>
                       <SelectContent>

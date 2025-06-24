@@ -7,12 +7,17 @@ import { useSidebar } from '@/hooks/useSidebar';
 export const SidebarToggle: React.FC = () => {
   const { isOpen, toggleSidebar } = useSidebar();
 
+  console.log('SidebarToggle - isOpen:', isOpen);
+
   return (
     <Button
       variant="ghost"
       size="sm"
-      onClick={toggleSidebar}
-      className="md:hidden fixed top-4 left-4 z-50 h-10 w-10 p-0"
+      onClick={() => {
+        console.log('Sidebar toggle clicked');
+        toggleSidebar();
+      }}
+      className="md:hidden fixed top-4 left-4 z-50 h-10 w-10 p-0 bg-white border shadow-sm hover:bg-gray-50"
     >
       {isOpen ? (
         <X className="h-5 w-5" />

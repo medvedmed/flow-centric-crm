@@ -105,6 +105,8 @@ const AppointmentBlock: React.FC<{
     minHeight: `${Math.max((appointment.duration || 60) / 15 * 16, 56)}px`
   };
 
+  console.log('Rendering appointment:', appointment.clientName, 'at', appointment.startTime);
+
   return (
     <div
       ref={setNodeRef}
@@ -131,10 +133,10 @@ const AppointmentBlock: React.FC<{
             <div className="text-xs font-medium text-blue-600 truncate">{appointment.service}</div>
             
             <div className="flex items-center justify-between mt-2">
-              <span className="text-xs text-gray-500">{appointment.clientPhone}</span>
+              <span className="text-xs text-gray-500">{appointment.clientPhone || 'No phone'}</span>
               <div className="flex items-center gap-1">
                 <DollarSign className="w-3 h-3 text-green-600" />
-                <span className="text-xs font-semibold text-green-600">${appointment.price}</span>
+                <span className="text-xs font-semibold text-green-600">${appointment.price || 0}</span>
               </div>
             </div>
           </div>
@@ -151,9 +153,22 @@ const GridCell: React.FC<{
   appointments: Appointment[];
   onBookSlot: (slot: BookingSlot) => void;
 }> = ({ timeSlot, staff, appointments, onBookSlot }) => {
-  const cellAppointments = appointments.filter(apt => 
-    apt.staffId === staff.id && apt.startTime === timeSlot.time
-  );
+  // Fix the appointment filtering to handle both time formats
+  const cellAppointments = appointments.filter(apt => {
+    const isMatchingStaff = apt.staffId === staff.id || apt.staff_id === staff.id;
+    const appointmentTime = apt.startTime || apt.start_time;
+    const isMatchingTime = appointmentTime === timeSlot.time || 
+                          (appointmentTime && appointmentTime.substring(0, 5) === timeSlot.time);
+    
+    console.log(`Checking appointment for ${staff.name} at ${timeSlot.time}:`, {
+      appointmentTime,
+      isMatchingStaff,
+      isMatchingTime,
+      clientName: apt.clientName || apt.client_name
+    });
+    
+    return isMatchingStaff && isMatchingTime;
+  });
 
   console.log(`Grid cell for ${staff.name} at ${timeSlot.time}: ${cellAppointments.length} appointments`);
 
@@ -193,7 +208,13 @@ const EnhancedInteractiveScheduler: React.FC<EnhancedInteractiveSchedulerProps> 
   console.log('EnhancedInteractiveScheduler rendering with:', {
     staffCount: staff.length,
     appointmentCount: appointments.length,
-    selectedDate: format(selectedDate, 'yyyy-MM-dd')
+    selectedDate: format(selectedDate, 'yyyy-MM-dd'),
+    appointments: appointments.map(apt => ({
+      id: apt.id,
+      clientName: apt.clientName || apt.client_name,
+      startTime: apt.startTime || apt.start_time,
+      staffId: apt.staffId || apt.staff_id
+    }))
   });
 
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -226,6 +247,7 @@ const EnhancedInteractiveScheduler: React.FC<EnhancedInteractiveSchedulerProps> 
   }, []);
 
   const handleAppointmentSuccess = useCallback(() => {
+    console.log('Appointment successfully created/updated');
     setIsAddAppointmentOpen(false);
     setSelectedBookingSlot(null);
     onAppointmentUpdate?.();
@@ -255,8 +277,8 @@ const EnhancedInteractiveScheduler: React.FC<EnhancedInteractiveSchedulerProps> 
       if (targetAppointment) {
         moveAppointment({
           appointmentId: active.id as string,
-          newStaffId: targetAppointment.staffId || '',
-          newTime: targetAppointment.startTime
+          newStaffId: targetAppointment.staffId || targetAppointment.staff_id || '',
+          newTime: targetAppointment.startTime || targetAppointment.start_time || ''
         });
       }
     }
@@ -372,6 +394,7 @@ const EnhancedInteractiveScheduler: React.FC<EnhancedInteractiveSchedulerProps> 
       <AddAppointmentDialog 
         open={isAddAppointmentOpen}
         onOpenChange={(open) => {
+          console.log('Dialog open state changed:', open);
           setIsAddAppointmentOpen(open);
           if (!open) {
             setSelectedBookingSlot(null);

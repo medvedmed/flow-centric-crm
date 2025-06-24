@@ -21,11 +21,27 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   const dateString = format(selectedDate, 'yyyy-MM-dd');
   const { staff, appointments, isLoading, error, staffError, appointmentsError } = useAppointmentData(dateString);
 
+  console.log('AppointmentScheduler - Data:', {
+    dateString,
+    staffCount: staff?.length || 0,
+    appointmentCount: appointments?.length || 0,
+    isLoading,
+    error,
+    staff: staff?.map(s => ({ id: s.id, name: s.name })),
+    appointments: appointments?.map(a => ({ 
+      id: a.id, 
+      client: a.clientName || a.client_name, 
+      time: a.startTime || a.start_time,
+      staffId: a.staffId || a.staff_id 
+    }))
+  });
+
   const handleRefresh = () => {
     window.location.reload();
   };
 
   const handleAppointmentUpdate = () => {
+    console.log('Appointment updated - triggering refresh');
     // This will be called when appointments are updated to refresh the data
     if (onAppointmentMove) {
       // Trigger any parent refresh logic if needed
@@ -87,8 +103,8 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   return (
     <AppointmentErrorBoundary>
       <EnhancedInteractiveScheduler
-        staff={staff}
-        appointments={appointments}
+        staff={staff || []}
+        appointments={appointments || []}
         selectedDate={selectedDate}
         onAppointmentUpdate={handleAppointmentUpdate}
       />

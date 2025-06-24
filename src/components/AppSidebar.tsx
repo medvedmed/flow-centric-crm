@@ -105,6 +105,8 @@ export const AppSidebar: React.FC = () => {
   const { isOpen, toggleSidebar } = useSidebar();
   const { isLoading } = useAuth();
 
+  console.log('AppSidebar - isOpen:', isOpen);
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -117,6 +119,7 @@ export const AppSidebar: React.FC = () => {
       
       {/* Sidebar */}
       <aside
+        data-sidebar="true"
         className={`fixed left-0 top-0 z-50 flex h-full flex-col overflow-y-auto border-r bg-white shadow-lg transition-transform duration-300 ease-in-out ${
           isOpen ? 'w-64 translate-x-0' : '-translate-x-full w-0'
         } lg:translate-x-0 lg:w-64 lg:shadow-none`}
@@ -124,6 +127,7 @@ export const AppSidebar: React.FC = () => {
         <div className="flex h-16 shrink-0 items-center justify-between px-4 border-b">
           <span className="font-semibold text-2xl text-teal-600">Salon CRM</span>
           <button
+            data-sidebar-toggle="true"
             onClick={toggleSidebar}
             className="lg:hidden p-2 hover:bg-gray-100 rounded-md"
           >
@@ -161,6 +165,7 @@ export const AppSidebar: React.FC = () => {
                   <NavLink
                     to={item.url}
                     onClick={() => {
+                      console.log(`Navigating to ${item.url}`);
                       // Close sidebar on mobile when clicking a link
                       if (window.innerWidth < 1024) {
                         toggleSidebar();

@@ -90,6 +90,9 @@ export interface Appointment {
   salonId: string;
   createdAt: string;
   updatedAt: string;
+  paymentStatus?: 'paid' | 'unpaid' | 'partial';
+  paymentMethod?: string;
+  paymentDate?: string;
 }
 
 export interface TimeOffRequest {

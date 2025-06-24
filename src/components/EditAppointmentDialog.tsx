@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -44,8 +43,8 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [extraServices, setExtraServices] = useState<ExtraService[]>([]);
-  const [paymentStatus, setPaymentStatus] = useState(appointment?.payment_status || 'unpaid');
-  const [paymentMethod, setPaymentMethod] = useState(appointment?.payment_method || 'cash');
+  const [paymentStatus, setPaymentStatus] = useState(appointment?.paymentStatus || 'unpaid');
+  const [paymentMethod, setPaymentMethod] = useState(appointment?.paymentMethod || 'cash');
 
   const { data: services = [] } = useQuery({
     queryKey: ['services-for-appointment'],
@@ -107,8 +106,8 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
       setExtraServices(existingExtraServices);
     }
     if (appointment) {
-      setPaymentStatus(appointment.payment_status || 'unpaid');
-      setPaymentMethod(appointment.payment_method || 'cash');
+      setPaymentStatus(appointment.paymentStatus || 'unpaid');
+      setPaymentMethod(appointment.paymentMethod || 'cash');
     }
   }, [existingExtraServices, appointment]);
 
@@ -164,7 +163,7 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
       }
 
       // Create financial transaction if payment status changed to paid
-      if (paymentStatus === 'paid' && appointment?.payment_status !== 'paid') {
+      if (paymentStatus === 'paid' && appointment?.paymentStatus !== 'paid') {
         const totalPrice = appointmentData.price + extraServices.reduce((sum, service) => sum + service.price, 0);
         
         const { error: transactionError } = await supabase

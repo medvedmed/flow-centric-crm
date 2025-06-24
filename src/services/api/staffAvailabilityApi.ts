@@ -41,8 +41,22 @@ export const staffAvailabilityApi = {
 
     if (error) throw error;
 
+    // Transform database records to TypeScript interface
+    const transformedData = data?.map(record => ({
+      id: record.id,
+      staffId: record.staff_id,
+      salonId: record.salon_id,
+      date: record.date,
+      startTime: record.start_time,
+      endTime: record.end_time,
+      isAvailable: record.is_available,
+      reason: record.reason,
+      createdAt: record.created_at,
+      updatedAt: record.updated_at
+    })) || [];
+
     return {
-      data: data || [],
+      data: transformedData,
       count: count || 0,
       hasMore: (count || 0) > page * pageSize,
       page,
@@ -59,12 +73,24 @@ export const staffAvailabilityApi = {
       .single();
 
     if (error) throw error;
-    return data;
+    
+    return {
+      id: data.id,
+      staffId: data.staff_id,
+      salonId: data.salon_id,
+      date: data.date,
+      startTime: data.start_time,
+      endTime: data.end_time,
+      isAvailable: data.is_available,
+      reason: data.reason,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
   },
 
   // Create staff availability
   createStaffAvailability: async (
-    availability: Omit<StaffAvailability, 'id' | 'salon_id' | 'created_at' | 'updated_at'>
+    availability: Omit<StaffAvailability, 'id' | 'salonId' | 'createdAt' | 'updatedAt'>
   ): Promise<StaffAvailability> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
@@ -72,30 +98,64 @@ export const staffAvailabilityApi = {
     const { data, error } = await supabase
       .from('staff_availability')
       .insert({
-        ...availability,
-        salon_id: user.id
+        staff_id: availability.staffId,
+        salon_id: user.id,
+        date: availability.date,
+        start_time: availability.startTime,
+        end_time: availability.endTime,
+        is_available: availability.isAvailable,
+        reason: availability.reason
       })
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    
+    return {
+      id: data.id,
+      staffId: data.staff_id,
+      salonId: data.salon_id,
+      date: data.date,
+      startTime: data.start_time,
+      endTime: data.end_time,
+      isAvailable: data.is_available,
+      reason: data.reason,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
   },
 
   // Update staff availability
   updateStaffAvailability: async (
     id: string,
-    availability: Partial<Omit<StaffAvailability, 'id' | 'salon_id' | 'created_at' | 'updated_at'>>
+    availability: Partial<Omit<StaffAvailability, 'id' | 'salonId' | 'createdAt' | 'updatedAt'>>
   ): Promise<StaffAvailability> => {
     const { data, error } = await supabase
       .from('staff_availability')
-      .update(availability)
+      .update({
+        start_time: availability.startTime,
+        end_time: availability.endTime,
+        is_available: availability.isAvailable,
+        reason: availability.reason
+      })
       .eq('id', id)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    
+    return {
+      id: data.id,
+      staffId: data.staff_id,
+      salonId: data.salon_id,
+      date: data.date,
+      startTime: data.start_time,
+      endTime: data.end_time,
+      isAvailable: data.is_available,
+      reason: data.reason,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
   },
 
   // Delete staff availability
@@ -110,14 +170,19 @@ export const staffAvailabilityApi = {
 
   // Bulk create availability records
   bulkCreateAvailability: async (
-    availabilityRecords: Omit<StaffAvailability, 'id' | 'salon_id' | 'created_at' | 'updated_at'>[]
+    availabilityRecords: Omit<StaffAvailability, 'id' | 'salonId' | 'createdAt' | 'updatedAt'>[]
   ): Promise<StaffAvailability[]> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
     const recordsWithSalonId = availabilityRecords.map(record => ({
-      ...record,
-      salon_id: user.id
+      staff_id: record.staffId,
+      salon_id: user.id,
+      date: record.date,
+      start_time: record.startTime,
+      end_time: record.endTime,
+      is_available: record.isAvailable,
+      reason: record.reason
     }));
 
     const { data, error } = await supabase
@@ -126,7 +191,19 @@ export const staffAvailabilityApi = {
       .select();
 
     if (error) throw error;
-    return data || [];
+    
+    return (data || []).map(record => ({
+      id: record.id,
+      staffId: record.staff_id,
+      salonId: record.salon_id,
+      date: record.date,
+      startTime: record.start_time,
+      endTime: record.end_time,
+      isAvailable: record.is_available,
+      reason: record.reason,
+      createdAt: record.created_at,
+      updatedAt: record.updated_at
+    }));
   },
 
   // Get availability for date range
@@ -144,7 +221,19 @@ export const staffAvailabilityApi = {
       .order('date', { ascending: true });
 
     if (error) throw error;
-    return data || [];
+    
+    return (data || []).map(record => ({
+      id: record.id,
+      staffId: record.staff_id,
+      salonId: record.salon_id,
+      date: record.date,
+      startTime: record.start_time,
+      endTime: record.end_time,
+      isAvailable: record.is_available,
+      reason: record.reason,
+      createdAt: record.created_at,
+      updatedAt: record.updated_at
+    }));
   },
 
   // Check if staff is available on a specific date and time

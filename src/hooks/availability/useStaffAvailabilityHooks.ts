@@ -65,7 +65,7 @@ export const useCreateStaffAvailability = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (availability: Omit<StaffAvailability, 'id' | 'salon_id' | 'created_at' | 'updated_at'>) =>
+    mutationFn: (availability: Omit<StaffAvailability, 'id' | 'salonId' | 'createdAt' | 'updatedAt'>) =>
       staffAvailabilityApi.createStaffAvailability(availability),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: staffAvailabilityKeys.all });
@@ -88,7 +88,7 @@ export const useUpdateStaffAvailability = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, availability }: { id: string; availability: Partial<StaffAvailability> }) =>
+    mutationFn: ({ id, availability }: { id: string; availability: Partial<Omit<StaffAvailability, 'id' | 'salonId' | 'createdAt' | 'updatedAt'>> }) =>
       staffAvailabilityApi.updateStaffAvailability(id, availability),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: staffAvailabilityKeys.all });
@@ -133,7 +133,7 @@ export const useBulkCreateAvailability = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (availabilityRecords: Omit<StaffAvailability, 'id' | 'salon_id' | 'created_at' | 'updated_at'>[]) =>
+    mutationFn: (availabilityRecords: Omit<StaffAvailability, 'id' | 'salonId' | 'createdAt' | 'updatedAt'>[]) =>
       staffAvailabilityApi.bulkCreateAvailability(availabilityRecords),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: staffAvailabilityKeys.all });

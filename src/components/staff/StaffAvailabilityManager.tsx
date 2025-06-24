@@ -6,11 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { CalendarDays, Clock, Plus, Edit, Trash, Check, X, AlertCircle } from 'lucide-react';
+import { CalendarDays, Clock, Plus, Edit, Trash, Check, X } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks } from 'date-fns';
 import { useStaff } from '@/hooks/staff/useStaffHooks';
 import {
@@ -18,10 +17,9 @@ import {
   useCreateStaffAvailability,
   useUpdateStaffAvailability,
   useDeleteStaffAvailability,
-  useBulkCreateAvailability,
-  useCheckAvailability
+  useBulkCreateAvailability
 } from '@/hooks/availability/useStaffAvailabilityHooks';
-import { StaffAvailability, Staff } from '@/services/types';
+import { StaffAvailability } from '@/services/types';
 import { toast } from '@/hooks/use-toast';
 
 interface StaffAvailabilityManagerProps {
@@ -34,7 +32,6 @@ export const StaffAvailabilityManager: React.FC<StaffAvailabilityManagerProps> =
   showStaffSelector = true
 }) => {
   const [selectedStaffId, setSelectedStaffId] = useState<string>(staffId || '');
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [weekStart, setWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAvailability, setEditingAvailability] = useState<StaffAvailability | null>(null);
@@ -42,9 +39,9 @@ export const StaffAvailabilityManager: React.FC<StaffAvailabilityManagerProps> =
 
   const [newAvailability, setNewAvailability] = useState({
     date: format(new Date(), 'yyyy-MM-dd'),
-    start_time: '09:00',
-    end_time: '17:00',
-    is_available: true,
+    startTime: '09:00',
+    endTime: '17:00',
+    isAvailable: true,
     reason: ''
   });
 
@@ -82,19 +79,19 @@ export const StaffAvailabilityManager: React.FC<StaffAvailabilityManagerProps> =
 
     try {
       await createMutation.mutateAsync({
-        staff_id: selectedStaffId,
+        staffId: selectedStaffId,
         date: newAvailability.date,
-        start_time: newAvailability.start_time,
-        end_time: newAvailability.end_time,
-        is_available: newAvailability.is_available,
+        startTime: newAvailability.startTime,
+        endTime: newAvailability.endTime,
+        isAvailable: newAvailability.isAvailable,
         reason: newAvailability.reason || undefined
       });
 
       setNewAvailability({
         date: format(new Date(), 'yyyy-MM-dd'),
-        start_time: '09:00',
-        end_time: '17:00',
-        is_available: true,
+        startTime: '09:00',
+        endTime: '17:00',
+        isAvailable: true,
         reason: ''
       });
       setIsDialogOpen(false);
@@ -110,9 +107,9 @@ export const StaffAvailabilityManager: React.FC<StaffAvailabilityManagerProps> =
       await updateMutation.mutateAsync({
         id: editingAvailability.id,
         availability: {
-          start_time: editingAvailability.start_time,
-          end_time: editingAvailability.end_time,
-          is_available: editingAvailability.is_available,
+          startTime: editingAvailability.startTime,
+          endTime: editingAvailability.endTime,
+          isAvailable: editingAvailability.isAvailable,
           reason: editingAvailability.reason || undefined
         }
       });
@@ -144,11 +141,11 @@ export const StaffAvailabilityManager: React.FC<StaffAvailabilityManagerProps> =
     }
 
     const weekRecords = weekDays.map(day => ({
-      staff_id: selectedStaffId,
+      staffId: selectedStaffId,
       date: format(day, 'yyyy-MM-dd'),
-      start_time: isAvailable ? '09:00' : undefined,
-      end_time: isAvailable ? '17:00' : undefined,
-      is_available: isAvailable,
+      startTime: isAvailable ? '09:00' : undefined,
+      endTime: isAvailable ? '17:00' : undefined,
+      isAvailable: isAvailable,
       reason: isAvailable ? undefined : 'Bulk set unavailable'
     }));
 
@@ -230,21 +227,21 @@ export const StaffAvailabilityManager: React.FC<StaffAvailabilityManagerProps> =
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="available"
-                    checked={newAvailability.is_available}
-                    onCheckedChange={(checked) => setNewAvailability({ ...newAvailability, is_available: checked })}
+                    checked={newAvailability.isAvailable}
+                    onCheckedChange={(checked) => setNewAvailability({ ...newAvailability, isAvailable: checked })}
                   />
                   <Label htmlFor="available">Available</Label>
                 </div>
 
-                {newAvailability.is_available && (
+                {newAvailability.isAvailable && (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="startTime">Start Time</Label>
                       <Input
                         id="startTime"
                         type="time"
-                        value={newAvailability.start_time}
-                        onChange={(e) => setNewAvailability({ ...newAvailability, start_time: e.target.value })}
+                        value={newAvailability.startTime}
+                        onChange={(e) => setNewAvailability({ ...newAvailability, startTime: e.target.value })}
                       />
                     </div>
                     <div>
@@ -252,14 +249,14 @@ export const StaffAvailabilityManager: React.FC<StaffAvailabilityManagerProps> =
                       <Input
                         id="endTime"
                         type="time"
-                        value={newAvailability.end_time}
-                        onChange={(e) => setNewAvailability({ ...newAvailability, end_time: e.target.value })}
+                        value={newAvailability.endTime}
+                        onChange={(e) => setNewAvailability({ ...newAvailability, endTime: e.target.value })}
                       />
                     </div>
                   </div>
                 )}
 
-                {!newAvailability.is_available && (
+                {!newAvailability.isAvailable && (
                   <div>
                     <Label htmlFor="reason">Reason (Optional)</Label>
                     <Textarea
@@ -406,7 +403,7 @@ export const StaffAvailabilityManager: React.FC<StaffAvailabilityManagerProps> =
                     <div className="text-center py-4">
                       <Badge variant="secondary">Default Hours</Badge>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {selectedStaff?.working_hours_start || '09:00'} - {selectedStaff?.working_hours_end || '17:00'}
+                        {selectedStaff?.workingHoursStart || '09:00'} - {selectedStaff?.workingHoursEnd || '17:00'}
                       </p>
                     </div>
                   ) : (
@@ -414,18 +411,18 @@ export const StaffAvailabilityManager: React.FC<StaffAvailabilityManagerProps> =
                       <div
                         key={avail.id}
                         className={`p-2 rounded border ${
-                          avail.is_available ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                          avail.isAvailable ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1">
-                            {avail.is_available ? (
+                            {avail.isAvailable ? (
                               <Check className="w-3 h-3 text-green-600" />
                             ) : (
                               <X className="w-3 h-3 text-red-600" />
                             )}
                             <span className="text-xs font-medium">
-                              {avail.is_available ? 'Available' : 'Unavailable'}
+                              {avail.isAvailable ? 'Available' : 'Unavailable'}
                             </span>
                           </div>
                           <div className="flex gap-1">
@@ -447,9 +444,9 @@ export const StaffAvailabilityManager: React.FC<StaffAvailabilityManagerProps> =
                             </Button>
                           </div>
                         </div>
-                        {avail.is_available && avail.start_time && avail.end_time && (
+                        {avail.isAvailable && avail.startTime && avail.endTime && (
                           <p className="text-xs text-muted-foreground">
-                            {avail.start_time} - {avail.end_time}
+                            {avail.startTime} - {avail.endTime}
                           </p>
                         )}
                         {avail.reason && (
@@ -486,23 +483,23 @@ export const StaffAvailabilityManager: React.FC<StaffAvailabilityManagerProps> =
               <div className="flex items-center space-x-2">
                 <Switch
                   id="editAvailable"
-                  checked={editingAvailability.is_available}
+                  checked={editingAvailability.isAvailable}
                   onCheckedChange={(checked) => 
-                    setEditingAvailability({ ...editingAvailability, is_available: checked })
+                    setEditingAvailability({ ...editingAvailability, isAvailable: checked })
                   }
                 />
                 <Label htmlFor="editAvailable">Available</Label>
               </div>
 
-              {editingAvailability.is_available && (
+              {editingAvailability.isAvailable && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Start Time</Label>
                     <Input
                       type="time"
-                      value={editingAvailability.start_time || ''}
+                      value={editingAvailability.startTime || ''}
                       onChange={(e) => 
-                        setEditingAvailability({ ...editingAvailability, start_time: e.target.value })
+                        setEditingAvailability({ ...editingAvailability, startTime: e.target.value })
                       }
                     />
                   </div>
@@ -510,16 +507,16 @@ export const StaffAvailabilityManager: React.FC<StaffAvailabilityManagerProps> =
                     <Label>End Time</Label>
                     <Input
                       type="time"
-                      value={editingAvailability.end_time || ''}
+                      value={editingAvailability.endTime || ''}
                       onChange={(e) => 
-                        setEditingAvailability({ ...editingAvailability, end_time: e.target.value })
+                        setEditingAvailability({ ...editingAvailability, endTime: e.target.value })
                       }
                     />
                   </div>
                 </div>
               )}
 
-              {!editingAvailability.is_available && (
+              {!editingAvailability.isAvailable && (
                 <div>
                   <Label>Reason</Label>
                   <Textarea

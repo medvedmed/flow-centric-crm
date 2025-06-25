@@ -23,52 +23,26 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
   const { user } = useAuth();
 
   const fetchEvents = useCallback(async () => {
-  if (!user) return;
+    if (!user) return;
 
-  try {
-    const { data: appointments, error } = await supabase
-      .from("appointments")
-      .select("*, staff:staff_id(id, name)");
+    try {
+      const { data: appointments, error } = await supabase
+        .from("appointments")
+        .select("*, staff:staff_id(id, name)")
+        .eq("salon_id", user.id); // adjust this if salon_id is elsewhere
 
-    console.log("appointments", appointments);
-    console.log("error", error);
+      console.log("appointments:", appointments);
+      console.log("supabase error:", error);
 
-    if (error) throw error;
+      if (error) throw error;
 
-    const formattedEvents = appointments.map((apt) => ({
-      id: apt.id,
-      title: `${apt.client_name} - ${apt.service}`,
-      start: moment(`${apt.date} ${apt.start_time}`).toDate(),
-      end: moment(`${apt.date} ${apt.end_time}`).toDate(),
-      resourceId: apt.staff?.id || "unassigned",
-    }));
-
-    const staffList = [
-      ...new Map(
-        appointments.map((apt) => [
-          apt.staff?.id || "unassigned",
-          {
-            resourceId: apt.staff?.id || "unassigned",
-            resourceTitle: apt.staff?.name || "Unassigned",
-          },
-        ])
-      ).values(),
-    ];
-
-    setEvents(formattedEvents);
-    setResources(staffList);
-  } catch (err) {
-    console.error("fetchEvents error:", err); // 👈 log full error
-    toast({
-      title: "Error",
-      description: "Could not load appointments",
-      variant: "destructive",
-    });
-  } finally {
-    setLoading(false);
-  }
-}, [user, toast]);
-
+      const formattedEvents = appointments.map((apt) => ({
+        id: apt.id,
+        title: `${apt.client_name} - ${apt.service}`,
+        start: moment(`${apt.date} ${apt.start_time}`).toDate(),
+        end: moment(`${apt.date} ${apt.end_time}`).toDate(),
+        resourceId: apt.staff?.id || "unassigned",
+      }));
 
       const staffList = [
         ...new Map(
@@ -85,6 +59,7 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
       setEvents(formattedEvents);
       setResources(staffList);
     } catch (err) {
+      console.error("Fetch appointments failed:", err);
       toast({
         title: "Error",
         description: "Could not load appointments",
@@ -102,13 +77,16 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
       );
       setEvents(updated);
 
-      const { error } = await supabase.from("appointments").update({
-        date: moment(start).format("YYYY-MM-DD"),
-        start_time: moment(start).format("HH:mm:ss"),
-        end_time: moment(end).format("HH:mm:ss"),
-        staff_id: resourceId,
-        updated_at: new Date().toISOString(),
-      }).eq("id", event.id);
+      const { error } = await supabase
+        .from("appointments")
+        .update({
+          date: moment(start).format("YYYY-MM-DD"),
+          start_time: moment(start).format("HH:mm:ss"),
+          end_time: moment(end).format("HH:mm:ss"),
+          staff_id: resourceId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", event.id);
 
       if (error) throw error;
     } catch (err) {

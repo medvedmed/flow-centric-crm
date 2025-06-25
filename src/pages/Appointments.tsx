@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent } from '@/components/ui/card';
@@ -41,7 +40,7 @@ const Appointments = () => {
   if (!canViewAppointments) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Card className="max-w-md">
+        <Card className="max-w-md shadow-xl rounded-2xl">
           <CardContent className="p-6 text-center">
             <Shield className="h-12 w-12 mx-auto mb-4 text-gray-400" />
             <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
@@ -53,47 +52,36 @@ const Appointments = () => {
   }
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-white flex flex-col">
+    <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-gray-50 to-white flex flex-col rounded-xl shadow-sm">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-gray-600" />
-            <h1 className="text-lg font-semibold text-gray-900">
-              Appointments
-            </h1>
+            <h1 className="text-lg font-semibold text-gray-900">Appointments</h1>
           </div>
         </div>
-        
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={goToPreviousDay}>
-            Previous
-          </Button>
-          <Button variant="outline" size="sm" onClick={goToToday}>
-            Today
-          </Button>
-          <Button variant="outline" size="sm" onClick={goToNextDay}>
-            Next
-          </Button>
+          <Button variant="outline" size="sm" onClick={goToPreviousDay} className="rounded-xl">Previous</Button>
+          <Button variant="default" size="sm" onClick={goToToday} className="rounded-xl">Today</Button>
+          <Button variant="outline" size="sm" onClick={goToNextDay} className="rounded-xl">Next</Button>
         </div>
       </div>
 
       {/* Main Content with Tabs */}
-      <div className="flex-1 overflow-hidden p-4">
+      <div className="flex-1 overflow-hidden px-4 py-2">
         <Tabs defaultValue="grid" className="w-full h-full flex flex-col">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="grid" className="flex items-center gap-2">
-              <Grid3X3 className="w-4 h-4" />
-              Grid View
+          <TabsList className="grid w-full max-w-md grid-cols-2 rounded-xl bg-gray-100 p-1">
+            <TabsTrigger value="grid" className="flex items-center gap-2 rounded-xl text-gray-700 data-[state=active]:bg-white data-[state=active]:shadow-md px-3 py-2">
+              <Grid3X3 className="w-4 h-4" /> Grid View
             </TabsTrigger>
-            <TabsTrigger value="calendar" className="flex items-center gap-2">
-              <CalendarDays className="w-4 h-4" />
-              Calendar View
+            <TabsTrigger value="calendar" className="flex items-center gap-2 rounded-xl text-gray-700 data-[state=active]:bg-white data-[state=active]:shadow-md px-3 py-2">
+              <CalendarDays className="w-4 h-4" /> Calendar View
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="grid" className="flex-1 overflow-hidden mt-4">
-            <div className="bg-white border-b border-gray-200 px-4 py-2 mb-4">
+            <div className="bg-white border rounded-xl shadow-sm px-6 py-3 mb-4">
               <h2 className="text-md font-medium text-gray-800">
                 {format(selectedDate, 'EEEE, MMMM d, yyyy')}
               </h2>

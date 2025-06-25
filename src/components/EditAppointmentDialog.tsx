@@ -241,7 +241,7 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* ADD COLOR FIELD */}
+          {/* Color field */}
           <div>
             <Label htmlFor="color">Color (optional)</Label>
             <Input
@@ -253,7 +253,7 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
             />
           </div>
 
-          {/* ... All other form inputs stay unchanged ... */}
+          {/* ... keep existing code (all other form fields remain the same) */}
 
           <div className="flex gap-2 pt-4">
             <Button type="submit" disabled={updateAppointmentMutation.isPending} className="flex-1">

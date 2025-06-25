@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from "react";
 import {
   Calendar,
@@ -15,9 +16,23 @@ import { useAuth } from "@/hooks/useAuth";
 const localizer = momentLocalizer(moment);
 const DnDCalendar = withDragAndDrop(Calendar);
 
+interface CalendarEvent {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  resourceId: string;
+  color: string;
+}
+
+interface CalendarResource {
+  resourceId: string;
+  resourceTitle: string;
+}
+
 const DragDropCalendar = ({ onAppointmentClick }) => {
-  const [events, setEvents] = useState([]);
-  const [resources, setResources] = useState([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [resources, setResources] = useState<CalendarResource[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -41,7 +56,7 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
       if (aptError) throw aptError;
 
       // Format appointments with optional color
-      const formattedEvents = appointments.map((apt) => ({
+      const formattedEvents: CalendarEvent[] = appointments.map((apt) => ({
         id: apt.id,
         title: `${apt.client_name} - ${apt.service}`,
         start: moment(`${apt.date} ${apt.start_time}`).toDate(),
@@ -51,7 +66,7 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
       }));
 
       // Map staff as resources
-      const formattedResources = staffData.map((staff) => ({
+      const formattedResources: CalendarResource[] = staffData.map((staff) => ({
         resourceId: staff.id,
         resourceTitle: staff.name,
       }));
@@ -99,7 +114,7 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
     }
   };
 
-  const handleSelectEvent = (event) => {
+  const handleSelectEvent = (event: CalendarEvent) => {
     onAppointmentClick?.(event);
   };
 
@@ -120,12 +135,12 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
         localizer={localizer}
         resizable
         resources={resources}
-        resourceIdAccessor="resourceId"
-        resourceTitleAccessor="resourceTitle"
+        resourceIdAccessor={(resource: CalendarResource) => resource.resourceId}
+        resourceTitleAccessor={(resource: CalendarResource) => resource.resourceTitle}
         onEventDrop={updateAppointment}
         onEventResize={updateAppointment}
         onSelectEvent={handleSelectEvent}
-        eventPropGetter={(event) => ({
+        eventPropGetter={(event: CalendarEvent) => ({
           style: {
             backgroundColor: event.color || "#007bff",
             color: "white",

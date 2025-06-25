@@ -88,6 +88,7 @@ export type Database = {
           client_id: string | null
           client_name: string
           client_phone: string | null
+          color: string | null
           created_at: string | null
           date: string
           duration: number | null
@@ -109,6 +110,7 @@ export type Database = {
           client_id?: string | null
           client_name: string
           client_phone?: string | null
+          color?: string | null
           created_at?: string | null
           date: string
           duration?: number | null
@@ -130,6 +132,7 @@ export type Database = {
           client_id?: string | null
           client_name?: string
           client_phone?: string | null
+          color?: string | null
           created_at?: string | null
           date?: string
           duration?: number | null

@@ -28,9 +28,8 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
     try {
       const { data: appointments, error } = await supabase
         .from("appointments")
-        .select("*, staff:staff_id(id, name)")
-        .eq("salon_id", user.salon_id);
-
+        .select("*, staff:staff_id(id, name)");
+        // .eq("salon_id", user.salon_id); // You can uncomment this later if needed
 
       if (error) throw error;
 

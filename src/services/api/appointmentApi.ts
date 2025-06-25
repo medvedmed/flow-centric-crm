@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabaseClient';
+
+import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/services/types';
 
 export const appointmentApi = {

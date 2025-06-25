@@ -93,51 +93,50 @@ export const appointmentApi = {
     }));
   },
 
- async updateAppointment(id: string, appointment: Partial<Appointment>): Promise<Appointment> {
-  const { data, error } = await supabase
-    .from('appointments')
-    .update({
-      client_id: appointment.clientId,
-      staff_id: appointment.staffId,
-      client_name: appointment.clientName,
-      client_phone: appointment.clientPhone,
-      service: appointment.service,
-      start_time: appointment.startTime,
-      end_time: appointment.endTime,
-      date: appointment.date,
-      price: appointment.price,
-      duration: appointment.duration,
-      status: appointment.status,
-      notes: appointment.notes,
-      color: appointment.color // <-- this is important
-    })
-    .eq('id', id)
-    .select()
-    .single();
+  async updateAppointment(id: string, appointment: Partial<Appointment>): Promise<Appointment> {
+    const { data, error } = await supabase
+      .from('appointments')
+      .update({
+        client_id: appointment.clientId,
+        staff_id: appointment.staffId,
+        client_name: appointment.clientName,
+        client_phone: appointment.clientPhone,
+        service: appointment.service,
+        start_time: appointment.startTime,
+        end_time: appointment.endTime,
+        date: appointment.date,
+        price: appointment.price,
+        duration: appointment.duration,
+        status: appointment.status,
+        notes: appointment.notes,
+        color: appointment.color
+      })
+      .eq('id', id)
+      .select()
+      .single();
 
-  if (error) throw error;
+    if (error) throw error;
 
-  return {
-    id: data.id,
-    clientId: data.client_id,
-    staffId: data.staff_id,
-    clientName: data.client_name,
-    clientPhone: data.client_phone,
-    service: data.service,
-    startTime: data.start_time,
-    endTime: data.end_time,
-    date: data.date,
-    price: data.price,
-    duration: data.duration,
-    status: data.status as Appointment['status'],
-    notes: data.notes,
-    salonId: data.salon_id,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
-    color: data.color
-  };
-}
-
+    return {
+      id: data.id,
+      clientId: data.client_id,
+      staffId: data.staff_id,
+      clientName: data.client_name,
+      clientPhone: data.client_phone,
+      service: data.service,
+      startTime: data.start_time,
+      endTime: data.end_time,
+      date: data.date,
+      price: data.price,
+      duration: data.duration,
+      status: data.status as Appointment['status'],
+      notes: data.notes,
+      salonId: data.salon_id,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      color: data.color
+    };
+  },
 
   async deleteAppointment(id: string): Promise<void> {
     const { error } = await supabase

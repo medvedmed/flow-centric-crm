@@ -11,7 +11,9 @@ import {
   BarChart3, 
   Settings,
   Clock,
-  CalendarClock
+  CalendarClock,
+  DollarSign,
+  ShoppingBag
 } from 'lucide-react';
 
 interface NavItem {
@@ -52,10 +54,24 @@ const navigationItems: NavItem[] = [
     requiredAction: 'view'
   },
   {
+    title: 'Products',
+    href: '/products',
+    icon: ShoppingBag,
+    requiredArea: 'products',
+    requiredAction: 'view'
+  },
+  {
     title: 'Inventory',
     href: '/inventory',
     icon: Package,
     requiredArea: 'inventory',
+    requiredAction: 'view'
+  },
+  {
+    title: 'Finance',
+    href: '/finance',
+    icon: DollarSign,
+    requiredArea: 'finance',
     requiredAction: 'view'
   },
   {

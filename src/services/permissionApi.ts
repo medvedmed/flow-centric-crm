@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export type AppRole = 'salon_owner' | 'manager' | 'staff' | 'receptionist';
@@ -12,7 +11,9 @@ export type PermissionArea =
   | 'reports' 
   | 'settings'
   | 'schedule_management'
-  | 'time_off_requests';
+  | 'time_off_requests'
+  | 'finance'
+  | 'products';
 
 export interface UserRole {
   id: string;

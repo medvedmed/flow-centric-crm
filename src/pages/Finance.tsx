@@ -1,17 +1,20 @@
 /*
- * Enhanced Finance Page with QueryClientProvider
- * Improvements:
- * - Wrapped app in QueryClientProvider
- * - Defensive coding for all API-based UI renderings
- * - Added loading and error fallback for queries
- * - Better null/undefined guards
- * - Structured to avoid white screens during unexpected response formats
+ * Enhanced Finance Page with UI cards and layout similar to Reports Dashboard
 */
 
 import React from 'react';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  LineElement,
+  CategoryScale,
+  LinearScale,
+  PointElement
+} from 'chart.js';
 
-// Fallback error UI component
+ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement);
+
 function ErrorFallback({ error }: { error: Error }) {
   return (
     <div className="text-center text-red-500 py-10">
@@ -21,16 +24,18 @@ function ErrorFallback({ error }: { error: Error }) {
   );
 }
 
-// Mocked financeApi as fallback until real path is resolved
 const financeApi = {
-  getFinancialSummary: async (start: string, end: string) => {
+  getFinancialSummary: async () => {
     return {
       totalIncome: 5000,
       totalExpenses: 3000,
-      netProfit: 2000
+      netProfit: 2000,
+      totalClients: 3,
+      returningClients: 0,
+      avgPerVisit: 0
     };
   },
-  getTransactions: async (start: string, end: string, type?: string, category?: string) => {
+  getTransactions: async () => {
     return {
       data: [
         { id: '1', category: 'Product Sales', amount: 1200 },
@@ -59,31 +64,13 @@ function FinanceWithFallback() {
 }
 
 function Finance() {
-  const dateRange = {
-    start: '2023-01-01',
-    end: '2023-12-31'
-  };
-
-  const filters = {
-    type: '',
-    category: ''
-  };
-
   const {
     data: summary,
     isError: summaryError,
     isLoading: summaryLoading
   } = useQuery({
-    queryKey: ['financial-summary', dateRange.start, dateRange.end],
-    queryFn: async () => {
-      try {
-        const data = await financeApi.getFinancialSummary(dateRange.start, dateRange.end);
-        return data;
-      } catch (error) {
-        console.error("Failed to fetch summary", error);
-        throw error;
-      }
-    }
+    queryKey: ['financial-summary'],
+    queryFn: () => financeApi.getFinancialSummary()
   });
 
   const {
@@ -91,20 +78,8 @@ function Finance() {
     isError: transactionsError,
     isLoading: transactionsLoading
   } = useQuery({
-    queryKey: ['financial-transactions', dateRange.start, dateRange.end, filters.type, filters.category],
-    queryFn: async () => {
-      try {
-        return await financeApi.getTransactions(
-          dateRange.start,
-          dateRange.end,
-          filters.type as 'income' | 'expense' || undefined,
-          filters.category || undefined
-        );
-      } catch (error) {
-        console.error("Failed to fetch transactions", error);
-        throw error;
-      }
-    }
+    queryKey: ['financial-transactions'],
+    queryFn: () => financeApi.getTransactions()
   });
 
   if (summaryLoading || transactionsLoading) {
@@ -117,27 +92,70 @@ function Finance() {
 
   const transactionList = Array.isArray(transactionsData?.data) ? transactionsData.data : [];
 
+  const cardClass = "rounded-xl shadow-sm p-4 w-full sm:w-48 text-center";
+
   return (
     <div className="space-y-6 p-4">
-      {/* Summary */}
-      <div className="space-y-2">
-        <div>Total Income: ${summary?.totalIncome?.toFixed(2) || '0.00'}</div>
-        <div>Total Expenses: ${summary?.totalExpenses?.toFixed(2) || '0.00'}</div>
-        <div>Net Profit: ${summary?.netProfit?.toFixed(2) || '0.00'}</div>
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-blue-700">Reports & Analytics</h1>
+        <p className="text-gray-500">Analyze your salon performance and business metrics.</p>
       </div>
 
-      {/* Transactions */}
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold">Transactions</h2>
-        {transactionList.map((tx) => (
-          <div key={tx.id} className="border p-2 rounded-md">
-            <span className="font-medium">{tx.category}</span> -
-            <span> ${tx.amount}</span>
-          </div>
-        ))}
-        {transactionList.length === 0 && (
-          <div className="text-muted-foreground">No transactions found.</div>
-        )}
+      <div className="flex flex-wrap justify-center gap-4">
+        <div className={`${cardClass} bg-green-50`}>
+          <div className="text-sm font-medium text-green-800">Total Revenue</div>
+          <div className="text-2xl font-bold text-green-900">${summary?.totalIncome?.toFixed(2)}</div>
+          <div className="text-xs text-gray-500">{transactionList.length} appointments</div>
+        </div>
+        <div className={`${cardClass} bg-blue-50`}>
+          <div className="text-sm font-medium text-blue-800">Total Clients</div>
+          <div className="text-2xl font-bold text-blue-900">{summary?.totalClients}</div>
+          <div className="text-xs text-gray-500">3 new this month</div>
+        </div>
+        <div className={`${cardClass} bg-purple-50`}>
+          <div className="text-sm font-medium text-purple-800">Avg Per Visit</div>
+          <div className="text-2xl font-bold text-purple-900">${summary?.avgPerVisit}</div>
+          <div className="text-xs text-gray-500">Per appointment</div>
+        </div>
+        <div className={`${cardClass} bg-orange-50`}>
+          <div className="text-sm font-medium text-orange-800">Returning Clients</div>
+          <div className="text-2xl font-bold text-orange-900">{summary?.returningClients}</div>
+          <div className="text-xs text-gray-500">This month</div>
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold mb-2">Revenue Trend</h2>
+        <Line
+          data={{
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            datasets: [
+              {
+                label: 'Revenue',
+                data: [0, 0, 0, 0, 0, summary?.totalIncome || 0],
+                fill: false,
+                borderColor: 'rgb(99, 102, 241)',
+                tension: 0.1
+              }
+            ]
+          }}
+          options={{ responsive: true, plugins: { legend: { display: false } } }}
+          className="bg-white rounded-xl shadow-sm p-4"
+        />
+      </div>
+
+      <div>
+        <h2 className="text-xl font-semibold mt-6">Transactions</h2>
+        <div className="space-y-2 mt-2">
+          {transactionList.map((tx) => (
+            <div key={tx.id} className="border p-2 rounded-md">
+              <span className="font-medium">{tx.category}</span> - <span>${tx.amount}</span>
+            </div>
+          ))}
+          {transactionList.length === 0 && (
+            <div className="text-muted-foreground">No transactions found.</div>
+          )}
+        </div>
       </div>
     </div>
   );

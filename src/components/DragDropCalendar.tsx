@@ -28,11 +28,8 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
     try {
       const { data: appointments, error } = await supabase
         .from("appointments")
-        .select("*, staff:staff_id(id, name)")
-        .eq("salon_id", user.id); // adjust this if salon_id is elsewhere
-
-      console.log("appointments:", appointments);
-      console.log("supabase error:", error);
+        .select("*")
+        .eq("salon_id", user.id);
 
       if (error) throw error;
 
@@ -41,23 +38,16 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
         title: `${apt.client_name} - ${apt.service}`,
         start: moment(`${apt.date} ${apt.start_time}`).toDate(),
         end: moment(`${apt.date} ${apt.end_time}`).toDate(),
-        resourceId: apt.staff?.id || "unassigned",
+        resourceId: apt.staff_id || "unassigned",
       }));
 
-      const staffList = [
-        ...new Map(
-          appointments.map((apt) => [
-            apt.staff?.id || "unassigned",
-            {
-              resourceId: apt.staff?.id || "unassigned",
-              resourceTitle: apt.staff?.name || "Unassigned",
-            },
-          ])
-        ).values(),
-      ];
-
       setEvents(formattedEvents);
-      setResources(staffList);
+      setResources([
+        {
+          resourceId: "unassigned",
+          resourceTitle: "Staff",
+        },
+      ]);
     } catch (err) {
       console.error("Fetch appointments failed:", err);
       toast({
@@ -77,19 +67,17 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
       );
       setEvents(updated);
 
-      const { error } = await supabase
-        .from("appointments")
-        .update({
-          date: moment(start).format("YYYY-MM-DD"),
-          start_time: moment(start).format("HH:mm:ss"),
-          end_time: moment(end).format("HH:mm:ss"),
-          staff_id: resourceId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", event.id);
+      const { error } = await supabase.from("appointments").update({
+        date: moment(start).format("YYYY-MM-DD"),
+        start_time: moment(start).format("HH:mm:ss"),
+        end_time: moment(end).format("HH:mm:ss"),
+        staff_id: resourceId,
+        updated_at: new Date().toISOString(),
+      }).eq("id", event.id);
 
       if (error) throw error;
     } catch (err) {
+      console.error("Update appointment failed:", err);
       toast({
         title: "Error",
         description: "Could not update appointment",

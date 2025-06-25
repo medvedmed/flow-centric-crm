@@ -1,19 +1,9 @@
 /*
- * Enhanced Finance Page with UI cards and layout similar to Reports Dashboard
+ * Enhanced Finance Page with Tailwind-based chart alternative (no chart.js)
 */
 
 import React from 'react';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  LineElement,
-  CategoryScale,
-  LinearScale,
-  PointElement
-} from 'chart.js';
-
-ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement);
 
 function ErrorFallback({ error }: { error: Error }) {
   return (
@@ -94,6 +84,10 @@ function Finance() {
 
   const cardClass = "rounded-xl shadow-sm p-4 w-full sm:w-48 text-center";
 
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  const revenueData = [0, 0, 0, 0, 0, summary?.totalIncome || 0];
+  const maxRevenue = Math.max(...revenueData);
+
   return (
     <div className="space-y-6 p-4">
       <div className="text-center">
@@ -126,22 +120,19 @@ function Finance() {
 
       <div>
         <h2 className="text-lg font-semibold mb-2">Revenue Trend</h2>
-        <Line
-          data={{
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-            datasets: [
-              {
-                label: 'Revenue',
-                data: [0, 0, 0, 0, 0, summary?.totalIncome || 0],
-                fill: false,
-                borderColor: 'rgb(99, 102, 241)',
-                tension: 0.1
-              }
-            ]
-          }}
-          options={{ responsive: true, plugins: { legend: { display: false } } }}
-          className="bg-white rounded-xl shadow-sm p-4"
-        />
+        <div className="bg-white p-4 rounded-xl shadow-sm">
+          <div className="flex items-end gap-4 h-40">
+            {revenueData.map((value, i) => (
+              <div key={i} className="flex flex-col items-center justify-end h-full">
+                <div
+                  className="bg-blue-500 w-4 rounded-t"
+                  style={{ height: `${(value / maxRevenue) * 100 || 2}%`, minHeight: '2px' }}
+                />
+                <div className="text-xs mt-1">{months[i]}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div>

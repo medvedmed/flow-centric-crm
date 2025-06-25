@@ -23,23 +23,52 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
   const { user } = useAuth();
 
   const fetchEvents = useCallback(async () => {
-    if (!user) return;
+  if (!user) return;
 
-    try {
-      const { data: appointments, error } = await supabase
-        .from("appointments")
-        .select("*, staff:staff_id(id, name)");
-        // .eq("salon_id", user.salon_id); // removed to avoid undefined error
+  try {
+    const { data: appointments, error } = await supabase
+      .from("appointments")
+      .select("*, staff:staff_id(id, name)");
 
-      if (error) throw error;
+    console.log("appointments", appointments);
+    console.log("error", error);
 
-      const formattedEvents = appointments.map((apt) => ({
-        id: apt.id,
-        title: `${apt.client_name} - ${apt.service}`,
-        start: moment(`${apt.date} ${apt.start_time}`).toDate(),
-        end: moment(`${apt.date} ${apt.end_time}`).toDate(),
-        resourceId: apt.staff?.id || "unassigned",
-      }));
+    if (error) throw error;
+
+    const formattedEvents = appointments.map((apt) => ({
+      id: apt.id,
+      title: `${apt.client_name} - ${apt.service}`,
+      start: moment(`${apt.date} ${apt.start_time}`).toDate(),
+      end: moment(`${apt.date} ${apt.end_time}`).toDate(),
+      resourceId: apt.staff?.id || "unassigned",
+    }));
+
+    const staffList = [
+      ...new Map(
+        appointments.map((apt) => [
+          apt.staff?.id || "unassigned",
+          {
+            resourceId: apt.staff?.id || "unassigned",
+            resourceTitle: apt.staff?.name || "Unassigned",
+          },
+        ])
+      ).values(),
+    ];
+
+    setEvents(formattedEvents);
+    setResources(staffList);
+  } catch (err) {
+    console.error("fetchEvents error:", err); // 👈 log full error
+    toast({
+      title: "Error",
+      description: "Could not load appointments",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+}, [user, toast]);
+
 
       const staffList = [
         ...new Map(

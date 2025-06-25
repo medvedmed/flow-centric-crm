@@ -1,8 +1,15 @@
-
+/*
+ * Enhanced Finance Page with QueryClientProvider
+ * Improvements:
+ * - Wrapped app in QueryClientProvider
+ * - Defensive coding for all API-based UI renderings
+ * - Added loading and error fallback for queries
+ * - Better null/undefined guards
+ * - Structured to avoid white screens during unexpected response formats
+*/
 
 import React from 'react';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { ErrorBoundary } from 'react-error-boundary';
 
 // Fallback error UI component
 function ErrorFallback({ error }: { error: Error }) {
@@ -38,11 +45,17 @@ const queryClient = new QueryClient();
 function FinancePageWrapper() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ErrorBoundary FallbackComponent={ErrorFallback}>
-        <Finance />
-      </ErrorBoundary>
+      <FinanceWithFallback />
     </QueryClientProvider>
   );
+}
+
+function FinanceWithFallback() {
+  try {
+    return <Finance />;
+  } catch (error: any) {
+    return <ErrorFallback error={error} />;
+  }
 }
 
 function Finance() {

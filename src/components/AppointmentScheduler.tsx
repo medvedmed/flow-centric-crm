@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
@@ -8,6 +7,7 @@ import { SimpleScheduler } from './SimpleScheduler';
 import { AppointmentErrorBoundary } from './AppointmentErrorBoundary';
 import { format } from 'date-fns';
 import { Appointment } from '@/services/types';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface AppointmentSchedulerProps {
   selectedDate: Date;
@@ -21,10 +21,10 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const dateString = format(selectedDate, 'yyyy-MM-dd');
   const { staff, appointments, isLoading, error, staffError, appointmentsError } = useAppointmentData(dateString);
+  const queryClient = useQueryClient();
 
   const handleRefresh = () => {
     queryClient.invalidateQueries(['appointments']);
-
   };
 
   if (authLoading) {

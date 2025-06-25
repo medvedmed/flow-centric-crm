@@ -1,19 +1,18 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2, Calendar, Clock, User, DollarSign, CreditCard, Palette } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Appointment } from '@/services/types';
+import { ClientInfoSection } from './appointment/ClientInfoSection';
+import { ServiceDetailsSection } from './appointment/ServiceDetailsSection';
+import { SchedulingSection } from './appointment/SchedulingSection';
+import { PaymentSection } from './appointment/PaymentSection';
+import { NotesSection } from './appointment/NotesSection';
 
 interface Service {
   id: string;
@@ -61,6 +60,7 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [extraServices, setExtraServices] = useState<ExtraService[]>([]);
 
+  // Queries for services, staff, and existing extra services
   const { data: services = [] } = useQuery({
     queryKey: ['services-for-appointment'],
     queryFn: async () => {
@@ -272,273 +272,67 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Client Information Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              <h3 className="font-semibold">Client Information</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="clientName">Client Name</Label>
-                <Input
-                  id="clientName"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="clientPhone">Client Phone</Label>
-                <Input
-                  id="clientPhone"
-                  value={clientPhone}
-                  onChange={(e) => setClientPhone(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
+          <ClientInfoSection
+            clientName={clientName}
+            clientPhone={clientPhone}
+            onClientNameChange={setClientName}
+            onClientPhoneChange={setClientPhone}
+          />
 
           <Separator />
 
           {/* Service Details Section */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Service Details</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="service">Service</Label>
-                <Select value={selectedService} onValueChange={handleServiceSelect}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a service" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {services.map((service) => (
-                      <SelectItem key={service.id} value={service.name}>
-                        {service.name} - ${service.price} ({service.duration}min)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="staff">Staff</Label>
-                <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select staff member" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staff.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Extra Services */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Extra Services</Label>
-                <Select onValueChange={addExtraService}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Add extra service" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {services
-                      .filter(s => !extraServices.find(es => es.id === s.id))
-                      .map((service) => (
-                        <SelectItem key={service.id} value={service.id}>
-                          <Plus className="w-3 h-3 mr-1" />
-                          {service.name} - ${service.price}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {extraServices.length > 0 && (
-                <div className="space-y-2">
-                  {extraServices.map((service) => (
-                    <div key={service.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary">{service.name}</Badge>
-                        <span className="text-sm text-gray-600">${service.price} • {service.duration}min</span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeExtraService(service.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="basePrice">Base Price</Label>
-                <Input
-                  id="basePrice"
-                  type="number"
-                  value={basePrice}
-                  onChange={(e) => setBasePrice(Number(e.target.value))}
-                  step="0.01"
-                />
-              </div>
-              <div>
-                <Label htmlFor="baseDuration">Base Duration (minutes)</Label>
-                <Input
-                  id="baseDuration"
-                  type="number"
-                  value={baseDuration}
-                  onChange={(e) => setBaseDuration(Number(e.target.value))}
-                />
-              </div>
-            </div>
-
-            {/* Totals */}
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold">Total Price:</span>
-                <span className="text-lg font-bold">${finalTotalPrice.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center mt-1">
-                <span className="font-semibold">Total Duration:</span>
-                <span className="text-lg font-bold">{finalTotalDuration} minutes</span>
-              </div>
-            </div>
-          </div>
+          <ServiceDetailsSection
+            selectedService={selectedService}
+            selectedStaff={selectedStaff}
+            basePrice={basePrice}
+            baseDuration={baseDuration}
+            extraServices={extraServices}
+            services={services}
+            staff={staff}
+            finalTotalPrice={finalTotalPrice}
+            finalTotalDuration={finalTotalDuration}
+            onServiceSelect={handleServiceSelect}
+            onStaffSelect={setSelectedStaff}
+            onBasePriceChange={setBasePrice}
+            onBaseDurationChange={setBaseDuration}
+            onAddExtraService={addExtraService}
+            onRemoveExtraService={removeExtraService}
+          />
 
           <Separator />
 
           {/* Scheduling Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              <h3 className="font-semibold">Scheduling</h3>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="date">Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={appointmentDate}
-                  onChange={(e) => setAppointmentDate(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="startTime">Start Time</Label>
-                <Input
-                  id="startTime"
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="endTime">End Time</Label>
-                <Input
-                  id="endTime"
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="status">Status</Label>
-                <Select value={status} onValueChange={(value: Appointment['status']) => setStatus(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Scheduled">Scheduled</SelectItem>
-                    <SelectItem value="Confirmed">Confirmed</SelectItem>
-                    <SelectItem value="In Progress">In Progress</SelectItem>
-                    <SelectItem value="Completed">Completed</SelectItem>
-                    <SelectItem value="Cancelled">Cancelled</SelectItem>
-                    <SelectItem value="No Show">No Show</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="color">Appointment Color</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="color"
-                    type="color"
-                    value={appointmentColor}
-                    onChange={(e) => setAppointmentColor(e.target.value)}
-                    className="w-20 h-10"
-                  />
-                  <Palette className="w-4 h-4 text-gray-500" />
-                </div>
-              </div>
-            </div>
-          </div>
+          <SchedulingSection
+            appointmentDate={appointmentDate}
+            startTime={startTime}
+            endTime={endTime}
+            status={status}
+            appointmentColor={appointmentColor}
+            onDateChange={setAppointmentDate}
+            onStartTimeChange={setStartTime}
+            onEndTimeChange={setEndTime}
+            onStatusChange={setStatus}
+            onColorChange={setAppointmentColor}
+          />
 
           <Separator />
 
           {/* Payment Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4" />
-              <h3 className="font-semibold">Payment</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="paymentStatus">Payment Status</Label>
-                <Select value={paymentStatus} onValueChange={(value: 'paid' | 'unpaid' | 'partial') => setPaymentStatus(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unpaid">Unpaid</SelectItem>
-                    <SelectItem value="partial">Partial</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="paymentMethod">Payment Method</Label>
-                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="card">Card</SelectItem>
-                    <SelectItem value="transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
+          <PaymentSection
+            paymentStatus={paymentStatus}
+            paymentMethod={paymentMethod}
+            onPaymentStatusChange={setPaymentStatus}
+            onPaymentMethodChange={setPaymentMethod}
+          />
 
           <Separator />
 
           {/* Notes Section */}
-          <div>
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any additional notes..."
-              rows={3}
-            />
-          </div>
+          <NotesSection
+            notes={notes}
+            onNotesChange={setNotes}
+          />
 
           <div className="flex gap-2 pt-4">
             <Button type="submit" disabled={updateAppointmentMutation.isPending} className="flex-1">

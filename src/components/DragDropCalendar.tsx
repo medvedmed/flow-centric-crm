@@ -26,36 +26,40 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
     if (!user) return;
 
     try {
-      const { data: appointments, error } = await supabase
-        .from("appointments")
-        .select("*, staff:staff_id(id, name)")
+      // Fetch staff
+      const { data: staffData, error: staffError } = await supabase
+        .from("staff")
+        .select("id, name")
         .eq("salon_id", user.id);
+      if (staffError) throw staffError;
 
-      if (error) throw error;
+      // Fetch appointments
+      const { data: appointments, error: aptError } = await supabase
+        .from("appointments")
+        .select("*")
+        .eq("salon_id", user.id);
+      if (aptError) throw aptError;
 
+      // Format appointments with optional color
       const formattedEvents = appointments.map((apt) => ({
         id: apt.id,
         title: `${apt.client_name} - ${apt.service}`,
         start: moment(`${apt.date} ${apt.start_time}`).toDate(),
         end: moment(`${apt.date} ${apt.end_time}`).toDate(),
-        resourceId: apt.staff?.id || "unassigned",
+        resourceId: apt.staff_id || "unassigned",
+        color: apt.color || "#007bff",
       }));
 
-      const staffList = [
-        ...new Map(
-          appointments.map((apt) => [
-            apt.staff?.id || "unassigned",
-            {
-              resourceId: apt.staff?.id || "unassigned",
-              resourceTitle: apt.staff?.name || "Unassigned",
-            },
-          ])
-        ).values(),
-      ];
+      // Map staff as resources
+      const formattedResources = staffData.map((staff) => ({
+        resourceId: staff.id,
+        resourceTitle: staff.name,
+      }));
 
       setEvents(formattedEvents);
-      setResources(staffList);
+      setResources(formattedResources);
     } catch (err) {
+      console.error("Error fetching calendar data:", err);
       toast({
         title: "Error",
         description: "Could not load appointments",
@@ -73,16 +77,20 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
       );
       setEvents(updated);
 
-      const { error } = await supabase.from("appointments").update({
-        date: moment(start).format("YYYY-MM-DD"),
-        start_time: moment(start).format("HH:mm:ss"),
-        end_time: moment(end).format("HH:mm:ss"),
-        staff_id: resourceId,
-        updated_at: new Date().toISOString(),
-      }).eq("id", event.id);
+      const { error } = await supabase
+        .from("appointments")
+        .update({
+          date: moment(start).format("YYYY-MM-DD"),
+          start_time: moment(start).format("HH:mm:ss"),
+          end_time: moment(end).format("HH:mm:ss"),
+          staff_id: resourceId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", event.id);
 
       if (error) throw error;
     } catch (err) {
+      console.error("Error updating appointment:", err);
       toast({
         title: "Error",
         description: "Could not update appointment",
@@ -117,9 +125,9 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
         onEventDrop={updateAppointment}
         onEventResize={updateAppointment}
         onSelectEvent={handleSelectEvent}
-        eventPropGetter={() => ({
+        eventPropGetter={(event) => ({
           style: {
-            backgroundColor: "#007bff",
+            backgroundColor: event.color || "#007bff",
             color: "white",
             borderRadius: "5px",
           },

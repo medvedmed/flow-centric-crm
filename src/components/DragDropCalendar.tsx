@@ -11,7 +11,6 @@ import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Appointment } from "@/services/types";
 
 const localizer = momentLocalizer(moment);
 const DnDCalendar = withDragAndDrop(Calendar);
@@ -29,43 +28,45 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
     try {
       const { data: appointments, error } = await supabase
         .from("appointments")
-        .select(`*, staff:staff_id(name, id)`) // joining staff
+        .select("*, staff:staff_id(id, name)")
         .eq("salon_id", user.id);
 
       if (error) throw error;
 
-      const formattedEvents = appointments.map((apt) => {
-        const start = moment(`${apt.date} ${apt.start_time}`).toDate();
-        const end = moment(`${apt.date} ${apt.end_time}`).toDate();
+      const formattedEvents = appointments.map((apt) => ({
+        id: apt.id,
+        title: `${apt.client_name} - ${apt.service}`,
+        start: moment(`${apt.date} ${apt.start_time}`).toDate(),
+        end: moment(`${apt.date} ${apt.end_time}`).toDate(),
+        resourceId: apt.staff?.id || "unassigned",
+      }));
 
-        return {
-          id: apt.id,
-          title: `${apt.client_name} - ${apt.service}`,
-          start,
-          end,
-          resourceId: apt.staff?.id || "unassigned",
-        };
-      });
-
-      const uniqueStaff = [
+      const staffList = [
         ...new Map(
-          appointments.map((apt) => [apt.staff?.id, {
-            resourceId: apt.staff?.id || "unassigned",
-            resourceTitle: apt.staff?.name || "Unassigned",
-          }])
+          appointments.map((apt) => [
+            apt.staff?.id || "unassigned",
+            {
+              resourceId: apt.staff?.id || "unassigned",
+              resourceTitle: apt.staff?.name || "Unassigned",
+            },
+          ])
         ).values(),
       ];
 
       setEvents(formattedEvents);
-      setResources(uniqueStaff);
+      setResources(staffList);
     } catch (err) {
-      toast({ title: "Error", description: "Could not load appointments", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Could not load appointments",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   }, [user, toast]);
 
-  const moveEvent = async ({ event, start, end, resourceId }) => {
+  const updateAppointment = async ({ event, start, end, resourceId }) => {
     try {
       const updated = events.map((ev) =>
         ev.id === event.id ? { ...ev, start, end, resourceId } : ev
@@ -82,12 +83,16 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
 
       if (error) throw error;
     } catch (err) {
-      toast({ title: "Error", description: "Could not update appointment", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Could not update appointment",
+        variant: "destructive",
+      });
     }
   };
 
   const handleSelectEvent = (event) => {
-    onAppointmentClick?.({ ...event });
+    onAppointmentClick?.(event);
   };
 
   useEffect(() => {
@@ -102,15 +107,15 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
     <div className="h-[80vh] bg-white rounded-xl shadow border">
       <DnDCalendar
         defaultView={Views.DAY}
-        views={[Views.DAY]}
+        views={[Views.DAY, Views.WEEK]}
         events={events}
         localizer={localizer}
         resizable
         resources={resources}
         resourceIdAccessor="resourceId"
         resourceTitleAccessor="resourceTitle"
-        onEventDrop={moveEvent}
-        onEventResize={moveEvent}
+        onEventDrop={updateAppointment}
+        onEventResize={updateAppointment}
         onSelectEvent={handleSelectEvent}
         eventPropGetter={() => ({
           style: {

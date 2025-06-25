@@ -42,15 +42,16 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
   // Populate form when appointment changes
   useEffect(() => {
     if (appointment) {
-      setClientName(appointment.client_name || '');
-      setClientPhone(appointment.client_phone || '');
+      console.log('Populating form with appointment data:', appointment);
+      setClientName(appointment.clientName || '');
+      setClientPhone(appointment.clientPhone || '');
       setAppointmentDate(appointment.date || '');
-      setStartTime(appointment.start_time || '');
-      setEndTime(appointment.end_time || '');
+      setStartTime(appointment.startTime || '');
+      setEndTime(appointment.endTime || '');
       setStatus(appointment.status || 'Scheduled');
       setAppointmentColor(appointment.color || '#3b82f6');
-      setPaymentStatus(appointment.payment_status || 'unpaid');
-      setPaymentMethod(appointment.payment_method || 'cash');
+      setPaymentStatus(appointment.paymentStatus || 'unpaid');
+      setPaymentMethod(appointment.paymentMethod || 'cash');
       setNotes(appointment.notes || '');
     }
   }, [appointment]);
@@ -76,18 +77,19 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
 
     try {
       const updateData = {
-        client_name: clientName,
-        client_phone: clientPhone,
+        clientName: clientName,
+        clientPhone: clientPhone,
         date: appointmentDate,
-        start_time: startTime,
-        end_time: endTime,
+        startTime: startTime,
+        endTime: endTime,
         status,
         color: appointmentColor,
-        payment_status: paymentStatus,
-        payment_method: paymentMethod,
+        paymentStatus: paymentStatus,
+        paymentMethod: paymentMethod,
         notes
       };
 
+      console.log('Updating appointment with data:', updateData);
       await appointmentApi.updateAppointment(appointment.id, updateData);
       
       // Invalidate queries to refresh data

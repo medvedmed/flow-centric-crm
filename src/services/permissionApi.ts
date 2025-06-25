@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export type AppRole = 'salon_owner' | 'manager' | 'staff' | 'receptionist';
@@ -81,19 +82,21 @@ export const permissionApi = {
       // Salon owners have all permissions
       if (userRole.role === 'salon_owner') return true;
 
-      const { data, error } = await supabase.rpc('has_permission', {
-        user_id: user.id,
-        salon_id: userRole.salonId,
-        area: area,
-        action: action
-      });
+      // For other areas, check permissions in the database
+      const { data, error } = await supabase
+        .from('role_permissions')
+        .select(`can_${action}`)
+        .eq('salon_id', userRole.salonId)
+        .eq('role', userRole.role)
+        .eq('area', area)
+        .single();
 
       if (error) {
         console.error('Permission check error:', error);
         return false;
       }
 
-      return data || false;
+      return data?.[`can_${action}`] || false;
     } catch (error) {
       console.error('Error checking permission:', error);
       return false;

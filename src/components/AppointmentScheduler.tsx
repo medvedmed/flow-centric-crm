@@ -24,7 +24,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   const queryClient = useQueryClient();
 
   const handleRefresh = () => {
-    queryClient.invalidateQueries(['appointments']);
+    queryClient.invalidateQueries({ queryKey: ['appointments'] });
   };
 
   if (authLoading) {

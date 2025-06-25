@@ -82,7 +82,7 @@ export const permissionApi = {
       // Salon owners have all permissions
       if (userRole.role === 'salon_owner') return true;
 
-      // For other areas, check permissions in the database
+      // For areas that might not exist in database yet, handle gracefully
       const { data, error } = await supabase
         .from('role_permissions')
         .select(`can_${action}`)
@@ -93,6 +93,7 @@ export const permissionApi = {
 
       if (error) {
         console.error('Permission check error:', error);
+        // If area doesn't exist in database, default to false for non-owners
         return false;
       }
 

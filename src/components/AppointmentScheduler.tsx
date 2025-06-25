@@ -23,7 +23,8 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   const { staff, appointments, isLoading, error, staffError, appointmentsError } = useAppointmentData(dateString);
 
   const handleRefresh = () => {
-    window.location.reload();
+    queryClient.invalidateQueries(['appointments']);
+
   };
 
   if (authLoading) {

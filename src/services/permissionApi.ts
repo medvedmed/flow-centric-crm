@@ -12,9 +12,7 @@ export type PermissionArea =
   | 'reports' 
   | 'settings'
   | 'schedule_management'
-  | 'time_off_requests'
-  | 'finance'
-  | 'products';
+  | 'time_off_requests';
 
 export interface UserRole {
   id: string;
@@ -82,22 +80,19 @@ export const permissionApi = {
       // Salon owners have all permissions
       if (userRole.role === 'salon_owner') return true;
 
-      // For areas that might not exist in database yet, handle gracefully
-      const { data, error } = await supabase
-        .from('role_permissions')
-        .select(`can_${action}`)
-        .eq('salon_id', userRole.salonId)
-        .eq('role', userRole.role)
-        .eq('area', area)
-        .single();
+      const { data, error } = await supabase.rpc('has_permission', {
+        user_id: user.id,
+        salon_id: userRole.salonId,
+        area: area,
+        action: action
+      });
 
       if (error) {
         console.error('Permission check error:', error);
-        // If area doesn't exist in database, default to false for non-owners
         return false;
       }
 
-      return data?.[`can_${action}`] || false;
+      return data || false;
     } catch (error) {
       console.error('Error checking permission:', error);
       return false;

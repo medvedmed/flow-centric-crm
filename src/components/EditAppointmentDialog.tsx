@@ -1,17 +1,32 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Plus, Trash2, Calendar, Clock, User, DollarSign, CreditCard } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { appointmentApi } from '@/services/api/appointmentApi';
-import { serviceApi } from '@/services/api/serviceApi';
-import { staffApi } from '@/services/api/staffApi';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Appointment } from '@/services/types';
-import { ClientInfoSection } from './appointment/ClientInfoSection';
-import { SchedulingSection } from './appointment/SchedulingSection';
-import { PaymentSection } from './appointment/PaymentSection';
-import { NotesSection } from './appointment/NotesSection';
+
+interface Service {
+  id: string;
+  name: string;
+  price: number;
+  duration: number;
+}
+
+interface ExtraService {
+  id: string;
+  name: string;
+  price: number;
+  duration: number;
+}
 
 interface EditAppointmentDialogProps {
   appointment: Appointment | null;
@@ -24,145 +39,522 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
   isOpen,
   onClose
 }) => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
-  // Form state
-  const [clientName, setClientName] = useState('');
-  const [clientPhone, setClientPhone] = useState('');
-  const [appointmentDate, setAppointmentDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [status, setStatus] = useState<Appointment['status']>('Scheduled');
-  const [appointmentColor, setAppointmentColor] = useState('#3b82f6');
-  const [paymentStatus, setPaymentStatus] = useState<'paid' | 'unpaid' | 'partial'>('unpaid');
-  const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [notes, setNotes] = useState('');
+  const [extraServices, setExtraServices] = useState<ExtraService[]>([]);
+  const [paymentStatus, setPaymentStatus] = useState<'paid' | 'unpaid' | 'partial'>(appointment?.paymentStatus || 'unpaid');
+  const [paymentMethod, setPaymentMethod] = useState(appointment?.paymentMethod || 'cash');
+  const [basePrice, setBasePrice] = useState(appointment?.price || 0);
 
-  // Populate form when appointment changes
+  const { data: services = [] } = useQuery({
+    queryKey: ['services-for-appointment'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('salon_id', user?.id)
+        .eq('is_active', true)
+        .order('name');
+      
+      if (error) throw error;
+      return data as Service[];
+    },
+    enabled: !!user && isOpen,
+  });
+
+  const { data: staff = [] } = useQuery({
+    queryKey: ['staff-for-appointment'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('salon_id', user?.id)
+        .eq('status', 'active')
+        .order('name');
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && isOpen,
+  });
+
+  const { data: existingExtraServices = [] } = useQuery({
+    queryKey: ['appointment-extra-services', appointment?.id],
+    queryFn: async () => {
+      if (!appointment?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('appointment_services')
+        .select('*')
+        .eq('appointment_id', appointment.id);
+      
+      if (error) throw error;
+      
+      return data.map(service => ({
+        id: service.id,
+        name: service.service_name,
+        price: service.service_price,
+        duration: service.service_duration
+      }));
+    },
+    enabled: !!appointment?.id && isOpen,
+  });
+
   useEffect(() => {
     if (appointment) {
-      console.log('Populating form with appointment data:', appointment);
-      setClientName(appointment.clientName || '');
-      setClientPhone(appointment.clientPhone || '');
-      setAppointmentDate(appointment.date || '');
-      setStartTime(appointment.startTime || '');
-      setEndTime(appointment.endTime || '');
-      setStatus(appointment.status || 'Scheduled');
-      setAppointmentColor(appointment.color || '#3b82f6');
+      setExtraServices(existingExtraServices);
       setPaymentStatus(appointment.paymentStatus || 'unpaid');
       setPaymentMethod(appointment.paymentMethod || 'cash');
-      setNotes(appointment.notes || '');
+      setBasePrice(appointment.price || 0);
     }
-  }, [appointment]);
+  }, [appointment, existingExtraServices]);
 
-  // Reset form when dialog closes
-  useEffect(() => {
-    if (!isOpen) {
-      setClientName('');
-      setClientPhone('');
-      setAppointmentDate('');
-      setStartTime('');
-      setEndTime('');
-      setStatus('Scheduled');
-      setAppointmentColor('#3b82f6');
-      setPaymentStatus('unpaid');
-      setPaymentMethod('cash');
-      setNotes('');
-    }
-  }, [isOpen]);
+  const updateAppointmentMutation = useMutation({
+    mutationFn: async (appointmentData: any) => {
+      console.log('Updating appointment with data:', appointmentData);
+      
+      // Calculate total price properly
+      const totalExtraPrice = extraServices.reduce((sum, service) => sum + Number(service.price), 0);
+      const finalPrice = Number(appointmentData.price) + totalExtraPrice;
+      
+      console.log('Price calculation:', {
+        basePrice: appointmentData.price,
+        extraPrice: totalExtraPrice,
+        finalPrice
+      });
 
-  const handleSave = async () => {
+      const { data: updatedAppointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .update({
+          client_name: appointmentData.client_name,
+          client_phone: appointmentData.client_phone,
+          service: appointmentData.service,
+          staff_id: appointmentData.staff_id,
+          date: appointmentData.date,
+          start_time: appointmentData.start_time,
+          end_time: appointmentData.end_time,
+          price: finalPrice,
+          duration: appointmentData.duration + extraServices.reduce((sum, service) => sum + Number(service.duration), 0),
+          status: appointmentData.status,
+          notes: appointmentData.notes,
+          payment_status: paymentStatus,
+          payment_method: paymentMethod,
+          payment_date: paymentStatus === 'paid' ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', appointment?.id)
+        .select()
+        .single();
+      
+      if (appointmentError) {
+        console.error('Appointment update error:', appointmentError);
+        throw appointmentError;
+      }
+
+      // Handle extra services
+      if (extraServices.length > 0) {
+        // Delete existing extra services
+        await supabase
+          .from('appointment_services')
+          .delete()
+          .eq('appointment_id', appointment?.id);
+
+        // Insert new extra services
+        const serviceInserts = extraServices.map(service => ({
+          appointment_id: appointment?.id,
+          service_name: service.name,
+          service_price: Number(service.price),
+          service_duration: Number(service.duration),
+          staff_id: appointmentData.staff_id
+        }));
+
+        const { error: servicesError } = await supabase
+          .from('appointment_services')
+          .insert(serviceInserts);
+        
+        if (servicesError) {
+          console.error('Services insert error:', servicesError);
+          throw servicesError;
+        }
+      } else {
+        // Clean up extra services if none selected
+        await supabase
+          .from('appointment_services')
+          .delete()
+          .eq('appointment_id', appointment?.id);
+      }
+
+      // Create financial transaction if payment status changed to paid
+      if (paymentStatus === 'paid' && appointment?.paymentStatus !== 'paid') {
+        console.log('Creating financial transaction for payment');
+        
+        const { error: transactionError } = await supabase
+          .from('financial_transactions')
+          .insert({
+            salon_id: user?.id,
+            transaction_type: 'income',
+            category: 'Service Revenue',
+            amount: finalPrice,
+            description: `Payment for ${appointmentData.service} - ${appointmentData.client_name}`,
+            payment_method: paymentMethod,
+            reference_id: appointment?.id,
+            reference_type: 'appointment',
+            transaction_date: new Date().toISOString().split('T')[0],
+            created_by: user?.id
+          });
+        
+        if (transactionError) {
+          console.error('Error creating financial transaction:', transactionError);
+        }
+      }
+
+      return updatedAppointment;
+    },
+    onSuccess: () => {
+      console.log('Appointment updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['enhanced-schedule-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      toast({ title: "Success", description: "Appointment updated successfully!" });
+      onClose();
+      setExtraServices([]);
+    },
+    onError: (error) => {
+      console.error('Update appointment error:', error);
+      toast({ title: "Error", description: "Failed to update appointment", variant: "destructive" });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     if (!appointment) return;
 
-    try {
-      const updateData = {
-        clientName: clientName,
-        clientPhone: clientPhone,
-        date: appointmentDate,
-        startTime: startTime,
-        endTime: endTime,
-        status,
-        color: appointmentColor,
-        paymentStatus: paymentStatus,
-        paymentMethod: paymentMethod,
-        notes
-      };
+    const formData = new FormData(e.currentTarget);
+    const appointmentData = {
+      client_name: formData.get('client_name') as string,
+      client_phone: formData.get('client_phone') as string,
+      service: formData.get('service') as string,
+      staff_id: formData.get('staff_id') as string,
+      date: formData.get('date') as string,
+      start_time: formData.get('start_time') as string,
+      end_time: formData.get('end_time') as string,
+      price: parseFloat(formData.get('price') as string) || 0,
+      duration: parseInt(formData.get('duration') as string) || 60,
+      status: formData.get('status') as string,
+      notes: formData.get('notes') as string,
+    };
 
-      console.log('Updating appointment with data:', updateData);
-      await appointmentApi.updateAppointment(appointment.id, updateData);
-      
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
-      queryClient.invalidateQueries({ queryKey: ['appointments', appointmentDate] });
-      
-      toast({
-        title: "Success",
-        description: "Appointment updated successfully"
-      });
-      
-      onClose();
-    } catch (error) {
-      console.error('Error updating appointment:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update appointment",
-        variant: "destructive"
-      });
+    console.log('Submitting appointment data:', appointmentData);
+    updateAppointmentMutation.mutate(appointmentData);
+  };
+
+  const addExtraService = (serviceId: string) => {
+    const service = services.find(s => s.id === serviceId);
+    if (service && !extraServices.find(s => s.id === serviceId)) {
+      setExtraServices(prev => [...prev, service]);
     }
   };
+
+  const removeExtraService = (serviceId: string) => {
+    setExtraServices(prev => prev.filter(s => s.id !== serviceId));
+  };
+
+  // Calculate totals with proper number handling
+  const totalExtraPrice = extraServices.reduce((sum, service) => sum + Number(service.price || 0), 0);
+  const totalExtraDuration = extraServices.reduce((sum, service) => sum + Number(service.duration || 0), 0);
+  const finalTotalPrice = Number(basePrice || 0) + totalExtraPrice;
 
   if (!appointment) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Appointment</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            Edit Appointment
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          <ClientInfoSection
-            clientName={clientName}
-            clientPhone={clientPhone}
-            onClientNameChange={setClientName}
-            onClientPhoneChange={setClientPhone}
-          />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Client Information */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="client_name">Client Name</Label>
+              <Input
+                id="client_name"
+                name="client_name"
+                defaultValue={appointment.clientName}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="client_phone">Client Phone</Label>
+              <Input
+                id="client_phone"
+                name="client_phone"
+                defaultValue={appointment.clientPhone || ''}
+                type="tel"
+              />
+            </div>
+          </div>
 
-          <SchedulingSection
-            appointmentDate={appointmentDate}
-            startTime={startTime}
-            endTime={endTime}
-            status={status}
-            appointmentColor={appointmentColor}
-            onDateChange={setAppointmentDate}
-            onStartTimeChange={setStartTime}
-            onEndTimeChange={setEndTime}
-            onStatusChange={setStatus}
-            onColorChange={setAppointmentColor}
-          />
+          {/* Service and Staff */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="service">Main Service</Label>
+              <Input
+                id="service"
+                name="service"
+                defaultValue={appointment.service}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="staff_id">Staff Member</Label>
+              <Select name="staff_id" defaultValue={appointment.staffId || ''}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select staff..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {staff.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-          <PaymentSection
-            paymentStatus={paymentStatus}
-            paymentMethod={paymentMethod}
-            onPaymentStatusChange={setPaymentStatus}
-            onPaymentMethodChange={setPaymentMethod}
-          />
+          {/* Date and Time */}
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="date">Date</Label>
+              <Input
+                id="date"
+                name="date"
+                type="date"
+                defaultValue={appointment.date}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="start_time">Start Time</Label>
+              <Input
+                id="start_time"
+                name="start_time"
+                type="time"
+                defaultValue={appointment.startTime}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="end_time">End Time</Label>
+              <Input
+                id="end_time"
+                name="end_time"
+                type="time"
+                defaultValue={appointment.endTime}
+                required
+              />
+            </div>
+          </div>
 
-          <NotesSection
-            notes={notes}
-            onNotesChange={setNotes}
-          />
+          {/* Pricing and Duration */}
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="price">Base Price ($)</Label>
+              <Input
+                id="price"
+                name="price"
+                type="number"
+                step="0.01"
+                value={basePrice}
+                onChange={(e) => setBasePrice(Number(e.target.value) || 0)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="duration">Duration (min)</Label>
+              <Input
+                id="duration"
+                name="duration"
+                type="number"
+                defaultValue={appointment.duration}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select name="status" defaultValue={appointment.status}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Scheduled">Scheduled</SelectItem>
+                  <SelectItem value="Confirmed">Confirmed</SelectItem>
+                  <SelectItem value="In Progress">In Progress</SelectItem>
+                  <SelectItem value="Completed">Completed</SelectItem>
+                  <SelectItem value="Cancelled">Cancelled</SelectItem>
+                  <SelectItem value="No Show">No Show</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>
+          <Separator />
+
+          {/* Extra Services */}
+          <div>
+            <Label className="text-base font-semibold">Extra Services</Label>
+            <div className="flex gap-2 mt-2">
+              <Select onValueChange={addExtraService}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Add extra service..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map((service) => (
+                    <SelectItem 
+                      key={service.id} 
+                      value={service.id}
+                      disabled={extraServices.some(s => s.id === service.id)}
+                    >
+                      {service.name} - ${service.price} ({service.duration}min)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {extraServices.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <Label className="text-sm">Added Services:</Label>
+                {extraServices.map((service) => (
+                  <div key={service.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <span className="font-medium">{service.name}</span>
+                      <span className="text-sm text-gray-500 ml-2">
+                        {service.duration} minutes
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">${Number(service.price).toFixed(2)}</Badge>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeExtraService(service.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center font-semibold pt-2 border-t">
+                  <span>Extra Services Total:</span>
+                  <div className="flex items-center gap-4">
+                    <span>${totalExtraPrice.toFixed(2)}</span>
+                    <span className="text-sm text-gray-500">+{totalExtraDuration}min</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Payment Information */}
+          <div>
+            <Label className="text-base font-semibold flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              Payment Information
+            </Label>
+            <div className="grid grid-cols-2 gap-4 mt-2">
+              <div>
+                <Label htmlFor="payment_status">Payment Status</Label>
+                <Select value={paymentStatus} onValueChange={(value: 'paid' | 'unpaid' | 'partial') => setPaymentStatus(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unpaid">Unpaid</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="partial">Partial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="payment_method">Payment Method</Label>
+                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="card">Card</SelectItem>
+                    <SelectItem value="transfer">Bank Transfer</SelectItem>
+                    <SelectItem value="mobile">Mobile Payment</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              name="notes"
+              defaultValue={appointment.notes || ''}
+              rows={3}
+            />
+          </div>
+
+          {/* Total Summary - Fixed Calculator */}
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="flex justify-between items-center text-lg font-semibold">
+              <span>Total Amount:</span>
+              <span>${finalTotalPrice.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm text-gray-600 mt-1">
+              <span>Base Price:</span>
+              <span>${Number(basePrice).toFixed(2)}</span>
+            </div>
+            {totalExtraPrice > 0 && (
+              <div className="flex justify-between items-center text-sm text-gray-600">
+                <span>Extra Services:</span>
+                <span>+${totalExtraPrice.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center text-sm text-gray-600 mt-1">
+              <span>Total Duration:</span>
+              <span>{(appointment.duration || 60) + totalExtraDuration} minutes</span>
+            </div>
+            <div className="flex justify-between items-center text-sm font-medium mt-2 pt-2 border-t">
+              <span>Payment Status:</span>
+              <Badge variant={paymentStatus === 'paid' ? 'default' : 'destructive'}>
+                {paymentStatus.toUpperCase()}
+              </Badge>
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button
+              type="submit"
+              disabled={updateAppointmentMutation.isPending}
+              className="flex-1"
+            >
+              {updateAppointmentMutation.isPending ? 'Updating...' : 'Update Appointment'}
+            </Button>
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>
-              Save Changes
-            </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

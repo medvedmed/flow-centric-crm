@@ -1,8 +1,75 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Appointment } from '@/services/types';
+import { Appointment, PaginatedResult } from '../types';
 
 export const appointmentApi = {
+  async getAppointments(
+    clientId?: string,
+    staffId?: string,
+    startDate?: string,
+    endDate?: string,
+    page: number = 1,
+    pageSize: number = 100
+  ): Promise<PaginatedResult<Appointment>> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const offset = (page - 1) * pageSize;
+    
+    let query = supabase
+      .from('appointments')
+      .select('*', { count: 'exact' })
+      .eq('salon_id', user.id);
+
+    if (clientId) {
+      query = query.eq('client_id', clientId);
+    }
+
+    if (staffId) {
+      query = query.eq('staff_id', staffId);
+    }
+
+    if (startDate) {
+      query = query.gte('date', startDate);
+    }
+
+    if (endDate) {
+      query = query.lte('date', endDate);
+    }
+
+    const { data, error, count } = await query
+      .order('date', { ascending: true })
+      .order('start_time', { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    
+    if (error) throw error;
+    
+    return {
+      data: data?.map(appointment => ({
+        id: appointment.id,
+        clientId: appointment.client_id,
+        staffId: appointment.staff_id,
+        clientName: appointment.client_name,
+        clientPhone: appointment.client_phone,
+        service: appointment.service,
+        startTime: appointment.start_time,
+        endTime: appointment.end_time,
+        date: appointment.date,
+        price: appointment.price,
+        duration: appointment.duration,
+        status: appointment.status as Appointment['status'],
+        notes: appointment.notes,
+        salonId: appointment.salon_id,
+        createdAt: appointment.created_at,
+        updatedAt: appointment.updated_at
+      })) || [],
+      count: count || 0,
+      hasMore: (count || 0) > offset + pageSize,
+      page,
+      pageSize
+    };
+  },
+
   async createAppointment(appointment: Appointment): Promise<Appointment> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
@@ -22,14 +89,13 @@ export const appointmentApi = {
         duration: appointment.duration || 60,
         status: appointment.status || 'Scheduled',
         notes: appointment.notes,
-        salon_id: user.id,
-        color: appointment.color,
+        salon_id: user.id
       })
       .select()
       .single();
-
+    
     if (error) throw error;
-
+    
     return {
       id: data.id,
       clientId: data.client_id,
@@ -46,51 +112,8 @@ export const appointmentApi = {
       notes: data.notes,
       salonId: data.salon_id,
       createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      color: data.color,
+      updatedAt: data.updated_at
     };
-  },
-
-  async getAppointments(
-    clientId?: string,
-    staffId?: string,
-    startDate?: string,
-    endDate?: string,
-    page: number = 1,
-    pageSize: number = 100
-  ): Promise<Appointment[]> {
-    const query = supabase.from('appointments').select('*');
-
-    if (clientId) query.eq('client_id', clientId);
-    if (staffId) query.eq('staff_id', staffId);
-    if (startDate) query.gte('date', startDate);
-    if (endDate) query.lte('date', endDate);
-
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-
-    const { data, error } = await query.range(from, to).order('start_time', { ascending: true });
-    if (error) throw error;
-
-    return data.map((item) => ({
-      id: item.id,
-      clientId: item.client_id,
-      staffId: item.staff_id,
-      clientName: item.client_name,
-      clientPhone: item.client_phone,
-      service: item.service,
-      startTime: item.start_time,
-      endTime: item.end_time,
-      date: item.date,
-      price: item.price,
-      duration: item.duration,
-      status: item.status as Appointment['status'],
-      notes: item.notes,
-      salonId: item.salon_id,
-      createdAt: item.created_at,
-      updatedAt: item.updated_at,
-      color: item.color,
-    }));
   },
 
   async updateAppointment(id: string, appointment: Partial<Appointment>): Promise<Appointment> {
@@ -109,14 +132,14 @@ export const appointmentApi = {
         duration: appointment.duration,
         status: appointment.status,
         notes: appointment.notes,
-        color: appointment.color
+        updated_at: new Date().toISOString()
       })
       .eq('id', id)
       .select()
       .single();
-
+    
     if (error) throw error;
-
+    
     return {
       id: data.id,
       clientId: data.client_id,
@@ -133,8 +156,7 @@ export const appointmentApi = {
       notes: data.notes,
       salonId: data.salon_id,
       createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      color: data.color
+      updatedAt: data.updated_at
     };
   },
 
@@ -143,7 +165,7 @@ export const appointmentApi = {
       .from('appointments')
       .delete()
       .eq('id', id);
-
+    
     if (error) throw error;
   }
 };

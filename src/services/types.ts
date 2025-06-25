@@ -93,7 +93,6 @@ export interface Appointment {
   paymentStatus?: 'paid' | 'unpaid' | 'partial';
   paymentMethod?: string;
   paymentDate?: string;
-  color?: string;
 }
 
 export interface TimeOffRequest {

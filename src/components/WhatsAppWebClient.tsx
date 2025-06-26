@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,10 +66,10 @@ export const WhatsAppWebClient: React.FC = () => {
           id: data.id,
           is_connected: data.is_connected,
           connection_state: data.connection_state as WhatsAppSession['connection_state'],
-          phone_number: data.phone_number,
-          qr_code: data.qr_code,
-          last_connected_at: data.last_connected_at,
-          client_info: data.client_info
+          phone_number: data.phone_number || undefined,
+          qr_code: data.qr_code || undefined,
+          last_connected_at: data.last_connected_at || undefined,
+          client_info: data.client_info || undefined
         };
         setSession(sessionData);
       }
@@ -98,11 +97,11 @@ export const WhatsAppWebClient: React.FC = () => {
         const messagesData: WhatsAppMessage[] = data.map(msg => ({
           id: msg.id,
           recipient_phone: msg.recipient_phone,
-          recipient_name: msg.recipient_name,
+          recipient_name: msg.recipient_name || undefined,
           message_content: msg.message_content,
           status: msg.status as WhatsAppMessage['status'],
-          sent_at: msg.sent_at,
-          error_message: msg.error_message
+          sent_at: msg.sent_at || undefined,
+          error_message: msg.error_message || undefined
         }));
         setMessages(messagesData);
       }
@@ -124,15 +123,16 @@ export const WhatsAppWebClient: React.FC = () => {
         },
         (payload) => {
           console.log('Session update:', payload);
-          if (payload.new) {
+          if (payload.new && typeof payload.new === 'object') {
+            const newData = payload.new as any;
             const sessionData: WhatsAppSession = {
-              id: payload.new.id,
-              is_connected: payload.new.is_connected,
-              connection_state: payload.new.connection_state as WhatsAppSession['connection_state'],
-              phone_number: payload.new.phone_number,
-              qr_code: payload.new.qr_code,
-              last_connected_at: payload.new.last_connected_at,
-              client_info: payload.new.client_info
+              id: newData.id,
+              is_connected: newData.is_connected,
+              connection_state: newData.connection_state as WhatsAppSession['connection_state'],
+              phone_number: newData.phone_number || undefined,
+              qr_code: newData.qr_code || undefined,
+              last_connected_at: newData.last_connected_at || undefined,
+              client_info: newData.client_info || undefined
             };
             setSession(sessionData);
           }

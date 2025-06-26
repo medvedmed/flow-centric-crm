@@ -1,55 +1,53 @@
 
 import { useState, useEffect, createContext, useContext } from 'react';
-
-interface StaffSession {
-  staffId: string;
-  staffName: string;
-  staffEmail: string;
-  salonId: string;
-  loginTime: string;
-}
+import { supabase } from '@/integrations/supabase/client';
 
 interface StaffAuthContextType {
-  staffSession: StaffSession | null;
   isStaff: boolean;
   isLoading: boolean;
-  signOutStaff: () => void;
+  staffData: any;
+  clearStaffSession: () => void;
 }
 
 const StaffAuthContext = createContext<StaffAuthContextType | undefined>(undefined);
 
 export const StaffAuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [staffSession, setStaffSession] = useState<StaffSession | null>(null);
+  const [isStaff, setIsStaff] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [staffData, setStaffData] = useState(null);
 
   useEffect(() => {
-    // Check for staff session in localStorage
-    const storedStaffSession = localStorage.getItem('staff_session');
-    if (storedStaffSession) {
-      try {
-        const session = JSON.parse(storedStaffSession);
-        setStaffSession(session);
-      } catch (error) {
-        console.error('Error parsing staff session:', error);
-        localStorage.removeItem('staff_session');
+    // Check for existing staff session
+    const checkStaffSession = () => {
+      const staffSession = localStorage.getItem('staff_session');
+      if (staffSession) {
+        try {
+          const parsedSession = JSON.parse(staffSession);
+          setStaffData(parsedSession);
+          setIsStaff(true);
+        } catch (error) {
+          console.error('Error parsing staff session:', error);
+          localStorage.removeItem('staff_session');
+        }
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    checkStaffSession();
   }, []);
 
-  const signOutStaff = () => {
+  const clearStaffSession = () => {
     localStorage.removeItem('staff_session');
-    setStaffSession(null);
+    setIsStaff(false);
+    setStaffData(null);
   };
-
-  const isStaff = !!staffSession;
 
   return (
     <StaffAuthContext.Provider value={{ 
-      staffSession, 
       isStaff, 
-      isLoading,
-      signOutStaff 
+      isLoading, 
+      staffData, 
+      clearStaffSession 
     }}>
       {children}
     </StaffAuthContext.Provider>

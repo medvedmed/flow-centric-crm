@@ -46,7 +46,7 @@ const Settings = () => {
   // Show loading screen while authentication is being verified
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[50vh]">
         <div className="flex items-center gap-2">
           <Loader2 className="w-6 h-6 animate-spin" />
           <span>Loading settings...</span>
@@ -58,7 +58,7 @@ const Settings = () => {
   // Show authentication error if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center justify-center min-h-screen p-6">
+      <div className="flex items-center justify-center min-h-[50vh] p-6">
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
@@ -71,7 +71,7 @@ const Settings = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen p-6">
+      <div className="flex items-center justify-center min-h-[50vh] p-6">
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
@@ -84,7 +84,7 @@ const Settings = () => {
 
   if (!canViewSettings) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[50vh]">
         <Card className="max-w-md">
           <CardContent className="p-6 text-center">
             <Shield className="h-12 w-12 mx-auto mb-4 text-gray-400" />
@@ -97,7 +97,7 @@ const Settings = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-white">
       <AdminSetupDialog 
         open={showAdminDialog} 
         onClose={() => setShowAdminDialog(false)} 

@@ -6,6 +6,7 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AuthProvider } from '@/hooks/useAuth';
+import { StaffAuthProvider } from '@/hooks/useStaffAuth';
 import AppWithRealTime from '@/components/AppWithRealTime';
 
 // Pages
@@ -42,32 +43,34 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <AuthProvider>
-          <Router>
-            <SidebarProvider>
-              <AppWithRealTime>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/appointments" element={<Appointments />} />
-                  <Route path="/clients" element={<Clients />} />
-                  <Route path="/client-retention" element={<ClientRetention />} />
-                  <Route path="/staff" element={<Staff />} />
-                  <Route path="/services" element={<Services />} />
-                  <Route path="/products" element={<Products />} />
-                  <Route path="/inventory" element={<Inventory />} />
-                  <Route path="/reports" element={<Reports />} />
-                  <Route path="/finance" element={<Finance />} />
-                  <Route path="/enhanced-finance" element={<EnhancedFinance />} />
-                  <Route path="/finance-analytics" element={<FinanceAnalytics />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/help" element={<Help />} />
-                  <Route path="/invite-accept" element={<InviteAccept />} />
-                  <Route path="/webhook-test" element={<WebhookTest />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </AppWithRealTime>
-            </SidebarProvider>
-          </Router>
+          <StaffAuthProvider>
+            <Router>
+              <SidebarProvider>
+                <AppWithRealTime>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/appointments" element={<Appointments />} />
+                    <Route path="/clients" element={<Clients />} />
+                    <Route path="/client-retention" element={<ClientRetention />} />
+                    <Route path="/staff" element={<Staff />} />
+                    <Route path="/services" element={<Services />} />
+                    <Route path="/products" element={<Products />} />
+                    <Route path="/inventory" element={<Inventory />} />
+                    <Route path="/reports" element={<Reports />} />
+                    <Route path="/finance" element={<Finance />} />
+                    <Route path="/enhanced-finance" element={<EnhancedFinance />} />
+                    <Route path="/finance-analytics" element={<FinanceAnalytics />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/help" element={<Help />} />
+                    <Route path="/invite-accept" element={<InviteAccept />} />
+                    <Route path="/webhook-test" element={<WebhookTest />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </AppWithRealTime>
+              </SidebarProvider>
+            </Router>
+          </StaffAuthProvider>
         </AuthProvider>
       </LanguageProvider>
       <Toaster />

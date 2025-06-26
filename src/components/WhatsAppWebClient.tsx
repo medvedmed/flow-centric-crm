@@ -61,7 +61,19 @@ export const WhatsAppWebClient: React.FC = () => {
         return;
       }
 
-      setSession(data);
+      // Cast the database response to match our interface
+      if (data) {
+        const sessionData: WhatsAppSession = {
+          id: data.id,
+          is_connected: data.is_connected,
+          connection_state: data.connection_state as WhatsAppSession['connection_state'],
+          phone_number: data.phone_number,
+          qr_code: data.qr_code,
+          last_connected_at: data.last_connected_at,
+          client_info: data.client_info
+        };
+        setSession(sessionData);
+      }
     } catch (error) {
       console.error('Error in loadSession:', error);
     }
@@ -81,7 +93,19 @@ export const WhatsAppWebClient: React.FC = () => {
         return;
       }
 
-      setMessages(data || []);
+      // Cast the database response to match our interface
+      if (data) {
+        const messagesData: WhatsAppMessage[] = data.map(msg => ({
+          id: msg.id,
+          recipient_phone: msg.recipient_phone,
+          recipient_name: msg.recipient_name,
+          message_content: msg.message_content,
+          status: msg.status as WhatsAppMessage['status'],
+          sent_at: msg.sent_at,
+          error_message: msg.error_message
+        }));
+        setMessages(messagesData);
+      }
     } catch (error) {
       console.error('Error in loadMessages:', error);
     }
@@ -100,7 +124,18 @@ export const WhatsAppWebClient: React.FC = () => {
         },
         (payload) => {
           console.log('Session update:', payload);
-          setSession(payload.new as WhatsAppSession);
+          if (payload.new) {
+            const sessionData: WhatsAppSession = {
+              id: payload.new.id,
+              is_connected: payload.new.is_connected,
+              connection_state: payload.new.connection_state as WhatsAppSession['connection_state'],
+              phone_number: payload.new.phone_number,
+              qr_code: payload.new.qr_code,
+              last_connected_at: payload.new.last_connected_at,
+              client_info: payload.new.client_info
+            };
+            setSession(sessionData);
+          }
         }
       )
       .subscribe();

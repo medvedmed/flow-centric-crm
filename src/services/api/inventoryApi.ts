@@ -35,112 +35,199 @@ export interface CreateInventoryItem {
 
 export const inventoryApi = {
   async getItems(category?: string, lowStock?: boolean) {
-    let query = supabase
-      .from('inventory_items')
-      .select('*')
-      .eq('is_active', true)
-      .order('name');
+    console.log('inventoryApi.getItems called with:', { category, lowStock });
+    
+    try {
+      let query = supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
 
-    if (category) {
-      query = query.eq('category', category);
-    }
+      if (category) {
+        query = query.eq('category', category);
+      }
 
-    if (lowStock) {
-      // Simple comparison instead of using .raw()
-      const { data: allItems, error: fetchError } = await query;
-      if (fetchError) throw fetchError;
+      const { data, error } = await query;
       
-      const lowStockItems = allItems?.filter(item => item.current_stock < item.minimum_stock) || [];
-      return lowStockItems;
-    }
+      if (error) {
+        console.error('Database error in getItems:', error);
+        throw error;
+      }
 
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
+      console.log('Retrieved items:', data?.length || 0);
+
+      if (lowStock && data) {
+        // Filter low stock items in JavaScript to avoid database type issues
+        const lowStockItems = data.filter(item => {
+          const currentStock = Number(item.current_stock);
+          const minimumStock = Number(item.minimum_stock);
+          return currentStock < minimumStock;
+        });
+        console.log('Low stock items found:', lowStockItems.length);
+        return lowStockItems;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in inventoryApi.getItems:', error);
+      throw error;
+    }
   },
 
   async getItem(id: string) {
-    const { data, error } = await supabase
-      .from('inventory_items')
-      .select('*')
-      .eq('id', id)
-      .single();
+    console.log('inventoryApi.getItem called with id:', id);
     
-    if (error) throw error;
-    return data;
+    try {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) {
+        console.error('Database error in getItem:', error);
+        throw error;
+      }
+      
+      console.log('Retrieved item:', data?.id);
+      return data;
+    } catch (error) {
+      console.error('Error in inventoryApi.getItem:', error);
+      throw error;
+    }
   },
 
   async createItem(item: CreateInventoryItem) {
-    const { data: profile } = await supabase.auth.getUser();
-    if (!profile.user) throw new Error('User not authenticated');
-
-    const { data, error } = await supabase
-      .from('inventory_items')
-      .insert([{ ...item, salon_id: profile.user.id }])
-      .select()
-      .single();
+    console.log('inventoryApi.createItem called with:', item.name);
     
-    if (error) throw error;
-    return data;
+    try {
+      const { data: profile } = await supabase.auth.getUser();
+      if (!profile.user) throw new Error('User not authenticated');
+
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .insert([{ ...item, salon_id: profile.user.id }])
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Database error in createItem:', error);
+        throw error;
+      }
+      
+      console.log('Created item:', data?.id);
+      return data;
+    } catch (error) {
+      console.error('Error in inventoryApi.createItem:', error);
+      throw error;
+    }
   },
 
   async updateItem(id: string, updates: Partial<CreateInventoryItem>) {
-    const { data, error } = await supabase
-      .from('inventory_items')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
+    console.log('inventoryApi.updateItem called with id:', id);
     
-    if (error) throw error;
-    return data;
+    try {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Database error in updateItem:', error);
+        throw error;
+      }
+      
+      console.log('Updated item:', data?.id);
+      return data;
+    } catch (error) {
+      console.error('Error in inventoryApi.updateItem:', error);
+      throw error;
+    }
   },
 
   async deleteItem(id: string) {
-    const { error } = await supabase
-      .from('inventory_items')
-      .update({ is_active: false })
-      .eq('id', id);
+    console.log('inventoryApi.deleteItem called with id:', id);
     
-    if (error) throw error;
+    try {
+      const { error } = await supabase
+        .from('inventory_items')
+        .update({ is_active: false })
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Database error in deleteItem:', error);
+        throw error;
+      }
+      
+      console.log('Deleted item:', id);
+    } catch (error) {
+      console.error('Error in inventoryApi.deleteItem:', error);
+      throw error;
+    }
   },
 
   async updateStock(id: string, quantity: number, operation: 'add' | 'subtract' | 'set') {
-    const { data: item } = await this.getItem(id);
-    if (!item) throw new Error('Item not found');
+    console.log('inventoryApi.updateStock called with:', { id, quantity, operation });
+    
+    try {
+      const { data: item } = await this.getItem(id);
+      if (!item) throw new Error('Item not found');
 
-    let newStock = item.current_stock;
-    switch (operation) {
-      case 'add':
-        newStock += quantity;
-        break;
-      case 'subtract':
-        newStock = Math.max(0, newStock - quantity);
-        break;
-      case 'set':
-        newStock = quantity;
-        break;
+      let newStock = Number(item.current_stock);
+      const quantityNum = Number(quantity);
+      
+      switch (operation) {
+        case 'add':
+          newStock += quantityNum;
+          break;
+        case 'subtract':
+          newStock = Math.max(0, newStock - quantityNum);
+          break;
+        case 'set':
+          newStock = quantityNum;
+          break;
+      }
+
+      console.log('Updating stock from', item.current_stock, 'to', newStock);
+
+      return this.updateItem(id, { 
+        current_stock: newStock,
+        last_restocked_at: operation === 'add' ? new Date().toISOString() : undefined
+      });
+    } catch (error) {
+      console.error('Error in inventoryApi.updateStock:', error);
+      throw error;
     }
-
-    return this.updateItem(id, { 
-      current_stock: newStock,
-      last_restocked_at: operation === 'add' ? new Date().toISOString() : undefined
-    });
   },
 
   async getCategories() {
-    const { data, error } = await supabase
-      .from('inventory_items')
-      .select('category')
-      .eq('is_active', true);
+    console.log('inventoryApi.getCategories called');
     
-    if (error) throw error;
-    
-    const categories = [...new Set(data.map(item => item.category))];
-    return categories;
+    try {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('category')
+        .eq('is_active', true);
+      
+      if (error) {
+        console.error('Database error in getCategories:', error);
+        throw error;
+      }
+      
+      const categories = [...new Set(data?.map(item => item.category) || [])];
+      console.log('Retrieved categories:', categories.length);
+      return categories;
+    } catch (error) {
+      console.error('Error in inventoryApi.getCategories:', error);
+      throw error;
+    }
   },
 
   async getLowStockItems() {
+    console.log('inventoryApi.getLowStockItems called');
     return this.getItems(undefined, true);
   }
 };

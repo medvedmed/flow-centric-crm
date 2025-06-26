@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Plus, DollarSign, TrendingUp, TrendingDown, Calendar, Filter, Download } from 'lucide-react';
+import { Plus, DollarSign, TrendingUp, TrendingDown, Calendar, Filter, Download, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { financeApi } from '@/services/api/financeApi';
@@ -28,10 +28,12 @@ const EnhancedFinance = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
+  console.log('EnhancedFinance component rendering');
+
   // Enable real-time updates
   useRealTimeUpdates();
 
-  const { data: transactionsData, isLoading: transactionsLoading } = useQuery({
+  const { data: transactionsData, isLoading: transactionsLoading, error: transactionsError } = useQuery({
     queryKey: ['financial-transactions', dateRange.start, dateRange.end, transactionType, selectedCategory, currentPage],
     queryFn: () => financeApi.getTransactions(
       dateRange.start || undefined,
@@ -41,24 +43,32 @@ const EnhancedFinance = () => {
       currentPage,
       pageSize
     ),
+    retry: 3,
+    retryDelay: 1000,
   });
 
-  const { data: summary, isLoading: summaryLoading } = useQuery({
+  const { data: summary, isLoading: summaryLoading, error: summaryError } = useQuery({
     queryKey: ['financial-summary', dateRange.start, dateRange.end],
     queryFn: () => financeApi.getFinancialSummary(
       dateRange.start || undefined,
       dateRange.end || undefined
     ),
+    retry: 3,
+    retryDelay: 1000,
   });
 
-  const { data: incomeCategories = [] } = useQuery({
+  const { data: incomeCategories = [], error: incomeCategoriesError } = useQuery({
     queryKey: ['income-categories', dateRange.start, dateRange.end],
     queryFn: () => financeApi.getCategorySummary('income', dateRange.start || undefined, dateRange.end || undefined),
+    retry: 3,
+    retryDelay: 1000,
   });
 
-  const { data: expenseCategories = [] } = useQuery({
+  const { data: expenseCategories = [], error: expenseCategoriesError } = useQuery({
     queryKey: ['expense-categories', dateRange.start, dateRange.end],
     queryFn: () => financeApi.getCategorySummary('expense', dateRange.start || undefined, dateRange.end || undefined),
+    retry: 3,
+    retryDelay: 1000,
   });
 
   const createTransactionMutation = useMutation({
@@ -72,6 +82,7 @@ const EnhancedFinance = () => {
       setIsAddDialogOpen(false);
     },
     onError: (error) => {
+      console.error('Create transaction mutation error:', error);
       toast({ title: 'Error', description: 'Failed to create transaction', variant: 'destructive' });
     },
   });
@@ -89,6 +100,7 @@ const EnhancedFinance = () => {
       transaction_date: formData.get('transaction_date') as string,
     };
 
+    console.log('Creating transaction with data:', transactionData);
     createTransactionMutation.mutate(transactionData);
   };
 
@@ -100,7 +112,12 @@ const EnhancedFinance = () => {
     { name: 'Expenses', value: summary?.totalExpenses || 0, fill: '#FF8042' },
   ];
 
-  if (transactionsLoading && summaryLoading) {
+  // Check for any errors
+  const hasError = transactionsError || summaryError || incomeCategoriesError || expenseCategoriesError;
+  const isLoading = transactionsLoading && summaryLoading;
+
+  if (isLoading) {
+    console.log('Finance page loading...');
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -110,6 +127,32 @@ const EnhancedFinance = () => {
       </div>
     );
   }
+
+  if (hasError) {
+    console.error('Finance page error:', { transactionsError, summaryError, incomeCategoriesError, expenseCategoriesError });
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="max-w-md">
+          <CardContent className="p-6 text-center">
+            <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-red-400" />
+            <h2 className="text-xl font-semibold mb-2">Error Loading Financial Data</h2>
+            <p className="text-gray-600 mb-4">Failed to load financial information. Please try again.</p>
+            <p className="text-sm text-gray-500 mb-4">
+              Error: {hasError instanceof Error ? hasError.message : 'Unknown error'}
+            </p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              className="mt-4"
+            >
+              Reload Page
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  console.log('Finance page rendered successfully');
 
   return (
     <div className="space-y-6">

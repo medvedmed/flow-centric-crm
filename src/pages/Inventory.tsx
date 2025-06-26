@@ -22,22 +22,30 @@ const Inventory = () => {
   const [showLowStock, setShowLowStock] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
+  console.log('Inventory component rendering');
+
   // Enable real-time updates
   useRealTimeUpdates();
 
   const { data: items = [], isLoading, error } = useQuery({
     queryKey: ['inventory-items', selectedCategory, showLowStock],
     queryFn: () => inventoryApi.getItems(selectedCategory || undefined, showLowStock),
+    retry: 3,
+    retryDelay: 1000,
   });
 
   const { data: categories = [] } = useQuery({
     queryKey: ['inventory-categories'],
     queryFn: () => inventoryApi.getCategories(),
+    retry: 3,
+    retryDelay: 1000,
   });
 
   const { data: lowStockItems = [] } = useQuery({
     queryKey: ['low-stock-items'],
     queryFn: () => inventoryApi.getLowStockItems(),
+    retry: 3,
+    retryDelay: 1000,
   });
 
   const createItemMutation = useMutation({
@@ -50,6 +58,7 @@ const Inventory = () => {
       setIsAddDialogOpen(false);
     },
     onError: (error) => {
+      console.error('Create item mutation error:', error);
       toast({ title: 'Error', description: 'Failed to create item', variant: 'destructive' });
     },
   });
@@ -63,6 +72,7 @@ const Inventory = () => {
       toast({ title: 'Success', description: 'Stock updated successfully!' });
     },
     onError: (error) => {
+      console.error('Update stock mutation error:', error);
       toast({ title: 'Error', description: 'Failed to update stock', variant: 'destructive' });
     },
   });
@@ -84,10 +94,12 @@ const Inventory = () => {
       supplier_contact: formData.get('supplier_contact') as string,
     };
 
+    console.log('Creating item with data:', itemData);
     createItemMutation.mutate(itemData);
   };
 
   const handleStockUpdate = (itemId: string, quantity: number, operation: 'add' | 'subtract' | 'set') => {
+    console.log('Updating stock:', { itemId, quantity, operation });
     updateStockMutation.mutate({ id: itemId, quantity, operation });
   };
 
@@ -98,6 +110,7 @@ const Inventory = () => {
   );
 
   if (isLoading) {
+    console.log('Inventory page loading...');
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -109,18 +122,28 @@ const Inventory = () => {
   }
 
   if (error) {
+    console.error('Inventory page error:', error);
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Card className="max-w-md">
           <CardContent className="p-6 text-center">
             <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-red-400" />
             <h2 className="text-xl font-semibold mb-2">Error Loading Inventory</h2>
-            <p className="text-gray-600">Failed to load inventory data. Please try again.</p>
+            <p className="text-gray-600 mb-4">Failed to load inventory data. Please try again.</p>
+            <p className="text-sm text-gray-500">Error: {error instanceof Error ? error.message : 'Unknown error'}</p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              className="mt-4"
+            >
+              Reload Page
+            </Button>
           </CardContent>
         </Card>
       </div>
     );
   }
+
+  console.log('Inventory page rendered successfully with', items.length, 'items');
 
   return (
     <div className="space-y-6">

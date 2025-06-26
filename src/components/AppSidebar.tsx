@@ -13,7 +13,6 @@ import {
   DollarSign, 
   Settings, 
   HelpCircle,
-  TrendingUp,
   Home,
   UserCheck
 } from 'lucide-react';
@@ -72,11 +71,11 @@ export function AppSidebar() {
   const location = useLocation();
 
   return (
-    <Sidebar className="border-r bg-background">
+    <Sidebar className="border-r bg-white">
       <SidebarContent>
         {menuItems.map((group) => (
           <SidebarGroup key={group.title}>
-            <SidebarGroupLabel className="text-muted-foreground text-xs uppercase tracking-wider font-semibold px-3 py-2">
+            <SidebarGroupLabel className="text-gray-600 text-xs uppercase tracking-wider font-semibold px-3 py-2">
               {group.title}
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -86,8 +85,8 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       className={cn(
-                        "text-foreground hover:bg-accent hover:text-accent-foreground transition-colors",
-                        location.pathname === item.url && "bg-accent text-accent-foreground border-r-2 border-primary"
+                        "text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors",
+                        location.pathname === item.url && "bg-blue-50 text-blue-700 border-r-2 border-blue-500"
                       )}
                     >
                       <Link to={item.url}>

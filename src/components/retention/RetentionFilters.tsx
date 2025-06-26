@@ -92,25 +92,25 @@ export const RetentionFilters: React.FC<RetentionFiltersProps> = ({
   };
 
   return (
-    <Card className="bg-card border">
+    <Card className="bg-white border-gray-200">
       <CardContent className="p-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-muted-foreground" />
-            <span className="text-foreground font-medium">Filters</span>
+            <Filter className="w-5 h-5 text-gray-500" />
+            <span className="text-gray-900 font-medium">Filters</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             {/* Period Filter */}
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-muted-foreground" />
+              <Calendar className="w-4 h-4 text-gray-500" />
               <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
-                <SelectTrigger className="w-40 bg-background border text-foreground">
+                <SelectTrigger className="w-40 bg-white border-gray-300 text-gray-900">
                   <SelectValue placeholder="Select period" />
                 </SelectTrigger>
-                <SelectContent className="bg-background border">
+                <SelectContent className="bg-white border-gray-200">
                   {periodOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value} className="text-foreground">
+                    <SelectItem key={option.value} value={option.value} className="text-gray-900">
                       {option.label}
                     </SelectItem>
                   ))}
@@ -120,13 +120,13 @@ export const RetentionFilters: React.FC<RetentionFiltersProps> = ({
 
             {/* Staff Filter */}
             <Select value={selectedStaff || 'all'} onValueChange={(value) => onStaffChange(value === 'all' ? undefined : value)}>
-              <SelectTrigger className="w-48 bg-background border text-foreground">
+              <SelectTrigger className="w-48 bg-white border-gray-300 text-gray-900">
                 <SelectValue placeholder="All Staff" />
               </SelectTrigger>
-              <SelectContent className="bg-background border">
-                <SelectItem value="all" className="text-foreground">All Staff</SelectItem>
+              <SelectContent className="bg-white border-gray-200">
+                <SelectItem value="all" className="text-gray-900">All Staff</SelectItem>
                 {staff?.map(member => (
-                  <SelectItem key={member.id} value={member.id} className="text-foreground">
+                  <SelectItem key={member.id} value={member.id} className="text-gray-900">
                     {member.name}
                   </SelectItem>
                 ))}
@@ -142,7 +142,7 @@ export const RetentionFilters: React.FC<RetentionFiltersProps> = ({
                   onStaffChange(undefined);
                   handlePeriodChange('all');
                 }}
-                className="border text-muted-foreground hover:bg-accent"
+                className="border-gray-300 text-gray-600 hover:bg-gray-50"
               >
                 Clear Filters
               </Button>
@@ -152,7 +152,7 @@ export const RetentionFilters: React.FC<RetentionFiltersProps> = ({
 
         {/* Active Filters Display */}
         {(startDate || endDate || selectedStaff) && (
-          <div className="mt-3 pt-3 border-t">
+          <div className="mt-3 pt-3 border-t border-gray-200">
             <div className="flex flex-wrap gap-2">
               {startDate && endDate && (
                 <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">

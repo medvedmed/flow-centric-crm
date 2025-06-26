@@ -24,11 +24,11 @@ export const RetentionOverview: React.FC<RetentionOverviewProps> = ({
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {[1, 2, 3, 4, 5].map(i => (
-          <Card key={i} className="bg-card border">
+          <Card key={i} className="bg-white border-gray-200">
             <CardContent className="p-6">
               <div className="animate-pulse space-y-2">
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-                <div className="h-8 bg-muted rounded w-1/2"></div>
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
               </div>
             </CardContent>
           </Card>
@@ -84,19 +84,19 @@ export const RetentionOverview: React.FC<RetentionOverviewProps> = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       {cards.map((card, index) => (
-        <Card key={index} className="bg-card border">
+        <Card key={index} className="bg-white border-gray-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground font-medium">{card.title}</p>
-                <p className="text-2xl font-bold text-foreground mt-1">{card.value}</p>
+                <p className="text-sm text-gray-600 font-medium">{card.title}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
                 {card.percentage && (
-                  <Badge variant="secondary" className="mt-2 bg-muted text-muted-foreground">
+                  <Badge variant="secondary" className="mt-2 bg-gray-100 text-gray-700">
                     {card.percentage}
                   </Badge>
                 )}
                 {card.subtitle && (
-                  <p className="text-xs text-muted-foreground mt-1">{card.subtitle}</p>
+                  <p className="text-xs text-gray-500 mt-1">{card.subtitle}</p>
                 )}
               </div>
               <div className={`p-3 rounded-full ${card.bgColor}`}>

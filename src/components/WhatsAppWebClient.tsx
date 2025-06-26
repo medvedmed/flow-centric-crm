@@ -67,7 +67,7 @@ export const WhatsAppWebClient: React.FC = () => {
           is_connected: data.is_connected,
           connection_state: data.connection_state as WhatsAppSession['connection_state'],
           phone_number: data.phone_number || undefined,
-          qr_code: data.qr_code || undefined,
+          qr_code: (data as any).qr_code || undefined, // Handle potential missing qr_code field
           last_connected_at: data.last_connected_at || undefined,
           client_info: data.client_info || undefined
         };

@@ -15,6 +15,7 @@ export type Database = {
           created_at: string
           id: string
           reminder_type: string
+          salon_id: string | null
           scheduled_time: string
           sent_at: string | null
           status: string
@@ -26,6 +27,7 @@ export type Database = {
           created_at?: string
           id?: string
           reminder_type: string
+          salon_id?: string | null
           scheduled_time: string
           sent_at?: string | null
           status?: string
@@ -37,6 +39,7 @@ export type Database = {
           created_at?: string
           id?: string
           reminder_type?: string
+          salon_id?: string | null
           scheduled_time?: string
           sent_at?: string | null
           status?: string
@@ -730,11 +733,11 @@ export type Database = {
       reminder_settings: {
         Row: {
           auto_send: boolean | null
+          auto_send_enabled: boolean
           created_at: string
           follow_up_enabled: boolean | null
           follow_up_template: string | null
           id: string
-          is_enabled: boolean
           message_template: string
           optimal_send_time: string | null
           reminder_timing: string
@@ -743,11 +746,11 @@ export type Database = {
         }
         Insert: {
           auto_send?: boolean | null
+          auto_send_enabled?: boolean
           created_at?: string
           follow_up_enabled?: boolean | null
           follow_up_template?: string | null
           id?: string
-          is_enabled?: boolean
           message_template?: string
           optimal_send_time?: string | null
           reminder_timing?: string
@@ -756,11 +759,11 @@ export type Database = {
         }
         Update: {
           auto_send?: boolean | null
+          auto_send_enabled?: boolean
           created_at?: string
           follow_up_enabled?: boolean | null
           follow_up_template?: string | null
           id?: string
-          is_enabled?: boolean
           message_template?: string
           optimal_send_time?: string | null
           reminder_timing?: string

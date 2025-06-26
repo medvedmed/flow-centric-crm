@@ -1411,6 +1411,60 @@ export type Database = {
           },
         ]
       }
+      whatsapp_automation_settings: {
+        Row: {
+          created_at: string
+          custom_reminder_minutes: number | null
+          follow_up_delay_hours: number | null
+          follow_up_enabled: boolean | null
+          follow_up_template: string | null
+          id: string
+          is_enabled: boolean | null
+          message_template_1h: string | null
+          message_template_24h: string | null
+          message_template_2h: string | null
+          reminder_1h_enabled: boolean | null
+          reminder_24h_enabled: boolean | null
+          reminder_2h_enabled: boolean | null
+          salon_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_reminder_minutes?: number | null
+          follow_up_delay_hours?: number | null
+          follow_up_enabled?: boolean | null
+          follow_up_template?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          message_template_1h?: string | null
+          message_template_24h?: string | null
+          message_template_2h?: string | null
+          reminder_1h_enabled?: boolean | null
+          reminder_24h_enabled?: boolean | null
+          reminder_2h_enabled?: boolean | null
+          salon_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_reminder_minutes?: number | null
+          follow_up_delay_hours?: number | null
+          follow_up_enabled?: boolean | null
+          follow_up_template?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          message_template_1h?: string | null
+          message_template_24h?: string | null
+          message_template_2h?: string | null
+          reminder_1h_enabled?: boolean | null
+          reminder_24h_enabled?: boolean | null
+          reminder_2h_enabled?: boolean | null
+          salon_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_contacts: {
         Row: {
           client_id: string | null
@@ -1564,6 +1618,60 @@ export type Database = {
           status?: string | null
           updated_at?: string
           whatsapp_message_id?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_reminder_queue: {
+        Row: {
+          appointment_id: string
+          attempts: number | null
+          client_name: string
+          client_phone: string
+          created_at: string
+          error_message: string | null
+          id: string
+          max_attempts: number | null
+          message_content: string
+          reminder_type: string
+          salon_id: string
+          scheduled_time: string
+          sent_at: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          attempts?: number | null
+          client_name: string
+          client_phone: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          message_content: string
+          reminder_type: string
+          salon_id: string
+          scheduled_time: string
+          sent_at?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          attempts?: number | null
+          client_name?: string
+          client_phone?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          message_content?: string
+          reminder_type?: string
+          salon_id?: string
+          scheduled_time?: string
+          sent_at?: string | null
+          status?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1787,6 +1895,19 @@ export type Database = {
       get_client_category: {
         Args: { visit_count: number }
         Returns: string
+      }
+      get_pending_whatsapp_reminders: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          salon_id: string
+          appointment_id: string
+          client_phone: string
+          client_name: string
+          message_content: string
+          reminder_type: string
+          scheduled_time: string
+        }[]
       }
       get_reminder_settings: {
         Args: Record<PropertyKey, never>

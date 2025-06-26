@@ -22,6 +22,9 @@ export { financeApi } from './api/financeApi';
 export { enhancedAppointmentApi } from './api/enhancedAppointmentApi';
 export { receiptApi } from './api/receiptApi';
 
+// Re-export new advanced finance API
+export { advancedFinanceApi } from './api/advancedFinanceApi';
+
 // Create the main supabaseApi object that maintains the existing interface
 export const supabaseApi = {
   // Profile functions
@@ -141,5 +144,18 @@ export const supabaseApi = {
   updateReceiptTemplate: (id: string, updates: any) => import('./api/receiptApi').then(m => m.receiptApi.updateTemplate(id, updates)),
   deleteReceiptTemplate: (id: string) => import('./api/receiptApi').then(m => m.receiptApi.deleteTemplate(id)),
   generateReceiptData: (appointmentId: string, templateId?: string) =>
-    import('./api/receiptApi').then(m => m.receiptApi.generateReceiptData(appointmentId, templateId))
+    import('./api/receiptApi').then(m => m.receiptApi.generateReceiptData(appointmentId, templateId)),
+
+  // Advanced Finance functions
+  getAdvancedTransactions: (filters?: any) => import('./api/advancedFinanceApi').then(m => m.advancedFinanceApi.getTransactions(filters)),
+  createAdvancedTransaction: (transaction: any) => import('./api/advancedFinanceApi').then(m => m.advancedFinanceApi.createTransaction(transaction)),
+  updateAdvancedTransaction: (id: string, updates: any) => import('./api/advancedFinanceApi').then(m => m.advancedFinanceApi.updateTransaction(id, updates)),
+  deleteAdvancedTransaction: (id: string) => import('./api/advancedFinanceApi').then(m => m.advancedFinanceApi.deleteTransaction(id)),
+  getFinanceCategories: (type?: 'income' | 'expense') => import('./api/advancedFinanceApi').then(m => m.advancedFinanceApi.getCategories(type)),
+  createFinanceCategory: (category: any) => import('./api/advancedFinanceApi').then(m => m.advancedFinanceApi.createCategory(category)),
+  getFinanceAccounts: () => import('./api/advancedFinanceApi').then(m => m.advancedFinanceApi.getAccounts()),
+  createFinanceAccount: (account: any) => import('./api/advancedFinanceApi').then(m => m.advancedFinanceApi.createAccount(account)),
+  updateFinanceAccountBalance: (accountName: string, newBalance: number) => import('./api/advancedFinanceApi').then(m => m.advancedFinanceApi.updateAccountBalance(accountName, newBalance)),
+  getFinanceAnalytics: (period: 'day' | 'week' | 'month' | 'year', startDate?: string, endDate?: string) => import('./api/advancedFinanceApi').then(m => m.advancedFinanceApi.getAnalytics(period, startDate, endDate)),
+  getAdvancedFinancialSummary: (startDate?: string, endDate?: string) => import('./api/advancedFinanceApi').then(m => m.advancedFinanceApi.getFinancialSummary(startDate, endDate))
 };

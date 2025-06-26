@@ -1,9 +1,9 @@
 
 import React from 'react';
-import EnhancedFinance from './EnhancedFinance';
+import FinanceAnalytics from './FinanceAnalytics';
 
 const Finance = () => {
-  return <EnhancedFinance />;
+  return <FinanceAnalytics />;
 };
 
 export default Finance;

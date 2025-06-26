@@ -375,6 +375,162 @@ export type Database = {
           },
         ]
       }
+      finance_accounts: {
+        Row: {
+          account_name: string
+          account_type: string
+          created_at: string
+          current_balance: number
+          id: string
+          is_active: boolean
+          salon_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_type: string
+          created_at?: string
+          current_balance?: number
+          id?: string
+          is_active?: boolean
+          salon_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_type?: string
+          created_at?: string
+          current_balance?: number
+          id?: string
+          is_active?: boolean
+          salon_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      finance_analytics: {
+        Row: {
+          created_at: string
+          id: string
+          net_profit: number
+          period_end: string
+          period_start: string
+          period_type: string
+          profit_margin: number
+          salon_id: string
+          total_expenses: number
+          total_income: number
+          transaction_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          net_profit?: number
+          period_end: string
+          period_start: string
+          period_type: string
+          profit_margin?: number
+          salon_id: string
+          total_expenses?: number
+          total_income?: number
+          transaction_count?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          net_profit?: number
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          profit_margin?: number
+          salon_id?: string
+          total_expenses?: number
+          total_income?: number
+          transaction_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      finance_categories: {
+        Row: {
+          category_name: string
+          category_type: string
+          created_at: string
+          id: string
+          is_default: boolean | null
+          salon_id: string
+        }
+        Insert: {
+          category_name: string
+          category_type: string
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          salon_id: string
+        }
+        Update: {
+          category_name?: string
+          category_type?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          salon_id?: string
+        }
+        Relationships: []
+      }
+      finance_transactions: {
+        Row: {
+          amount: number
+          category: string
+          client_name: string | null
+          created_at: string
+          description: string | null
+          id: string
+          invoice_id: string | null
+          is_tip: boolean | null
+          payment_method: string
+          salon_id: string
+          staff_id: string | null
+          transaction_date: string
+          transaction_type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          client_name?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_id?: string | null
+          is_tip?: boolean | null
+          payment_method?: string
+          salon_id: string
+          staff_id?: string | null
+          transaction_date?: string
+          transaction_type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          client_name?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_id?: string | null
+          is_tip?: boolean | null
+          payment_method?: string
+          salon_id?: string
+          staff_id?: string | null
+          transaction_date?: string
+          transaction_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       financial_transactions: {
         Row: {
           amount: number

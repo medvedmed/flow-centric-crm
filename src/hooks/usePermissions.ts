@@ -1,21 +1,20 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { permissionApi, PermissionArea } from '@/services/permissionApi';
 import { analyticsApi } from '@/services/api/analyticsApi';
 import { useStaffAuth } from '@/hooks/useStaffAuth';
 
 export const usePermissions = () => {
-  const { staffSession, isStaff } = useStaffAuth();
+  const { staffData, isStaff } = useStaffAuth();
 
   const { data: permissionsData, isLoading: roleLoading, error } = useQuery({
-    queryKey: ['user-permissions', isStaff, staffSession?.staffId],
+    queryKey: ['user-permissions', isStaff, staffData?.id],
     queryFn: async () => {
       try {
         // If user is staff, return staff role data
-        if (isStaff && staffSession) {
+        if (isStaff && staffData) {
           return {
             role: 'staff' as const,
-            salonId: staffSession.salonId,
+            salonId: staffData.salon_id,
             permissions: {}
           };
         }

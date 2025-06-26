@@ -24,11 +24,11 @@ export const RetentionOverview: React.FC<RetentionOverviewProps> = ({
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {[1, 2, 3, 4, 5].map(i => (
-          <Card key={i} className="bg-gray-800 border-gray-700">
+          <Card key={i} className="bg-card border">
             <CardContent className="p-6">
               <div className="animate-pulse space-y-2">
-                <div className="h-4 bg-gray-700 rounded w-3/4"></div>
-                <div className="h-8 bg-gray-700 rounded w-1/2"></div>
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+                <div className="h-8 bg-muted rounded w-1/2"></div>
               </div>
             </CardContent>
           </Card>
@@ -44,39 +44,39 @@ export const RetentionOverview: React.FC<RetentionOverviewProps> = ({
       title: 'Total Clients',
       value: summary.totalClients,
       icon: Users,
-      color: 'text-blue-400',
-      bgColor: 'bg-blue-600/20'
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50'
     },
     {
       title: 'New Clients',
       value: summary.newClients,
       icon: UserCheck,
-      color: 'text-green-400',
-      bgColor: 'bg-green-600/20',
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
       percentage: summary.totalClients > 0 ? (summary.newClients / summary.totalClients * 100).toFixed(1) + '%' : '0%'
     },
     {
       title: 'Returning Clients',
       value: summary.returningClients,
       icon: TrendingUp,
-      color: 'text-orange-400',
-      bgColor: 'bg-orange-600/20',
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50',
       percentage: summary.totalClients > 0 ? (summary.returningClients / summary.totalClients * 100).toFixed(1) + '%' : '0%'
     },
     {
       title: 'Loyal Clients',
       value: summary.loyalClients,
       icon: Award,
-      color: 'text-purple-400',
-      bgColor: 'bg-purple-600/20',
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
       percentage: summary.totalClients > 0 ? (summary.loyalClients / summary.totalClients * 100).toFixed(1) + '%' : '0%'
     },
     {
       title: 'Retention Rate',
       value: summary.overallRetentionRate.toFixed(1) + '%',
       icon: Clock,
-      color: 'text-teal-400',
-      bgColor: 'bg-teal-600/20',
+      color: 'text-teal-600',
+      bgColor: 'bg-teal-50',
       subtitle: `${summary.averageVisitsPerClient.toFixed(1)} avg visits`
     }
   ];
@@ -84,19 +84,19 @@ export const RetentionOverview: React.FC<RetentionOverviewProps> = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       {cards.map((card, index) => (
-        <Card key={index} className="bg-gray-800 border-gray-700">
+        <Card key={index} className="bg-card border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400 font-medium">{card.title}</p>
-                <p className="text-2xl font-bold text-white mt-1">{card.value}</p>
+                <p className="text-sm text-muted-foreground font-medium">{card.title}</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{card.value}</p>
                 {card.percentage && (
-                  <Badge variant="secondary" className="mt-2 bg-gray-700 text-gray-300">
+                  <Badge variant="secondary" className="mt-2 bg-muted text-muted-foreground">
                     {card.percentage}
                   </Badge>
                 )}
                 {card.subtitle && (
-                  <p className="text-xs text-gray-500 mt-1">{card.subtitle}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{card.subtitle}</p>
                 )}
               </div>
               <div className={`p-3 rounded-full ${card.bgColor}`}>

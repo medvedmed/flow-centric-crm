@@ -118,10 +118,10 @@ const EnhancedFinance = () => {
   if (isLoading) {
     console.log('Finance page loading...');
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
-          <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-          <p>Loading financial data...</p>
+          <DollarSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <p className="text-foreground">Loading financial data...</p>
         </div>
       </div>
     );
@@ -130,13 +130,13 @@ const EnhancedFinance = () => {
   if (hasError) {
     console.error('Finance page error:', { transactionsError, summaryError, incomeCategoriesError, expenseCategoriesError });
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <Card className="max-w-md">
           <CardContent className="p-6 text-center">
-            <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-red-400" />
-            <h2 className="text-xl font-semibold mb-2">Error Loading Financial Data</h2>
-            <p className="text-gray-600 mb-4">Failed to load financial information. Please try again.</p>
-            <p className="text-sm text-gray-500 mb-4">
+            <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-red-500" />
+            <h2 className="text-xl font-semibold mb-2 text-foreground">Error Loading Financial Data</h2>
+            <p className="text-muted-foreground mb-4">Failed to load financial information. Please try again.</p>
+            <p className="text-sm text-muted-foreground mb-4">
               Error: {hasError instanceof Error ? hasError.message : 'Unknown error'}
             </p>
             <Button 
@@ -154,11 +154,11 @@ const EnhancedFinance = () => {
   console.log('Finance page rendered successfully');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-background min-h-screen p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Financial Management</h1>
+          <h1 className="text-3xl font-bold text-foreground">Financial Management</h1>
           <p className="text-muted-foreground mt-1">Track income, expenses, and financial performance</p>
         </div>
         
@@ -169,19 +169,19 @@ const EnhancedFinance = () => {
               Add Transaction
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="bg-background">
             <DialogHeader>
-              <DialogTitle>Add New Transaction</DialogTitle>
+              <DialogTitle className="text-foreground">Add New Transaction</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreateTransaction} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="transaction_type">Type *</Label>
                   <Select name="transaction_type" required>
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-background border">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background border">
                       <SelectItem value="income">Income</SelectItem>
                       <SelectItem value="expense">Expense</SelectItem>
                     </SelectContent>
@@ -189,19 +189,19 @@ const EnhancedFinance = () => {
                 </div>
                 <div>
                   <Label htmlFor="category">Category *</Label>
-                  <Input id="category" name="category" required />
+                  <Input id="category" name="category" required className="bg-background border" />
                 </div>
                 <div>
                   <Label htmlFor="amount">Amount *</Label>
-                  <Input id="amount" name="amount" type="number" step="0.01" required />
+                  <Input id="amount" name="amount" type="number" step="0.01" required className="bg-background border" />
                 </div>
                 <div>
                   <Label htmlFor="payment_method">Payment Method</Label>
                   <Select name="payment_method">
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-background border">
                       <SelectValue placeholder="Select method" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background border">
                       <SelectItem value="cash">Cash</SelectItem>
                       <SelectItem value="card">Card</SelectItem>
                       <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
@@ -216,12 +216,13 @@ const EnhancedFinance = () => {
                     name="transaction_date" 
                     type="date" 
                     defaultValue={new Date().toISOString().split('T')[0]}
+                    className="bg-background border"
                   />
                 </div>
               </div>
               <div>
                 <Label htmlFor="description">Description</Label>
-                <Textarea id="description" name="description" />
+                <Textarea id="description" name="description" className="bg-background border" />
               </div>
               <div className="flex gap-2 pt-4">
                 <Button type="submit" disabled={createTransactionMutation.isPending}>
@@ -238,11 +239,11 @@ const EnhancedFinance = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
+        <Card className="bg-card border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Income</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Income</p>
                 <p className="text-2xl font-bold text-green-600">
                   ${summary?.totalIncome?.toFixed(2) || '0.00'}
                 </p>
@@ -252,11 +253,11 @@ const EnhancedFinance = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Expenses</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
                 <p className="text-2xl font-bold text-red-600">
                   ${summary?.totalExpenses?.toFixed(2) || '0.00'}
                 </p>
@@ -266,11 +267,11 @@ const EnhancedFinance = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Net Profit</p>
+                <p className="text-sm font-medium text-muted-foreground">Net Profit</p>
                 <p className={`text-2xl font-bold ${(summary?.netProfit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   ${summary?.netProfit?.toFixed(2) || '0.00'}
                 </p>
@@ -280,12 +281,12 @@ const EnhancedFinance = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Transactions</p>
-                <p className="text-2xl font-bold">
+                <p className="text-sm font-medium text-muted-foreground">Transactions</p>
+                <p className="text-2xl font-bold text-foreground">
                   {summary?.transactionCount || 0}
                 </p>
               </div>
@@ -297,9 +298,9 @@ const EnhancedFinance = () => {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <Card className="bg-card border">
           <CardHeader>
-            <CardTitle>Income vs Expenses</CardTitle>
+            <CardTitle className="text-foreground">Income vs Expenses</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -324,9 +325,9 @@ const EnhancedFinance = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card border">
           <CardHeader>
-            <CardTitle>Category Breakdown</CardTitle>
+            <CardTitle className="text-foreground">Category Breakdown</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -343,7 +344,7 @@ const EnhancedFinance = () => {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="bg-card border">
         <CardContent className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
@@ -353,6 +354,7 @@ const EnhancedFinance = () => {
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                className="bg-background border"
               />
             </div>
             <div>
@@ -362,15 +364,16 @@ const EnhancedFinance = () => {
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                className="bg-background border"
               />
             </div>
             <div>
               <Label htmlFor="type_filter">Type</Label>
               <Select value={transactionType} onValueChange={(value: any) => setTransactionType(value)}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background border">
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border">
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="income">Income</SelectItem>
                   <SelectItem value="expense">Expense</SelectItem>
@@ -384,6 +387,7 @@ const EnhancedFinance = () => {
                 placeholder="Filter by category"
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
+                className="bg-background border"
               />
             </div>
           </div>
@@ -391,22 +395,22 @@ const EnhancedFinance = () => {
       </Card>
 
       {/* Transactions Table */}
-      <Card>
+      <Card className="bg-card border">
         <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
+          <CardTitle className="text-foreground">Recent Transactions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {transactions.map((transaction) => (
-              <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
+              <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg bg-background">
                 <div className="flex items-center gap-4">
                   <Badge variant={transaction.transaction_type === 'income' ? 'default' : 'destructive'}>
                     {transaction.transaction_type}
                   </Badge>
                   <div>
-                    <p className="font-medium">{transaction.category}</p>
-                    <p className="text-sm text-gray-600">{transaction.description}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="font-medium text-foreground">{transaction.category}</p>
+                    <p className="text-sm text-muted-foreground">{transaction.description}</p>
+                    <p className="text-xs text-muted-foreground">
                       {new Date(transaction.transaction_date).toLocaleDateString()}
                     </p>
                   </div>
@@ -415,16 +419,16 @@ const EnhancedFinance = () => {
                   <p className={`font-bold ${transaction.transaction_type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                     {transaction.transaction_type === 'income' ? '+' : '-'}${transaction.amount.toFixed(2)}
                   </p>
-                  <p className="text-sm text-gray-600">{transaction.payment_method}</p>
+                  <p className="text-sm text-muted-foreground">{transaction.payment_method}</p>
                 </div>
               </div>
             ))}
 
             {transactions.length === 0 && (
               <div className="text-center py-8">
-                <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <h3 className="text-lg font-semibold mb-2">No Transactions Found</h3>
-                <p className="text-gray-600">Start by adding your first transaction.</p>
+                <DollarSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2 text-foreground">No Transactions Found</h3>
+                <p className="text-muted-foreground">Start by adding your first transaction.</p>
               </div>
             )}
           </div>
@@ -439,7 +443,7 @@ const EnhancedFinance = () => {
               >
                 Previous
               </Button>
-              <span className="flex items-center px-4">
+              <span className="flex items-center px-4 text-foreground">
                 Page {currentPage} of {totalPages}
               </span>
               <Button

@@ -92,25 +92,25 @@ export const RetentionFilters: React.FC<RetentionFiltersProps> = ({
   };
 
   return (
-    <Card className="bg-gray-800 border-gray-700">
+    <Card className="bg-card border">
       <CardContent className="p-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-400" />
-            <span className="text-white font-medium">Filters</span>
+            <Filter className="w-5 h-5 text-muted-foreground" />
+            <span className="text-foreground font-medium">Filters</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             {/* Period Filter */}
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-400" />
+              <Calendar className="w-4 h-4 text-muted-foreground" />
               <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
-                <SelectTrigger className="w-40 bg-gray-700 border-gray-600 text-white">
+                <SelectTrigger className="w-40 bg-background border text-foreground">
                   <SelectValue placeholder="Select period" />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-700 border-gray-600">
+                <SelectContent className="bg-background border">
                   {periodOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value} className="text-white">
+                    <SelectItem key={option.value} value={option.value} className="text-foreground">
                       {option.label}
                     </SelectItem>
                   ))}
@@ -120,13 +120,13 @@ export const RetentionFilters: React.FC<RetentionFiltersProps> = ({
 
             {/* Staff Filter */}
             <Select value={selectedStaff || 'all'} onValueChange={(value) => onStaffChange(value === 'all' ? undefined : value)}>
-              <SelectTrigger className="w-48 bg-gray-700 border-gray-600 text-white">
+              <SelectTrigger className="w-48 bg-background border text-foreground">
                 <SelectValue placeholder="All Staff" />
               </SelectTrigger>
-              <SelectContent className="bg-gray-700 border-gray-600">
-                <SelectItem value="all" className="text-white">All Staff</SelectItem>
+              <SelectContent className="bg-background border">
+                <SelectItem value="all" className="text-foreground">All Staff</SelectItem>
                 {staff?.map(member => (
-                  <SelectItem key={member.id} value={member.id} className="text-white">
+                  <SelectItem key={member.id} value={member.id} className="text-foreground">
                     {member.name}
                   </SelectItem>
                 ))}
@@ -142,7 +142,7 @@ export const RetentionFilters: React.FC<RetentionFiltersProps> = ({
                   onStaffChange(undefined);
                   handlePeriodChange('all');
                 }}
-                className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                className="border text-muted-foreground hover:bg-accent"
               >
                 Clear Filters
               </Button>
@@ -152,15 +152,15 @@ export const RetentionFilters: React.FC<RetentionFiltersProps> = ({
 
         {/* Active Filters Display */}
         {(startDate || endDate || selectedStaff) && (
-          <div className="mt-3 pt-3 border-t border-gray-700">
+          <div className="mt-3 pt-3 border-t">
             <div className="flex flex-wrap gap-2">
               {startDate && endDate && (
-                <div className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-sm">
+                <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
                   {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}
                 </div>
               )}
               {selectedStaff && (
-                <div className="bg-green-600/20 text-green-400 px-3 py-1 rounded-full text-sm">
+                <div className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm">
                   {staff?.find(s => s.id === selectedStaff)?.name || 'Selected Staff'}
                 </div>
               )}

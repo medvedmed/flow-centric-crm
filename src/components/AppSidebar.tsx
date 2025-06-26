@@ -72,11 +72,11 @@ export function AppSidebar() {
   const location = useLocation();
 
   return (
-    <Sidebar className="border-r border-gray-800 bg-gray-900">
+    <Sidebar className="border-r bg-background">
       <SidebarContent>
         {menuItems.map((group) => (
           <SidebarGroup key={group.title}>
-            <SidebarGroupLabel className="text-gray-400 text-xs uppercase tracking-wider font-semibold px-3 py-2">
+            <SidebarGroupLabel className="text-muted-foreground text-xs uppercase tracking-wider font-semibold px-3 py-2">
               {group.title}
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -86,8 +86,8 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       className={cn(
-                        "text-gray-300 hover:text-white hover:bg-gray-800 transition-colors",
-                        location.pathname === item.url && "bg-gray-800 text-white border-r-2 border-blue-500"
+                        "text-foreground hover:bg-accent hover:text-accent-foreground transition-colors",
+                        location.pathname === item.url && "bg-accent text-accent-foreground border-r-2 border-primary"
                       )}
                     >
                       <Link to={item.url}>

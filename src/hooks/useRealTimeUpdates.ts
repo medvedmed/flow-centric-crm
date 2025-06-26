@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -40,6 +39,10 @@ export const useRealTimeUpdates = () => {
           queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
           queryClient.invalidateQueries({ queryKey: ['staff-performance'] });
           queryClient.invalidateQueries({ queryKey: ['enhanced-schedule-appointments'] });
+          // Invalidate retention queries when appointments change
+          queryClient.invalidateQueries({ queryKey: ['retention-summary'] });
+          queryClient.invalidateQueries({ queryKey: ['staff-retention-metrics'] });
+          queryClient.invalidateQueries({ queryKey: ['client-retention-data'] });
         }
       )
       .subscribe();
@@ -190,6 +193,25 @@ export const useRealTimeUpdates = () => {
       )
       .subscribe();
 
+    // Subscribe to client retention analytics changes
+    const retentionChannel = supabase
+      .channel('retention-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'client_retention_analytics'
+        },
+        (payload) => {
+          console.log('Retention analytics change:', payload);
+          queryClient.invalidateQueries({ queryKey: ['retention-summary'] });
+          queryClient.invalidateQueries({ queryKey: ['staff-retention-metrics'] });
+          queryClient.invalidateQueries({ queryKey: ['client-retention-data'] });
+        }
+      )
+      .subscribe();
+
     // Subscribe to appointment services changes
     const appointmentServicesChannel = supabase
       .channel('appointment-services-changes')
@@ -238,6 +260,7 @@ export const useRealTimeUpdates = () => {
       supabase.removeChannel(analyticsChannel);
       supabase.removeChannel(inventoryChannel);
       supabase.removeChannel(financeChannel);
+      supabase.removeChannel(retentionChannel);
       supabase.removeChannel(appointmentServicesChannel);
       supabase.removeChannel(clientPaymentsChannel);
     };

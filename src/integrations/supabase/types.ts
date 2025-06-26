@@ -269,6 +269,54 @@ export type Database = {
         }
         Relationships: []
       }
+      client_retention_analytics: {
+        Row: {
+          average_days_between_visits: number | null
+          client_category: string
+          client_id: string
+          created_at: string
+          days_since_last_visit: number | null
+          first_visit_date: string | null
+          id: string
+          last_visit_date: string | null
+          salon_id: string
+          staff_id: string | null
+          total_spent: number | null
+          total_visits: number
+          updated_at: string
+        }
+        Insert: {
+          average_days_between_visits?: number | null
+          client_category?: string
+          client_id: string
+          created_at?: string
+          days_since_last_visit?: number | null
+          first_visit_date?: string | null
+          id?: string
+          last_visit_date?: string | null
+          salon_id: string
+          staff_id?: string | null
+          total_spent?: number | null
+          total_visits?: number
+          updated_at?: string
+        }
+        Update: {
+          average_days_between_visits?: number | null
+          client_category?: string
+          client_id?: string
+          created_at?: string
+          days_since_last_visit?: number | null
+          first_visit_date?: string | null
+          id?: string
+          last_visit_date?: string | null
+          salon_id?: string
+          staff_id?: string | null
+          total_spent?: number | null
+          total_visits?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_sessions: {
         Row: {
           client_id: string
@@ -1210,6 +1258,51 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_retention_metrics: {
+        Row: {
+          created_at: string
+          id: string
+          loyal_clients: number
+          new_clients: number
+          period_end: string
+          period_start: string
+          retention_rate: number
+          returning_clients: number
+          salon_id: string
+          staff_id: string
+          total_unique_clients: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          loyal_clients?: number
+          new_clients?: number
+          period_end: string
+          period_start: string
+          retention_rate?: number
+          returning_clients?: number
+          salon_id: string
+          staff_id: string
+          total_unique_clients?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          loyal_clients?: number
+          new_clients?: number
+          period_end?: string
+          period_start?: string
+          retention_rate?: number
+          returning_clients?: number
+          salon_id?: string
+          staff_id?: string
+          total_unique_clients?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       time_off_requests: {
         Row: {
           created_at: string | null
@@ -1594,6 +1687,18 @@ export type Database = {
           is_valid: boolean
         }[]
       }
+      calculate_staff_retention_metrics: {
+        Args: { target_salon_id: string; start_date: string; end_date: string }
+        Returns: {
+          staff_id: string
+          staff_name: string
+          total_unique_clients: number
+          new_clients: number
+          returning_clients: number
+          loyal_clients: number
+          retention_rate: number
+        }[]
+      }
       check_reminder_exists: {
         Args: { appointment_id_param: string; reminder_type_param: string }
         Returns: {
@@ -1678,6 +1783,10 @@ export type Database = {
           created_at: string
           updated_at: string
         }[]
+      }
+      get_client_category: {
+        Args: { visit_count: number }
+        Returns: string
       }
       get_reminder_settings: {
         Args: Record<PropertyKey, never>

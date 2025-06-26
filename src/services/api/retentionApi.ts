@@ -82,7 +82,20 @@ export const retentionApi = {
     const { data, error } = await query;
     if (error) throw error;
 
-    return data || [];
+    // Transform the data to match our interface with proper typing
+    return (data || []).map(item => ({
+      id: item.id,
+      salon_id: item.salon_id,
+      client_id: item.client_id,
+      staff_id: item.staff_id,
+      total_visits: item.total_visits,
+      first_visit_date: item.first_visit_date,
+      last_visit_date: item.last_visit_date,
+      client_category: item.client_category as 'New' | 'Returning' | 'Loyal',
+      days_since_last_visit: item.days_since_last_visit,
+      total_spent: item.total_spent,
+      average_days_between_visits: item.average_days_between_visits
+    }));
   },
 
   // Get retention summary metrics

@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
 import { LanguageProvider } from '@/contexts/LanguageContext';
-import { AppWithRealTime } from '@/components/AppWithRealTime';
+import AppWithRealTime from '@/components/AppWithRealTime';
 
 // Pages
 import Index from '@/pages/Index';

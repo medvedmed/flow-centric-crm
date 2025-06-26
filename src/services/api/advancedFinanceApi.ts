@@ -61,9 +61,16 @@ export const advancedFinanceApi = {
     staff_id?: string;
     invoice_id?: string;
   }) {
+    // Get current user ID for salon_id
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
     const { data, error } = await supabase
       .from('finance_transactions')
-      .insert([transaction])
+      .insert({
+        ...transaction,
+        salon_id: user.id
+      })
       .select()
       .single();
 
@@ -122,9 +129,16 @@ export const advancedFinanceApi = {
     category_type: 'income' | 'expense';
     is_default?: boolean;
   }) {
+    // Get current user ID for salon_id
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
     const { data, error } = await supabase
       .from('finance_categories')
-      .insert([category])
+      .insert({
+        ...category,
+        salon_id: user.id
+      })
       .select()
       .single();
 
@@ -149,9 +163,16 @@ export const advancedFinanceApi = {
     account_type: 'cash' | 'card' | 'bank_transfer' | 'digital_wallet';
     current_balance?: number;
   }) {
+    // Get current user ID for salon_id
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
     const { data, error } = await supabase
       .from('finance_accounts')
-      .insert([account])
+      .insert({
+        ...account,
+        salon_id: user.id
+      })
       .select()
       .single();
 

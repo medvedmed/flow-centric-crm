@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +18,6 @@ interface EnhancedWhatsAppSession {
   phone_number?: string;
   qr_code?: string;
   last_connected_at?: string;
-  last_seen?: string;
   webjs_session_data?: any;
 }
 
@@ -40,13 +39,20 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [testPhone, setTestPhone] = useState('');
   const [testMessage, setTestMessage] = useState('Hello! This is a test message from your enhanced salon system.');
+  const subscriptionRef = useRef<any>(null);
 
   useEffect(() => {
     if (user) {
       loadSession();
       loadMessages();
-      subscribeToUpdates();
+      setupSubscriptions();
     }
+
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+      }
+    };
   }, [user]);
 
   const loadSession = async () => {
@@ -60,7 +66,7 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
         return;
       }
 
-      if (data.session) {
+      if (data?.session) {
         setSession(data.session);
       }
     } catch (error) {
@@ -99,9 +105,13 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
     }
   };
 
-  const subscribeToUpdates = () => {
-    const sessionChannel = supabase
-      .channel('enhanced-whatsapp-session')
+  const setupSubscriptions = () => {
+    if (subscriptionRef.current) {
+      supabase.removeChannel(subscriptionRef.current);
+    }
+
+    subscriptionRef.current = supabase
+      .channel(`enhanced-whatsapp-${user?.id}`)
       .on(
         'postgres_changes',
         {
@@ -126,10 +136,6 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
           }
         }
       )
-      .subscribe();
-
-    const messagesChannel = supabase
-      .channel('enhanced-whatsapp-messages')
       .on(
         'postgres_changes',
         {
@@ -144,11 +150,6 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
         }
       )
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(sessionChannel);
-      supabase.removeChannel(messagesChannel);
-    };
   };
 
   const handleConnect = async () => {
@@ -331,10 +332,9 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
                 <Badge variant="outline" className="bg-green-100 text-green-700">Enhanced</Badge>
               </div>
               <div className="flex justify-center">
-                <img
-                  src={`data:image/svg+xml;base64,${session.qr_code}`}
-                  alt="Enhanced WhatsApp QR Code"
-                  className="w-48 h-48 border-2 border-green-200 rounded-lg"
+                <div 
+                  className="w-48 h-48 border-2 border-green-200 rounded-lg flex items-center justify-center bg-white"
+                  dangerouslySetInnerHTML={{ __html: atob(session.qr_code) }}
                 />
               </div>
               <p className="text-sm text-gray-600 text-center mt-2">

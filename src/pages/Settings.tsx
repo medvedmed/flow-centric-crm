@@ -17,6 +17,7 @@ import { BusinessAnalytics } from "@/components/BusinessAnalytics";
 import { DatabaseDebugPanel } from "@/components/DatabaseDebugPanel";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const Settings = () => {
   const { needsAdminSetup } = useAdminSetup();
@@ -154,101 +155,119 @@ const Settings = () => {
         </TabsList>
 
         <TabsContent value="salon" className="space-y-6">
-          <EnhancedSalonProfile />
+          <ErrorBoundary>
+            <EnhancedSalonProfile />
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="whatsapp" className="space-y-6">
-          <WhatsAppSection />
+          <ErrorBoundary>
+            <WhatsAppSection />
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="manager" className="space-y-6">
-          {canEditSettings ? (
-            <ManagerSection />
-          ) : (
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Shield className="h-8 w-8 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-600">You need edit permissions to access the Manager section.</p>
-              </CardContent>
-            </Card>
-          )}
+          <ErrorBoundary>
+            {canEditSettings ? (
+              <ManagerSection />
+            ) : (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <Shield className="h-8 w-8 mx-auto mb-4 text-gray-400" />
+                  <p className="text-gray-600">You need edit permissions to access the Manager section.</p>
+                </CardContent>
+              </Card>
+            )}
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="roles" className="space-y-6">
-          {canEditSettings ? (
-            <UnifiedRoleManagement />
-          ) : (
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Shield className="h-8 w-8 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-600">You need edit permissions to manage roles and permissions.</p>
-              </CardContent>
-            </Card>
-          )}
+          <ErrorBoundary>
+            {canEditSettings ? (
+              <UnifiedRoleManagement />
+            ) : (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <Shield className="h-8 w-8 mx-auto mb-4 text-gray-400" />
+                  <p className="text-gray-600">You need edit permissions to manage roles and permissions.</p>
+                </CardContent>
+              </Card>
+            )}
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="schedule" className="space-y-6">
-          {canEditSettings ? (
-            <StaffScheduleSection />
-          ) : (
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Shield className="h-8 w-8 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-600">You need edit permissions to manage staff schedules.</p>
-              </CardContent>
-            </Card>
-          )}
+          <ErrorBoundary>
+            {canEditSettings ? (
+              <StaffScheduleSection />
+            ) : (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <Shield className="h-8 w-8 mx-auto mb-4 text-gray-400" />
+                  <p className="text-gray-600">You need edit permissions to manage staff schedules.</p>
+                </CardContent>
+              </Card>
+            )}
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">
-          {canViewReports ? (
-            <BusinessAnalytics />
-          ) : (
-            <Card>
-              <CardContent className="p-6 text-center">
-                <BarChart3 className="h-8 w-8 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-600">You need report permissions to view business analytics.</p>
-              </CardContent>
-            </Card>
-          )}
+          <ErrorBoundary>
+            {canViewReports ? (
+              <BusinessAnalytics />
+            ) : (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <BarChart3 className="h-8 w-8 mx-auto mb-4 text-gray-400" />
+                  <p className="text-gray-600">You need report permissions to view business analytics.</p>
+                </CardContent>
+              </Card>
+            )}
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="automation" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5" />
-                Automation Hub
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-medium mb-2">Smart Scheduling</h3>
-                  <p className="text-sm text-gray-600 mb-3">Automatically suggest optimal appointment times based on staff availability and client preferences.</p>
-                  <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">Coming Soon</div>
+          <ErrorBoundary>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5" />
+                  Automation Hub
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="p-4 border rounded-lg">
+                    <h3 className="font-medium mb-2">Smart Scheduling</h3>
+                    <p className="text-sm text-gray-600 mb-3">Automatically suggest optimal appointment times based on staff availability and client preferences.</p>
+                    <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">Coming Soon</div>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <h3 className="font-medium mb-2">Auto Follow-ups</h3>
+                    <p className="text-sm text-gray-600 mb-3">Send personalized follow-up messages and review requests automatically.</p>
+                    <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">Available in WhatsApp</div>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <h3 className="font-medium mb-2">Predictive Analytics</h3>
+                    <p className="text-sm text-gray-600 mb-3">AI-powered insights to predict busy periods and optimize staffing.</p>
+                    <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">Coming Soon</div>
+                  </div>
                 </div>
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-medium mb-2">Auto Follow-ups</h3>
-                  <p className="text-sm text-gray-600 mb-3">Send personalized follow-up messages and review requests automatically.</p>
-                  <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">Available in WhatsApp</div>
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-medium mb-2">Predictive Analytics</h3>
-                  <p className="text-sm text-gray-600 mb-3">AI-powered insights to predict busy periods and optimize staffing.</p>
-                  <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">Coming Soon</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6">
-          <NotificationPreferences />
+          <ErrorBoundary>
+            <NotificationPreferences />
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="debug" className="space-y-6">
-          <DatabaseDebugPanel />
+          <ErrorBoundary>
+            <DatabaseDebugPanel />
+          </ErrorBoundary>
         </TabsContent>
       </Tabs>
     </div>

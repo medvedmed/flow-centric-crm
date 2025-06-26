@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -48,9 +48,11 @@ export const WhatsAppAutomation: React.FC = () => {
     follow_up_delay_hours: 2,
   });
   const [queueStats, setQueueStats] = useState<QueueStats>({ pending: 0, sent: 0, failed: 0 });
+  const loadedRef = useRef(false);
 
   useEffect(() => {
-    if (user) {
+    if (user && !loadedRef.current) {
+      loadedRef.current = true;
       loadAutomationSettings();
       loadQueueStats();
     }
@@ -103,13 +105,15 @@ export const WhatsAppAutomation: React.FC = () => {
   };
 
   const saveSettings = async () => {
+    if (!user) return;
+    
     setLoading(true);
     try {
       const { error } = await supabase
         .from('whatsapp_automation_settings')
         .upsert({
           ...settings,
-          salon_id: user?.id,
+          salon_id: user.id,
         }, { onConflict: 'salon_id' });
 
       if (error) throw error;

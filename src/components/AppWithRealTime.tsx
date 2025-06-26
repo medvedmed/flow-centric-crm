@@ -23,29 +23,44 @@ const AppWithRealTime = ({ children }: AppWithRealTimeProps) => {
   const noSidebarPages = ['/', '/auth', '/invite-accept'];
   const shouldShowSidebar = isAuthenticated && !noSidebarPages.includes(location.pathname);
 
+  // Show loading spinner while auth is being checked
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <div className="flex items-center gap-2">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <span>Loading application...</span>
+        </div>
       </div>
     );
   }
 
   // For pages without sidebar (login, index, etc.)
   if (!shouldShowSidebar) {
-    return <div className="min-h-screen bg-gray-50">{children}</div>;
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="w-full">
+          {children}
+        </div>
+      </div>
+    );
   }
 
   // For authenticated pages with sidebar
   return (
     <div className="min-h-screen flex w-full">
       <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+      <SidebarInset className="flex-1">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
           <SidebarTrigger className="-ml-1" />
+          <div className="ml-auto">
+            <span className="text-sm text-gray-600">
+              {user ? `Welcome, ${user.email}` : isStaff ? 'Staff Dashboard' : ''}
+            </span>
+          </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="min-h-[100vh] flex-1 rounded-xl bg-gray-50 p-4">
+          <div className="min-h-[calc(100vh-5rem)] flex-1 rounded-xl bg-white p-4">
             {children}
           </div>
         </div>

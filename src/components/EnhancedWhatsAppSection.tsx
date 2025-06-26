@@ -1,12 +1,16 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MessageSquare, Smartphone, Globe, Zap, Settings, Clock } from 'lucide-react';
 import { EnhancedWhatsAppWebClient } from './EnhancedWhatsAppWebClient';
+import { WhatsAppWebClient } from './WhatsAppWebClient';
 import { WhatsAppAutomation } from './WhatsAppAutomation';
+import { WhatsAppConfigToggle } from './WhatsAppConfigToggle';
 
 export const EnhancedWhatsAppSection: React.FC = () => {
+  const [useServer, setUseServer] = useState(true);
+
   return (
     <div className="space-y-6">
       <div>
@@ -15,6 +19,8 @@ export const EnhancedWhatsAppSection: React.FC = () => {
           Connect your WhatsApp with enhanced features including automated reminders, message templates, and advanced scheduling.
         </p>
       </div>
+
+      <WhatsAppConfigToggle onModeChange={setUseServer} />
 
       <Tabs defaultValue="enhanced-web" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
@@ -44,6 +50,7 @@ export const EnhancedWhatsAppSection: React.FC = () => {
               <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg">
                 <h3 className="font-medium text-blue-800 mb-2">Enhanced Features:</h3>
                 <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• {useServer ? 'Real WhatsApp Web.js integration with your server' : 'Supabase Edge Function integration'}</li>
                   <li>• Enhanced QR code connection with better reliability</li>
                   <li>• Automated appointment reminder system</li>
                   <li>• Advanced message templates with variables</li>
@@ -53,7 +60,8 @@ export const EnhancedWhatsAppSection: React.FC = () => {
                   <li>• Enhanced error handling and retry mechanisms</li>
                 </ul>
               </div>
-              <EnhancedWhatsAppWebClient />
+              
+              {useServer ? <EnhancedWhatsAppWebClient /> : <WhatsAppWebClient />}
             </CardContent>
           </Card>
         </TabsContent>
@@ -76,6 +84,7 @@ export const EnhancedWhatsAppSection: React.FC = () => {
                   <li>• Smart scheduling based on appointment times</li>
                   <li>• Bulk message processing with queue management</li>
                   <li>• Failed message retry with exponential backoff</li>
+                  {useServer && <li>• Real-time queue processing every 30 seconds</li>}
                 </ul>
               </div>
               <WhatsAppAutomation />
@@ -100,6 +109,7 @@ export const EnhancedWhatsAppSection: React.FC = () => {
                     <li>• Automatic rate limiting based on WhatsApp policies</li>
                     <li>• Session persistence and automatic reconnection</li>
                     <li>• Secure message queue with encryption</li>
+                    {useServer && <li>• Local server with enhanced security controls</li>}
                   </ul>
                 </div>
 
@@ -110,18 +120,33 @@ export const EnhancedWhatsAppSection: React.FC = () => {
                     <li>• Real-time sync with client database</li>
                     <li>• Automated client preference management</li>
                     <li>• Comprehensive message analytics and reporting</li>
+                    {useServer && <li>• Direct WhatsApp Web.js API access for advanced features</li>}
                   </ul>
                 </div>
 
                 <div className="p-4 bg-yellow-50 rounded-lg">
                   <h3 className="font-medium text-yellow-800 mb-2">Setup Instructions:</h3>
                   <ol className="text-sm text-yellow-700 space-y-1 list-decimal list-inside">
-                    <li>Click "Connect Enhanced" to initialize WhatsApp Web</li>
-                    <li>Scan the enhanced QR code with your WhatsApp mobile app</li>
-                    <li>Configure automation settings in the Automation tab</li>
-                    <li>Set up message templates with your preferred content</li>
-                    <li>Enable desired reminder types and timing</li>
-                    <li>Test the system by sending a test message</li>
+                    {useServer ? (
+                      <>
+                        <li>Make sure your WhatsApp server is running on localhost:3020</li>
+                        <li>Click "Connect Enhanced" to initialize WhatsApp Web</li>
+                        <li>Scan the QR code with your WhatsApp mobile app</li>
+                        <li>Configure automation settings in the Automation tab</li>
+                        <li>Set up message templates with your preferred content</li>
+                        <li>Enable desired reminder types and timing</li>
+                        <li>Test the system by sending a test message</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>Click "Connect Enhanced" to initialize WhatsApp Web</li>
+                        <li>Scan the enhanced QR code with your WhatsApp mobile app</li>
+                        <li>Configure automation settings in the Automation tab</li>
+                        <li>Set up message templates with your preferred content</li>
+                        <li>Enable desired reminder types and timing</li>
+                        <li>Test the system by sending a test message</li>
+                      </>
+                    )}
                   </ol>
                 </div>
               </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,168 +7,101 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { MessageSquare, Smartphone, Wifi, WifiOff, Send, QrCode, Loader2, Zap, CheckCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-
-interface EnhancedWhatsAppSession {
-  id: string;
-  is_connected: boolean;
-  connection_state: 'disconnected' | 'connecting' | 'connected' | 'ready';
-  phone_number?: string;
-  qr_code?: string;
-  last_connected_at?: string;
-  webjs_session_data?: any;
-}
-
-interface WhatsAppMessage {
-  id: string;
-  recipient_phone: string;
-  recipient_name?: string;
-  message_content: string;
-  status: 'pending' | 'sent' | 'delivered' | 'failed';
-  sent_at?: string;
-  error_message?: string;
-}
+import { whatsappServerClient, WhatsAppServerSession, WhatsAppServerMessage } from '@/services/whatsappServerClient';
 
 export const EnhancedWhatsAppWebClient: React.FC = () => {
-  const { user } = useAuth();
   const { toast } = useToast();
-  const [session, setSession] = useState<EnhancedWhatsAppSession | null>(null);
-  const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
+  const [session, setSession] = useState<WhatsAppServerSession | null>(null);
+  const [messages, setMessages] = useState<WhatsAppServerMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [testPhone, setTestPhone] = useState('');
   const [testMessage, setTestMessage] = useState('Hello! This is a test message from your enhanced salon system.');
   const subscriptionRef = useRef<any>(null);
+  const statusPollingRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (user) {
-      loadSession();
-      loadMessages();
-      setupSubscriptions();
-    }
+    loadSession();
+    loadMessages();
+    setupSubscriptions();
+    startStatusPolling();
 
     return () => {
       if (subscriptionRef.current) {
-        supabase.removeChannel(subscriptionRef.current);
+        whatsappServerClient.subscribeToMessageUpdates(() => {}).then(channel => {
+          // Cleanup handled by the subscription
+        });
+      }
+      if (statusPollingRef.current) {
+        clearInterval(statusPollingRef.current);
       }
     };
-  }, [user]);
+  }, []);
 
   const loadSession = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-web-enhanced', {
-        body: { action: 'get_status' }
-      });
-
-      if (error) {
-        console.error('Error loading session:', error);
-        return;
-      }
-
-      if (data?.session) {
-        setSession(data.session);
-      }
+      const { session: sessionData } = await whatsappServerClient.getStatus();
+      setSession(sessionData);
     } catch (error) {
-      console.error('Error in loadSession:', error);
+      console.error('Error loading session:', error);
+      // Set default disconnected state
+      setSession({
+        id: 'whatsapp-session',
+        is_connected: false,
+        connection_state: 'disconnected'
+      });
     }
   };
 
   const loadMessages = async () => {
     try {
-      const { data, error } = await supabase
-        .from('whatsapp_messages')
-        .select('*')
-        .eq('salon_id', user?.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (error) {
-        console.error('Error loading messages:', error);
-        return;
-      }
-
-      if (data) {
-        const messagesData: WhatsAppMessage[] = data.map(msg => ({
-          id: msg.id,
-          recipient_phone: msg.recipient_phone,
-          recipient_name: msg.recipient_name || undefined,
-          message_content: msg.message_content,
-          status: msg.status as WhatsAppMessage['status'],
-          sent_at: msg.sent_at || undefined,
-          error_message: msg.error_message || undefined
-        }));
-        setMessages(messagesData);
-      }
+      const messagesData = await whatsappServerClient.getMessageHistory();
+      setMessages(messagesData);
     } catch (error) {
-      console.error('Error in loadMessages:', error);
+      console.error('Error loading messages:', error);
     }
   };
 
   const setupSubscriptions = () => {
     if (subscriptionRef.current) {
-      supabase.removeChannel(subscriptionRef.current);
+      // Clean up existing subscription
     }
 
-    subscriptionRef.current = supabase
-      .channel(`enhanced-whatsapp-${user?.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'whatsapp_sessions',
-          filter: `salon_id=eq.${user?.id}`
-        },
-        (payload) => {
-          console.log('Enhanced session update:', payload);
-          if (payload.new && typeof payload.new === 'object') {
-            const newData = payload.new as any;
-            setSession({
-              id: newData.id,
-              is_connected: newData.is_connected,
-              connection_state: newData.connection_state,
-              phone_number: newData.phone_number || undefined,
-              qr_code: newData.qr_code || undefined,
-              last_connected_at: newData.last_connected_at || undefined,
-              webjs_session_data: newData.webjs_session_data || undefined
-            });
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'whatsapp_messages',
-          filter: `salon_id=eq.${user?.id}`
-        },
-        (payload) => {
-          console.log('Enhanced message update:', payload);
-          loadMessages();
-        }
-      )
-      .subscribe();
+    subscriptionRef.current = whatsappServerClient.subscribeToMessageUpdates((message) => {
+      console.log('Enhanced message update:', message);
+      loadMessages(); // Refresh messages when new ones arrive
+    });
+  };
+
+  const startStatusPolling = () => {
+    // Poll status every 5 seconds to keep UI updated
+    statusPollingRef.current = setInterval(async () => {
+      try {
+        const { session: sessionData } = await whatsappServerClient.getStatus();
+        setSession(sessionData);
+      } catch (error) {
+        // Silently handle polling errors
+        console.error('Status polling error:', error);
+      }
+    }, 5000);
   };
 
   const handleConnect = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-web-enhanced', {
-        body: { action: 'connect' }
-      });
-
-      if (error) throw error;
-
+      const result = await whatsappServerClient.connect();
+      
       toast({
         title: 'Enhanced Connection Starting',
-        description: 'Initializing WhatsApp Web with enhanced features. Please scan the QR code.',
+        description: 'Initializing WhatsApp Web with enhanced features. Please scan the QR code when it appears.',
       });
+
+      // Start polling for QR code and status updates
+      setTimeout(loadSession, 2000);
     } catch (error) {
       console.error('Enhanced connect error:', error);
       toast({
         title: 'Connection Error',
-        description: 'Failed to initialize enhanced WhatsApp connection.',
+        description: 'Failed to initialize enhanced WhatsApp connection: ' + (error as Error).message,
         variant: 'destructive',
       });
     } finally {
@@ -180,21 +112,20 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
   const handleDisconnect = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-web-enhanced', {
-        body: { action: 'disconnect' }
-      });
-
-      if (error) throw error;
+      await whatsappServerClient.disconnect();
 
       toast({
         title: 'Disconnected',
         description: 'Enhanced WhatsApp session has been disconnected.',
       });
+
+      // Update local state
+      setSession(prev => prev ? { ...prev, is_connected: false, connection_state: 'disconnected' } : null);
     } catch (error) {
       console.error('Enhanced disconnect error:', error);
       toast({
         title: 'Error',
-        description: 'Failed to disconnect enhanced WhatsApp session.',
+        description: 'Failed to disconnect enhanced WhatsApp session: ' + (error as Error).message,
         variant: 'destructive',
       });
     } finally {
@@ -214,15 +145,7 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-web-enhanced', {
-        body: {
-          action: 'send_message',
-          phone: testPhone,
-          message: testMessage
-        }
-      });
-
-      if (error) throw error;
+      await whatsappServerClient.sendMessage(testPhone, testMessage);
 
       toast({
         title: 'Enhanced Message Sent',
@@ -231,11 +154,14 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
 
       setTestPhone('');
       setTestMessage('Hello! This is a test message from your enhanced salon system.');
+      
+      // Refresh messages
+      setTimeout(loadMessages, 1000);
     } catch (error) {
       console.error('Enhanced send message error:', error);
       toast({
         title: 'Send Error',
-        description: 'Failed to send enhanced message. Please try again.',
+        description: 'Failed to send enhanced message: ' + (error as Error).message,
         variant: 'destructive',
       });
     } finally {
@@ -332,9 +258,10 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
                 <Badge variant="outline" className="bg-green-100 text-green-700">Enhanced</Badge>
               </div>
               <div className="flex justify-center">
-                <div 
-                  className="w-48 h-48 border-2 border-green-200 rounded-lg flex items-center justify-center bg-white"
-                  dangerouslySetInnerHTML={{ __html: atob(session.qr_code) }}
+                <img
+                  src={`data:image/png;base64,${session.qr_code}`}
+                  alt="WhatsApp QR Code"
+                  className="w-48 h-48 border-2 border-green-200 rounded-lg bg-white"
                 />
               </div>
               <p className="text-sm text-gray-600 text-center mt-2">

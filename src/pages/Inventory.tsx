@@ -30,21 +30,21 @@ const Inventory = () => {
   const { data: items = [], isLoading, error } = useQuery({
     queryKey: ['inventory-items', selectedCategory, showLowStock],
     queryFn: () => inventoryApi.getItems(selectedCategory || undefined, showLowStock),
-    retry: 3,
+    retry: 1,
     retryDelay: 1000,
   });
 
   const { data: categories = [] } = useQuery({
     queryKey: ['inventory-categories'],
     queryFn: () => inventoryApi.getCategories(),
-    retry: 3,
+    retry: 1,
     retryDelay: 1000,
   });
 
   const { data: lowStockItems = [] } = useQuery({
     queryKey: ['low-stock-items'],
     queryFn: () => inventoryApi.getLowStockItems(),
-    retry: 3,
+    retry: 1,
     retryDelay: 1000,
   });
 
@@ -255,7 +255,7 @@ const Inventory = () => {
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
                 {categories.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}

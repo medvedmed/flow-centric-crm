@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,113 +19,142 @@ const Dashboard = () => {
       const today = new Date().toISOString().split('T')[0];
       const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-      // Get today's appointments with all fields
-      const { data: todayAppointments, error: todayError } = await supabase
-        .from('appointments')
-        .select('*, staff!appointments_staff_id_fkey(name)')
-        .eq('salon_id', user?.id)
-        .eq('date', today);
+      try {
+        // Get today's appointments with all fields
+        const { data: todayAppointments, error: todayError } = await supabase
+          .from('appointments')
+          .select('*, staff!appointments_staff_id_fkey(name)')
+          .eq('salon_id', user?.id)
+          .eq('date', today);
 
-      if (todayError) {
-        console.error('Today appointments error:', todayError);
-        throw todayError;
+        if (todayError) {
+          console.error('Today appointments error:', todayError);
+          throw todayError;
+        }
+
+        // Get tomorrow's appointments
+        const { data: tomorrowAppointments, error: tomorrowError } = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('salon_id', user?.id)
+          .eq('date', tomorrow);
+
+        if (tomorrowError) {
+          console.error('Tomorrow appointments error:', tomorrowError);
+          throw tomorrowError;
+        }
+
+        // Get this month's revenue from financial transactions (more accurate)
+        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+        const { data: monthlyTransactions, error: revenueError } = await supabase
+          .from('financial_transactions')
+          .select('amount')
+          .eq('salon_id', user?.id)
+          .eq('transaction_type', 'income')
+          .gte('transaction_date', startOfMonth);
+
+        if (revenueError) {
+          console.error('Monthly revenue error:', revenueError);
+        }
+
+        // Get pending payments (unpaid completed appointments)
+        const { data: pendingPayments, error: pendingError } = await supabase
+          .from('appointments')
+          .select('price, client_name, service, date')
+          .eq('salon_id', user?.id)
+          .eq('status', 'Completed')
+          .eq('payment_status', 'unpaid');
+
+        if (pendingError) {
+          console.error('Pending payments error:', pendingError);
+        }
+
+        // Get total clients
+        const { count: totalClients, error: clientsError } = await supabase
+          .from('clients')
+          .select('*', { count: 'exact', head: true })
+          .eq('salon_id', user?.id);
+
+        if (clientsError) {
+          console.error('Clients count error:', clientsError);
+        }
+
+        // Fix the low stock query - fetch all items and filter in JavaScript
+        let lowStockItems = [];
+        try {
+          const { data: inventoryItems, error: stockError } = await supabase
+            .from('inventory_items')
+            .select('*')
+            .eq('salon_id', user?.id)
+            .eq('is_active', true);
+
+          if (stockError) {
+            console.error('Inventory error:', stockError);
+          } else if (inventoryItems) {
+            // Filter low stock items in JavaScript to avoid database type issues
+            lowStockItems = inventoryItems.filter(item => {
+              const currentStock = Number(item.current_stock);
+              const minimumStock = Number(item.minimum_stock);
+              return currentStock < minimumStock;
+            });
+            console.log('Low stock items found:', lowStockItems.length);
+          }
+        } catch (error) {
+          console.error('Error fetching inventory items:', error);
+          lowStockItems = []; // Fallback to empty array
+        }
+
+        // Calculate today's revenue from completed appointments
+        const todayRevenue = todayAppointments
+          ?.filter(apt => apt.status === 'Completed')
+          ?.reduce((sum, apt) => sum + (Number(apt.price) || 0), 0) || 0;
+
+        // Calculate monthly revenue
+        const monthlyRevenue = monthlyTransactions?.reduce((sum, txn) => sum + (Number(txn.amount) || 0), 0) || 0;
+
+        // Calculate pending payments total
+        const totalPendingPayments = pendingPayments?.reduce((sum, payment) => sum + (Number(payment.price) || 0), 0) || 0;
+
+        console.log('Dashboard stats calculated:', {
+          todayAppointments: todayAppointments?.length || 0,
+          todayRevenue,
+          monthlyRevenue,
+          totalPendingPayments,
+          lowStockCount: lowStockItems.length
+        });
+
+        return {
+          todayAppointments: todayAppointments || [],
+          tomorrowAppointments: tomorrowAppointments || [],
+          todayRevenue,
+          monthlyRevenue,
+          pendingPayments: pendingPayments || [],
+          totalPendingPayments,
+          totalClients: totalClients || 0,
+          lowStockCount: lowStockItems.length,
+          lowStockItems: lowStockItems.slice(0, 3)
+        };
+      } catch (error) {
+        console.error('Dashboard stats error:', error);
+        // Return fallback data instead of throwing
+        return {
+          todayAppointments: [],
+          tomorrowAppointments: [],
+          todayRevenue: 0,
+          monthlyRevenue: 0,
+          pendingPayments: [],
+          totalPendingPayments: 0,
+          totalClients: 0,
+          lowStockCount: 0,
+          lowStockItems: []
+        };
       }
-
-      // Get tomorrow's appointments
-      const { data: tomorrowAppointments, error: tomorrowError } = await supabase
-        .from('appointments')
-        .select('*')
-        .eq('salon_id', user?.id)
-        .eq('date', tomorrow);
-
-      if (tomorrowError) {
-        console.error('Tomorrow appointments error:', tomorrowError);
-        throw tomorrowError;
-      }
-
-      // Get this month's revenue from financial transactions (more accurate)
-      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-      const { data: monthlyTransactions, error: revenueError } = await supabase
-        .from('financial_transactions')
-        .select('amount')
-        .eq('salon_id', user?.id)
-        .eq('transaction_type', 'income')
-        .gte('transaction_date', startOfMonth);
-
-      if (revenueError) {
-        console.error('Monthly revenue error:', revenueError);
-      }
-
-      // Get pending payments (unpaid completed appointments)
-      const { data: pendingPayments, error: pendingError } = await supabase
-        .from('appointments')
-        .select('price, client_name, service, date')
-        .eq('salon_id', user?.id)
-        .eq('status', 'Completed')
-        .eq('payment_status', 'unpaid');
-
-      if (pendingError) {
-        console.error('Pending payments error:', pendingError);
-      }
-
-      // Get total clients
-      const { count: totalClients, error: clientsError } = await supabase
-        .from('clients')
-        .select('*', { count: 'exact', head: true })
-        .eq('salon_id', user?.id);
-
-      if (clientsError) {
-        console.error('Clients count error:', clientsError);
-      }
-
-      // Get low stock items
-      const { data: lowStockItems, error: stockError } = await supabase
-        .from('inventory_items')
-        .select('*')
-        .eq('salon_id', user?.id)
-        .eq('is_active', true)
-        .lte('current_stock', 'minimum_stock');
-
-      if (stockError) {
-        console.error('Low stock error:', stockError);
-      }
-
-      const lowStock = lowStockItems || [];
-
-      // Calculate today's revenue from completed appointments
-      const todayRevenue = todayAppointments
-        ?.filter(apt => apt.status === 'Completed')
-        ?.reduce((sum, apt) => sum + (Number(apt.price) || 0), 0) || 0;
-
-      // Calculate monthly revenue
-      const monthlyRevenue = monthlyTransactions?.reduce((sum, txn) => sum + (Number(txn.amount) || 0), 0) || 0;
-
-      // Calculate pending payments total
-      const totalPendingPayments = pendingPayments?.reduce((sum, payment) => sum + (Number(payment.price) || 0), 0) || 0;
-
-      console.log('Dashboard stats calculated:', {
-        todayAppointments: todayAppointments?.length || 0,
-        todayRevenue,
-        monthlyRevenue,
-        totalPendingPayments,
-        lowStockCount: lowStock.length
-      });
-
-      return {
-        todayAppointments: todayAppointments || [],
-        tomorrowAppointments: tomorrowAppointments || [],
-        todayRevenue,
-        monthlyRevenue,
-        pendingPayments: pendingPayments || [],
-        totalPendingPayments,
-        totalClients: totalClients || 0,
-        lowStockCount: lowStock.length,
-        lowStockItems: lowStock.slice(0, 3)
-      };
     },
     enabled: !!user,
     refetchInterval: 15000, // Refresh every 15 seconds
     staleTime: 5000, // Consider data stale after 5 seconds
+    retry: 1, // Reduce retry attempts to prevent error loops
+    retryDelay: 1000,
   });
 
   // Get upcoming appointments for the sidebar

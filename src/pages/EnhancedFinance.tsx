@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,7 +42,7 @@ const EnhancedFinance = () => {
       currentPage,
       pageSize
     ),
-    retry: 3,
+    retry: 1,
     retryDelay: 1000,
   });
 
@@ -53,21 +52,21 @@ const EnhancedFinance = () => {
       dateRange.start || undefined,
       dateRange.end || undefined
     ),
-    retry: 3,
+    retry: 1,
     retryDelay: 1000,
   });
 
   const { data: incomeCategories = [], error: incomeCategoriesError } = useQuery({
     queryKey: ['income-categories', dateRange.start, dateRange.end],
     queryFn: () => financeApi.getCategorySummary('income', dateRange.start || undefined, dateRange.end || undefined),
-    retry: 3,
+    retry: 1,
     retryDelay: 1000,
   });
 
   const { data: expenseCategories = [], error: expenseCategoriesError } = useQuery({
     queryKey: ['expense-categories', dateRange.start, dateRange.end],
     queryFn: () => financeApi.getCategorySummary('expense', dateRange.start || undefined, dateRange.end || undefined),
-    retry: 3,
+    retry: 1,
     retryDelay: 1000,
   });
 
@@ -372,7 +371,7 @@ const EnhancedFinance = () => {
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Types</SelectItem>
+                  <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="income">Income</SelectItem>
                   <SelectItem value="expense">Expense</SelectItem>
                 </SelectContent>

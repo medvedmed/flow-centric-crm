@@ -1921,6 +1921,18 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_reminders_for_processing: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          salon_id: string
+          appointment_id: string
+          client_phone: string
+          client_name: string
+          message_content: string
+          reminder_type: string
+        }[]
+      }
       get_user_by_staff_code: {
         Args: { code: string }
         Returns: {
@@ -1956,8 +1968,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      process_whatsapp_reminders: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       reset_daily_message_counts: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      update_reminder_after_sending: {
+        Args: { reminder_id: string; new_status: string; error_msg?: string }
         Returns: undefined
       }
       update_reminder_settings: {

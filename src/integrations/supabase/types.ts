@@ -1846,6 +1846,16 @@ export type Database = {
           updated_at: string
         }[]
       }
+      debug_automation_settings_access: {
+        Args: { target_salon_id: string }
+        Returns: {
+          can_select: boolean
+          can_insert: boolean
+          can_update: boolean
+          current_user_id: string
+          settings_count: number
+        }[]
+      }
       generate_client_id: {
         Args: Record<PropertyKey, never>
         Returns: string

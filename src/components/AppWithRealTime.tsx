@@ -4,7 +4,7 @@ import { Routes, Route } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { AppSidebar } from '@/components/AppSidebar';
-import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarInset, SidebarTrigger, SidebarProvider } from '@/components/ui/sidebar';
 import { Loader2 } from 'lucide-react';
 import Dashboard from '@/pages/Dashboard';
 import Appointments from '@/pages/Appointments';
@@ -50,35 +50,37 @@ const AppWithRealTime = ({ children }: AppWithRealTimeProps) => {
     );
   }
 
-  // For authenticated pages with sidebar
+  // For authenticated pages with sidebar - wrap with SidebarProvider
   return (
-    <div className="min-h-screen flex w-full">
-      <AppSidebar />
-      <SidebarInset className="flex-1">
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
-          <SidebarTrigger className="-ml-1" />
-          <div className="ml-auto">
-            <span className="text-sm text-gray-600">
-              Welcome, {user?.email}
-            </span>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        <SidebarInset className="flex-1">
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
+            <SidebarTrigger className="-ml-1" />
+            <div className="ml-auto">
+              <span className="text-sm text-gray-600">
+                Welcome, {user?.email}
+              </span>
+            </div>
+          </header>
+          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+            <div className="min-h-[calc(100vh-5rem)] flex-1 rounded-xl bg-white p-4">
+              <Routes>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/appointments" element={<Appointments />} />
+                <Route path="/clients" element={<Clients />} />
+                <Route path="/staff" element={<Staff />} />
+                <Route path="/services" element={<Services />} />
+                <Route path="/finance" element={<Finance />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/settings" element={<EnhancedSettings />} />
+              </Routes>
+            </div>
           </div>
-        </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="min-h-[calc(100vh-5rem)] flex-1 rounded-xl bg-white p-4">
-            <Routes>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/appointments" element={<Appointments />} />
-              <Route path="/clients" element={<Clients />} />
-              <Route path="/staff" element={<Staff />} />
-              <Route path="/services" element={<Services />} />
-              <Route path="/finance" element={<Finance />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/settings" element={<EnhancedSettings />} />
-            </Routes>
-          </div>
-        </div>
-      </SidebarInset>
-    </div>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   );
 };
 

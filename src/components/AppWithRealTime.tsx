@@ -1,19 +1,11 @@
 
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useStaffAuth } from '@/hooks/useStaffAuth';
 import { AppSidebar } from '@/components/AppSidebar';
-import { SidebarInset, SidebarTrigger, SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Loader2 } from 'lucide-react';
-import Dashboard from '@/pages/Dashboard';
-import Appointments from '@/pages/Appointments';
-import Clients from '@/pages/Clients';
-import Staff from '@/pages/Staff';
-import Services from '@/pages/Services';
-import Finance from '@/pages/Finance';
-import Reports from '@/pages/Reports';
-import EnhancedSettings from '@/pages/EnhancedSettings';
 
 interface AppWithRealTimeProps {
   children: React.ReactNode;
@@ -21,11 +13,15 @@ interface AppWithRealTimeProps {
 
 const AppWithRealTime = ({ children }: AppWithRealTimeProps) => {
   const location = useLocation();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const { isStaff, isLoading: staffLoading } = useStaffAuth();
+  
+  const isLoading = authLoading || staffLoading;
+  const isAuthenticated = user || isStaff;
   
   // Pages that should not show the sidebar (login, index, etc.)
   const noSidebarPages = ['/', '/auth', '/invite-accept'];
-  const shouldShowSidebar = user && !noSidebarPages.includes(location.pathname);
+  const shouldShowSidebar = isAuthenticated && !noSidebarPages.includes(location.pathname);
 
   // Show loading spinner while auth is being checked
   if (isLoading) {
@@ -50,37 +46,26 @@ const AppWithRealTime = ({ children }: AppWithRealTimeProps) => {
     );
   }
 
-  // For authenticated pages with sidebar - wrap with SidebarProvider
+  // For authenticated pages with sidebar
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1">
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
-            <SidebarTrigger className="-ml-1" />
-            <div className="ml-auto">
-              <span className="text-sm text-gray-600">
-                Welcome, {user?.email}
-              </span>
-            </div>
-          </header>
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-            <div className="min-h-[calc(100vh-5rem)] flex-1 rounded-xl bg-white p-4">
-              <Routes>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/appointments" element={<Appointments />} />
-                <Route path="/clients" element={<Clients />} />
-                <Route path="/staff" element={<Staff />} />
-                <Route path="/services" element={<Services />} />
-                <Route path="/finance" element={<Finance />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/settings" element={<EnhancedSettings />} />
-              </Routes>
-            </div>
+    <div className="min-h-screen flex w-full">
+      <AppSidebar />
+      <SidebarInset className="flex-1">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
+          <SidebarTrigger className="-ml-1" />
+          <div className="ml-auto">
+            <span className="text-sm text-gray-600">
+              {user ? `Welcome, ${user.email}` : isStaff ? 'Staff Dashboard' : ''}
+            </span>
           </div>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+        </header>
+        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+          <div className="min-h-[calc(100vh-5rem)] flex-1 rounded-xl bg-white p-4">
+            {children}
+          </div>
+        </div>
+      </SidebarInset>
+    </div>
   );
 };
 

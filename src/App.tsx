@@ -1,65 +1,81 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { LanguageProvider } from "./contexts/LanguageContext";
-import { AuthProvider, useAuth } from "./hooks/useAuth";
-import { StaffAuthProvider } from "./hooks/useStaffAuth";
-import { ErrorBoundary } from "./components/ErrorBoundary";
-import AppWithRealTime from "./components/AppWithRealTime";
-import Landing from "./pages/Landing";
-import { EnhancedAuthForm } from "./components/EnhancedAuthForm";
-import "./App.css";
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { Toaster } from '@/components/ui/toaster';
+import { LanguageProvider } from '@/contexts/LanguageContext';
+import { AuthProvider } from '@/hooks/useAuth';
+import { StaffAuthProvider } from '@/hooks/useStaffAuth';
+import AppWithRealTime from '@/components/AppWithRealTime';
 
-const queryClient = new QueryClient();
+// Pages
+import Index from '@/pages/Index';
+import Dashboard from '@/pages/Dashboard';
+import Appointments from '@/pages/Appointments';
+import Clients from '@/pages/Clients';
+import Staff from '@/pages/Staff';
+import Services from '@/pages/Services';
+import Products from '@/pages/Products';
+import Inventory from '@/pages/Inventory';
+import Reports from '@/pages/Reports';
+import Settings from '@/pages/Settings';
+import Help from '@/pages/Help';
+import NotFound from '@/pages/NotFound';
+import InviteAccept from '@/pages/InviteAccept';
+import WebhookTest from '@/pages/WebhookTest';
+import Finance from '@/pages/Finance';
+import EnhancedFinance from '@/pages/EnhancedFinance';
+import FinanceAnalytics from '@/pages/FinanceAnalytics';
+import ClientRetention from '@/pages/ClientRetention';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 1,
+    },
+  },
+});
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <StaffAuthProvider>
-          <LanguageProvider>
-            <TooltipProvider>
-              <BrowserRouter>
-                <ErrorBoundary>
+      <LanguageProvider>
+        <AuthProvider>
+          <StaffAuthProvider>
+            <Router>
+              <SidebarProvider>
+                <AppWithRealTime>
                   <Routes>
-                    <Route path="/" element={<Landing />} />
-                    <Route path="/login" element={<EnhancedAuthForm />} />
-                    <Route path="/*" element={<AuthenticatedApp />} />
+                    <Route path="/" element={<Index />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/appointments" element={<Appointments />} />
+                    <Route path="/clients" element={<Clients />} />
+                    <Route path="/client-retention" element={<ClientRetention />} />
+                    <Route path="/staff" element={<Staff />} />
+                    <Route path="/services" element={<Services />} />
+                    <Route path="/products" element={<Products />} />
+                    <Route path="/inventory" element={<Inventory />} />
+                    <Route path="/reports" element={<Reports />} />
+                    <Route path="/finance" element={<Finance />} />
+                    <Route path="/enhanced-finance" element={<EnhancedFinance />} />
+                    <Route path="/finance-analytics" element={<FinanceAnalytics />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/help" element={<Help />} />
+                    <Route path="/invite-accept" element={<InviteAccept />} />
+                    <Route path="/webhook-test" element={<WebhookTest />} />
+                    <Route path="*" element={<NotFound />} />
                   </Routes>
-                </ErrorBoundary>
-              </BrowserRouter>
-              <Toaster />
-              <Sonner />
-            </TooltipProvider>
-          </LanguageProvider>
-        </StaffAuthProvider>
-      </AuthProvider>
+                </AppWithRealTime>
+              </SidebarProvider>
+            </Router>
+          </StaffAuthProvider>
+        </AuthProvider>
+      </LanguageProvider>
+      <Toaster />
     </QueryClientProvider>
   );
-}
-
-function AuthenticatedApp() {
-  const { user, isLoading, isAuthenticated } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your salon dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <AppWithRealTime>{null}</AppWithRealTime>;
 }
 
 export default App;

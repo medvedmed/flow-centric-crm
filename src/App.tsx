@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "./contexts/LanguageContext";
-import { useAuth } from "./hooks/useAuth";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import AppWithRealTime from "./components/AppWithRealTime";
 import Landing from "./pages/Landing";
@@ -17,21 +17,23 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <TooltipProvider>
-          <BrowserRouter>
-            <ErrorBoundary>
-              <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/login" element={<EnhancedAuthForm />} />
-                <Route path="/*" element={<AuthenticatedApp />} />
-              </Routes>
-            </ErrorBoundary>
-          </BrowserRouter>
-          <Toaster />
-          <Sonner />
-        </TooltipProvider>
-      </LanguageProvider>
+      <AuthProvider>
+        <LanguageProvider>
+          <TooltipProvider>
+            <BrowserRouter>
+              <ErrorBoundary>
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/login" element={<EnhancedAuthForm />} />
+                  <Route path="/*" element={<AuthenticatedApp />} />
+                </Routes>
+              </ErrorBoundary>
+            </BrowserRouter>
+            <Toaster />
+            <Sonner />
+          </TooltipProvider>
+        </LanguageProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

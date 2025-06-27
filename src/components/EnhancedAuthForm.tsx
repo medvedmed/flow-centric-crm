@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,12 +6,15 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Mail, Lock, User, Building, Sparkles, Shield, Eye, EyeOff } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 export const EnhancedAuthForm: React.FC = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -22,6 +24,13 @@ export const EnhancedAuthForm: React.FC = () => {
     salonName: '',
     confirmPassword: ''
   });
+
+  // Redirect authenticated users
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const validatePassword = (password: string) => {
     const minLength = 8;
@@ -68,6 +77,7 @@ export const EnhancedAuthForm: React.FC = () => {
         email: formData.email,
         password: formData.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
             full_name: formData.fullName,
             salon_name: formData.salonName,
@@ -108,6 +118,8 @@ export const EnhancedAuthForm: React.FC = () => {
         title: 'Welcome back!',
         description: 'Successfully signed in.',
       });
+      
+      // Navigation will be handled by useEffect above
     } catch (error: any) {
       toast({
         title: 'Sign In Failed',

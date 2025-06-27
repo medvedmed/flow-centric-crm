@@ -3,7 +3,6 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useStaffAuth } from '@/hooks/useStaffAuth';
 import { AppSidebar } from '@/components/AppSidebar';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Loader2 } from 'lucide-react';
@@ -22,15 +21,11 @@ interface AppWithRealTimeProps {
 
 const AppWithRealTime = ({ children }: AppWithRealTimeProps) => {
   const location = useLocation();
-  const { user, isLoading: authLoading } = useAuth();
-  const { isStaff, isLoading: staffLoading } = useStaffAuth();
-  
-  const isLoading = authLoading || staffLoading;
-  const isAuthenticated = user || isStaff;
+  const { user, isLoading } = useAuth();
   
   // Pages that should not show the sidebar (login, index, etc.)
   const noSidebarPages = ['/', '/auth', '/invite-accept'];
-  const shouldShowSidebar = isAuthenticated && !noSidebarPages.includes(location.pathname);
+  const shouldShowSidebar = user && !noSidebarPages.includes(location.pathname);
 
   // Show loading spinner while auth is being checked
   if (isLoading) {
@@ -64,7 +59,7 @@ const AppWithRealTime = ({ children }: AppWithRealTimeProps) => {
           <SidebarTrigger className="-ml-1" />
           <div className="ml-auto">
             <span className="text-sm text-gray-600">
-              {user ? `Welcome, ${user.email}` : isStaff ? 'Staff Dashboard' : ''}
+              Welcome, {user?.email}
             </span>
           </div>
         </header>

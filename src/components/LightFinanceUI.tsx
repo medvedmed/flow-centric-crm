@@ -16,7 +16,7 @@ import {
   CreditCard,
   Wallet
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Cell, BarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Cell, BarChart, Bar, Pie } from 'recharts';
 
 interface FinanceData {
   totalRevenue: number;
@@ -62,12 +62,12 @@ export const LightFinanceUI: React.FC = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-gradient-to-br from-slate-50 via-white to-purple-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Financial Dashboard</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Financial Dashboard</h1>
             <p className="text-gray-600 mt-1">Track your salon's financial performance</p>
           </div>
           <Badge className="bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600">
@@ -77,14 +77,14 @@ export const LightFinanceUI: React.FC = () => {
 
         {/* Key Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Revenue</p>
                   <p className="text-2xl font-bold text-gray-900">{formatCurrency(financeData.totalRevenue)}</p>
                 </div>
-                <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-green-500 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-green-500 rounded-xl flex items-center justify-center">
                   <TrendingUp className="w-6 h-6 text-white" />
                 </div>
               </div>
@@ -96,14 +96,14 @@ export const LightFinanceUI: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Expenses</p>
                   <p className="text-2xl font-bold text-gray-900">{formatCurrency(financeData.totalExpenses)}</p>
                 </div>
-                <div className="w-12 h-12 bg-gradient-to-r from-red-400 to-red-500 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-gradient-to-r from-red-400 to-red-500 rounded-xl flex items-center justify-center">
                   <TrendingDown className="w-6 h-6 text-white" />
                 </div>
               </div>
@@ -115,14 +115,14 @@ export const LightFinanceUI: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Net Profit</p>
                   <p className="text-2xl font-bold text-gray-900">{formatCurrency(financeData.netProfit)}</p>
                 </div>
-                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
                   <DollarSign className="w-6 h-6 text-white" />
                 </div>
               </div>
@@ -134,14 +134,14 @@ export const LightFinanceUI: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Profit Margin</p>
                   <p className="text-2xl font-bold text-gray-900">59.5%</p>
                 </div>
-                <div className="w-12 h-12 bg-gradient-to-r from-indigo-400 to-purple-500 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-gradient-to-r from-indigo-400 to-purple-500 rounded-xl flex items-center justify-center">
                   <PieChart className="w-6 h-6 text-white" />
                 </div>
               </div>
@@ -156,7 +156,7 @@ export const LightFinanceUI: React.FC = () => {
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="bg-white border-0 shadow-lg">
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-gray-800">
                 <BarChart3 className="w-5 h-5 text-purple-600" />
@@ -185,7 +185,7 @@ export const LightFinanceUI: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-0 shadow-lg">
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-gray-800">
                 <PieChart className="w-5 h-5 text-blue-600" />
@@ -216,7 +216,7 @@ export const LightFinanceUI: React.FC = () => {
         </div>
 
         {/* Recent Transactions */}
-        <Card className="bg-white border-0 shadow-lg">
+        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-gray-800">
               <CreditCard className="w-5 h-5 text-indigo-600" />
@@ -226,9 +226,9 @@ export const LightFinanceUI: React.FC = () => {
           <CardContent>
             <div className="space-y-4">
               {financeData.transactions.map((transaction) => (
-                <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                <div key={transaction.id} className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-purple-50 rounded-xl hover:from-gray-100 hover:to-purple-100 transition-all duration-200">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                       transaction.type === 'income' 
                         ? 'bg-green-100 text-green-600' 
                         : 'bg-red-100 text-red-600'

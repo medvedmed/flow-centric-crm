@@ -1,11 +1,20 @@
 
 import React from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useStaffAuth } from '@/hooks/useStaffAuth';
 import { AppSidebar } from '@/components/AppSidebar';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Loader2 } from 'lucide-react';
+import Dashboard from '@/pages/Dashboard';
+import Appointments from '@/pages/Appointments';
+import Clients from '@/pages/Clients';
+import Staff from '@/pages/Staff';
+import Services from '@/pages/Services';
+import Finance from '@/pages/Finance';
+import Reports from '@/pages/Reports';
+import EnhancedSettings from '@/pages/EnhancedSettings';
 
 interface AppWithRealTimeProps {
   children: React.ReactNode;
@@ -61,7 +70,16 @@ const AppWithRealTime = ({ children }: AppWithRealTimeProps) => {
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
           <div className="min-h-[calc(100vh-5rem)] flex-1 rounded-xl bg-white p-4">
-            {children}
+            <Routes>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/appointments" element={<Appointments />} />
+              <Route path="/clients" element={<Clients />} />
+              <Route path="/staff" element={<Staff />} />
+              <Route path="/services" element={<Services />} />
+              <Route path="/finance" element={<Finance />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/settings" element={<EnhancedSettings />} />
+            </Routes>
           </div>
         </div>
       </SidebarInset>

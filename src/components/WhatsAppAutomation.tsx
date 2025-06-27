@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -7,10 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Clock, Settings, Save, MessageSquare, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { whatsappServerClient } from '@/services/whatsappServerClient';
+import { Clock, MessageSquare, Users, Zap, Settings, Send } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AutomationSettings {
+  id?: string;
   is_enabled: boolean;
   reminder_24h_enabled: boolean;
   reminder_2h_enabled: boolean;
@@ -23,96 +25,109 @@ interface AutomationSettings {
   follow_up_delay_hours: number;
 }
 
-const defaultSettings: AutomationSettings = {
-  is_enabled: true,
-  reminder_24h_enabled: true,
-  reminder_2h_enabled: false,
-  reminder_1h_enabled: false,
-  message_template_24h: 'Hi {clientName}! This is a reminder for your {service} appointment tomorrow at {time}. See you at {salonName}!',
-  message_template_2h: 'Hi {clientName}! Your {service} appointment is in 2 hours at {time}. See you soon at {salonName}!',
-  message_template_1h: 'Hi {clientName}! Your {service} appointment is in 1 hour at {time}. We\'re ready for you at {salonName}!',
-  follow_up_enabled: false,
-  follow_up_template: 'Hi {clientName}! How was your {service} appointment? We\'d love your feedback!',
-  follow_up_delay_hours: 2
-};
+interface QueueStats {
+  pending: number;
+  sent: number;
+  failed: number;
+}
 
 export const WhatsAppAutomation: React.FC = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
-  const [settings, setSettings] = useState<AutomationSettings>(defaultSettings);
   const [loading, setLoading] = useState(false);
-  const [reminderQueue, setReminderQueue] = useState<any[]>([]);
-  const [loadingQueue, setLoadingQueue] = useState(false);
+  const [settings, setSettings] = useState<AutomationSettings>({
+    is_enabled: true,
+    reminder_24h_enabled: true,
+    reminder_2h_enabled: false,
+    reminder_1h_enabled: false,
+    message_template_24h: 'Hi {clientName}! This is a reminder for your {service} appointment tomorrow at {time}. See you at {salonName}!',
+    message_template_2h: 'Hi {clientName}! Your {service} appointment is in 2 hours at {time}. See you soon at {salonName}!',
+    message_template_1h: 'Hi {clientName}! Your {service} appointment is in 1 hour at {time}. We\'re ready for you at {salonName}!',
+    follow_up_enabled: false,
+    follow_up_template: 'Hi {clientName}! How was your {service} appointment? We\'d love your feedback!',
+    follow_up_delay_hours: 2,
+  });
+  const [queueStats, setQueueStats] = useState<QueueStats>({ pending: 0, sent: 0, failed: 0 });
+  const loadedRef = useRef(false);
 
   useEffect(() => {
-    loadAutomationSettings();
-    loadReminderQueue();
-  }, []);
+    if (user && !loadedRef.current) {
+      loadedRef.current = true;
+      loadAutomationSettings();
+      loadQueueStats();
+    }
+  }, [user]);
 
   const loadAutomationSettings = async () => {
     try {
-      console.log('Loading automation settings...');
-      const data = await whatsappServerClient.getAutomationSettings();
+      const { data, error } = await supabase
+        .from('whatsapp_automation_settings')
+        .select('*')
+        .eq('salon_id', user?.id)
+        .single();
       
       if (data) {
-        console.log('Loaded settings:', data);
-        setSettings({
-          is_enabled: data.is_enabled ?? defaultSettings.is_enabled,
-          reminder_24h_enabled: data.reminder_24h_enabled ?? defaultSettings.reminder_24h_enabled,
-          reminder_2h_enabled: data.reminder_2h_enabled ?? defaultSettings.reminder_2h_enabled,
-          reminder_1h_enabled: data.reminder_1h_enabled ?? defaultSettings.reminder_1h_enabled,
-          message_template_24h: data.message_template_24h || defaultSettings.message_template_24h,
-          message_template_2h: data.message_template_2h || defaultSettings.message_template_2h,
-          message_template_1h: data.message_template_1h || defaultSettings.message_template_1h,
-          follow_up_enabled: data.follow_up_enabled ?? defaultSettings.follow_up_enabled,
-          follow_up_template: data.follow_up_template || defaultSettings.follow_up_template,
-          follow_up_delay_hours: data.follow_up_delay_hours ?? defaultSettings.follow_up_delay_hours
-        });
-      } else {
-        console.log('No existing settings found, using defaults');
-        setSettings(defaultSettings);
+        setSettings(data);
       }
     } catch (error) {
       console.error('Error loading automation settings:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load automation settings.',
-        variant: 'destructive',
-      });
     }
   };
 
-  const loadReminderQueue = async () => {
-    setLoadingQueue(true);
+  const loadQueueStats = async () => {
     try {
-      const queue = await whatsappServerClient.getReminderQueue();
-      setReminderQueue(queue);
+      const { data: pending } = await supabase
+        .from('whatsapp_reminder_queue')
+        .select('id', { count: 'exact' })
+        .eq('salon_id', user?.id)
+        .eq('status', 'pending');
+
+      const { data: sent } = await supabase
+        .from('whatsapp_reminder_queue')
+        .select('id', { count: 'exact' })
+        .eq('salon_id', user?.id)
+        .eq('status', 'sent');
+
+      const { data: failed } = await supabase
+        .from('whatsapp_reminder_queue')
+        .select('id', { count: 'exact' })
+        .eq('salon_id', user?.id)
+        .eq('status', 'failed');
+
+      setQueueStats({
+        pending: pending?.length || 0,
+        sent: sent?.length || 0,
+        failed: failed?.length || 0,
+      });
     } catch (error) {
-      console.error('Error loading reminder queue:', error);
-    } finally {
-      setLoadingQueue(false);
+      console.error('Error loading queue stats:', error);
     }
   };
 
-  const saveAutomationSettings = async () => {
+  const saveSettings = async () => {
+    if (!user) return;
+    
     setLoading(true);
     try {
-      console.log('Saving automation settings:', settings);
-      await whatsappServerClient.updateAutomationSettings(settings);
-      
-      toast({
-        title: 'Settings Saved',
-        description: 'WhatsApp automation settings have been updated successfully!',
-        variant: 'default',
-      });
+      const { error } = await supabase
+        .from('whatsapp_automation_settings')
+        .upsert({
+          ...settings,
+          salon_id: user.id,
+        }, { onConflict: 'salon_id' });
 
-      // Reload queue to see any changes
-      loadReminderQueue();
-    } catch (error) {
-      console.error('Error saving automation settings:', error);
+      if (error) throw error;
+
       toast({
-        title: 'Error',
-        description: 'Failed to save automation settings. Please try again.',
-        variant: 'destructive',
+        title: "Settings Saved",
+        description: "WhatsApp automation settings updated successfully!",
+      });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save automation settings.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -120,36 +135,90 @@ export const WhatsAppAutomation: React.FC = () => {
   };
 
   const processQueue = async () => {
+    setLoading(true);
     try {
-      const result = await whatsappServerClient.processQueue();
-      toast({
-        title: 'Queue Processed',
-        description: `Processed ${result.processed} reminders. ${result.failed} failed.`,
+      const { data, error } = await supabase.functions.invoke('whatsapp-web-enhanced', {
+        body: { action: 'process_queue' }
       });
-      loadReminderQueue();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to process reminder queue.',
-        variant: 'destructive',
-      });
-    }
-  };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'sent': return 'bg-green-100 text-green-700';
-      case 'failed': return 'bg-red-100 text-red-700';
-      case 'processing': return 'bg-yellow-100 text-yellow-700';
-      case 'pending': return 'bg-blue-100 text-blue-700';
-      default: return 'bg-gray-100 text-gray-700';
+      if (error) throw error;
+
+      toast({
+        title: "Queue Processed",
+        description: `Processed ${data.processed_count} reminders from queue.`,
+      });
+
+      loadQueueStats();
+    } catch (error) {
+      console.error('Error processing queue:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process reminder queue.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Main Automation Settings */}
-      <Card>
+      {/* Automation Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-white border-gray-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Automation Status</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className={`w-2 h-2 rounded-full ${settings.is_enabled ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span className="font-medium">{settings.is_enabled ? 'Active' : 'Inactive'}</span>
+                </div>
+              </div>
+              <Zap className="w-8 h-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-gray-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Pending</p>
+                <p className="text-2xl font-bold text-orange-600">{queueStats.pending}</p>
+              </div>
+              <Clock className="w-8 h-8 text-orange-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-gray-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Sent Today</p>
+                <p className="text-2xl font-bold text-green-600">{queueStats.sent}</p>
+              </div>
+              <Send className="w-8 h-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-gray-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Failed</p>
+                <p className="text-2xl font-bold text-red-600">{queueStats.failed}</p>
+              </div>
+              <MessageSquare className="w-8 h-8 text-red-500" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Settings */}
+      <Card className="bg-white border-gray-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -157,11 +226,11 @@ export const WhatsAppAutomation: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Master Enable/Disable */}
-          <div className="flex items-center justify-between p-4 border rounded-lg bg-gradient-to-r from-blue-50 to-green-50">
+          {/* Master Toggle */}
+          <div className="flex items-center justify-between p-4 border rounded-lg">
             <div>
               <h3 className="font-medium">Enable WhatsApp Automation</h3>
-              <p className="text-sm text-gray-600">Automatically send appointment reminders and follow-ups</p>
+              <p className="text-sm text-gray-600">Automatically send appointment reminders</p>
             </div>
             <Switch
               checked={settings.is_enabled}
@@ -169,160 +238,139 @@ export const WhatsAppAutomation: React.FC = () => {
             />
           </div>
 
-          {settings.is_enabled && (
-            <>
-              {/* Reminder Settings */}
-              <div className="space-y-4">
-                <h3 className="font-medium flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Reminder Types
-                </h3>
-
-                {/* 24 Hour Reminder */}
-                <div className="space-y-3 p-4 border rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="reminder_24h">24 Hours Before Appointment</Label>
-                    <Switch
-                      id="reminder_24h"
-                      checked={settings.reminder_24h_enabled}
-                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, reminder_24h_enabled: checked }))}
-                    />
-                  </div>
-                  {settings.reminder_24h_enabled && (
-                    <Textarea
-                      value={settings.message_template_24h}
-                      onChange={(e) => setSettings(prev => ({ ...prev, message_template_24h: e.target.value }))}
-                      placeholder="24h reminder message template"
-                      rows={2}
-                    />
-                  )}
+          {/* Reminder Settings */}
+          <div className="space-y-4">
+            <h3 className="font-medium text-lg">Reminder Types</h3>
+            
+            {/* 24 Hour Reminder */}
+            <div className="space-y-3 p-4 border rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium">24 Hour Reminder</h4>
+                  <p className="text-sm text-gray-600">Send reminder 1 day before appointment</p>
                 </div>
-
-                {/* 2 Hour Reminder */}
-                <div className="space-y-3 p-4 border rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="reminder_2h">2 Hours Before Appointment</Label>
-                    <Switch
-                      id="reminder_2h"
-                      checked={settings.reminder_2h_enabled}
-                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, reminder_2h_enabled: checked }))}
-                    />
-                  </div>
-                  {settings.reminder_2h_enabled && (
-                    <Textarea
-                      value={settings.message_template_2h}
-                      onChange={(e) => setSettings(prev => ({ ...prev, message_template_2h: e.target.value }))}
-                      placeholder="2h reminder message template"
-                      rows={2}
-                    />
-                  )}
-                </div>
-
-                {/* 1 Hour Reminder */}
-                <div className="space-y-3 p-4 border rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="reminder_1h">1 Hour Before Appointment</Label>
-                    <Switch
-                      id="reminder_1h"
-                      checked={settings.reminder_1h_enabled}
-                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, reminder_1h_enabled: checked }))}
-                    />
-                  </div>
-                  {settings.reminder_1h_enabled && (
-                    <Textarea
-                      value={settings.message_template_1h}
-                      onChange={(e) => setSettings(prev => ({ ...prev, message_template_1h: e.target.value }))}
-                      placeholder="1h reminder message template"
-                      rows={2}
-                    />
-                  )}
-                </div>
+                <Switch
+                  checked={settings.reminder_24h_enabled}
+                  onCheckedChange={(checked) => setSettings(prev => ({ ...prev, reminder_24h_enabled: checked }))}
+                />
               </div>
-
-              {/* Follow-up Settings */}
-              <div className="space-y-3 p-4 border rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="follow_up">Follow-up Messages</Label>
-                    <p className="text-sm text-gray-600">Send feedback requests after appointments</p>
-                  </div>
-                  <Switch
-                    id="follow_up"
-                    checked={settings.follow_up_enabled}
-                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, follow_up_enabled: checked }))}
-                  />
-                </div>
-                {settings.follow_up_enabled && (
+              {settings.reminder_24h_enabled && (
+                <div>
+                  <Label htmlFor="template_24h">Message Template</Label>
                   <Textarea
-                    value={settings.follow_up_template}
-                    onChange={(e) => setSettings(prev => ({ ...prev, follow_up_template: e.target.value }))}
-                    placeholder="Follow-up message template"
-                    rows={2}
+                    id="template_24h"
+                    value={settings.message_template_24h}
+                    onChange={(e) => setSettings(prev => ({ ...prev, message_template_24h: e.target.value }))}
+                    rows={3}
                   />
-                )}
-              </div>
-
-              {/* Template Variables Info */}
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <h4 className="font-medium text-blue-800 mb-2">Available Variables:</h4>
-                <div className="text-sm text-blue-700 space-y-1">
-                  <p><code>{'{clientName}'}</code> - Client's name</p>
-                  <p><code>{'{service}'}</code> - Appointment service</p>
-                  <p><code>{'{time}'}</code> - Appointment time</p>
-                  <p><code>{'{date}'}</code> - Appointment date</p>
-                  <p><code>{'{salonName}'}</code> - Your salon name</p>
                 </div>
-              </div>
-            </>
-          )}
-
-          <Button onClick={saveAutomationSettings} disabled={loading} className="w-full">
-            <Save className="w-4 h-4 mr-2" />
-            {loading ? 'Saving...' : 'Save Automation Settings'}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Reminder Queue Status */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Reminder Queue
-          </CardTitle>
-          <Button onClick={loadReminderQueue} disabled={loadingQueue} variant="outline" size="sm">
-            {loadingQueue ? 'Loading...' : 'Refresh'}
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {reminderQueue.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No reminders in queue</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {reminderQueue.slice(0, 10).map((reminder) => (
-                <div key={reminder.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{reminder.client_name}</p>
-                    <p className="text-sm text-gray-600">{reminder.reminder_type} reminder</p>
-                    <p className="text-xs text-gray-500">
-                      Scheduled: {new Date(reminder.scheduled_time).toLocaleString()}
-                    </p>
-                  </div>
-                  <Badge className={getStatusColor(reminder.status)}>
-                    {reminder.status}
-                  </Badge>
-                </div>
-              ))}
-              {reminderQueue.length > 10 && (
-                <p className="text-sm text-gray-500 text-center">
-                  ...and {reminderQueue.length - 10} more reminders
-                </p>
               )}
             </div>
-          )}
+
+            {/* 2 Hour Reminder */}
+            <div className="space-y-3 p-4 border rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium">2 Hour Reminder</h4>
+                  <p className="text-sm text-gray-600">Send reminder 2 hours before appointment</p>
+                </div>
+                <Switch
+                  checked={settings.reminder_2h_enabled}
+                  onCheckedChange={(checked) => setSettings(prev => ({ ...prev, reminder_2h_enabled: checked }))}
+                />
+              </div>
+              {settings.reminder_2h_enabled && (
+                <div>
+                  <Label htmlFor="template_2h">Message Template</Label>
+                  <Textarea
+                    id="template_2h"
+                    value={settings.message_template_2h}
+                    onChange={(e) => setSettings(prev => ({ ...prev, message_template_2h: e.target.value }))}
+                    rows={3}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* 1 Hour Reminder */}
+            <div className="space-y-3 p-4 border rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium">1 Hour Reminder</h4>
+                  <p className="text-sm text-gray-600">Send reminder 1 hour before appointment</p>
+                </div>
+                <Switch
+                  checked={settings.reminder_1h_enabled}
+                  onCheckedChange={(checked) => setSettings(prev => ({ ...prev, reminder_1h_enabled: checked }))}
+                />
+              </div>
+              {settings.reminder_1h_enabled && (
+                <div>
+                  <Label htmlFor="template_1h">Message Template</Label>
+                  <Textarea
+                    id="template_1h"
+                    value={settings.message_template_1h}
+                    onChange={(e) => setSettings(prev => ({ ...prev, message_template_1h: e.target.value }))}
+                    rows={3}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Follow-up Settings */}
+          <div className="space-y-3 p-4 border rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-medium">Follow-up Messages</h4>
+                <p className="text-sm text-gray-600">Send feedback requests after appointments</p>
+              </div>
+              <Switch
+                checked={settings.follow_up_enabled}
+                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, follow_up_enabled: checked }))}
+              />
+            </div>
+            {settings.follow_up_enabled && (
+              <div>
+                <Label htmlFor="follow_up_template">Follow-up Template</Label>
+                <Textarea
+                  id="follow_up_template"
+                  value={settings.follow_up_template}
+                  onChange={(e) => setSettings(prev => ({ ...prev, follow_up_template: e.target.value }))}
+                  rows={3}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Template Variables */}
+          <div className="p-4 bg-blue-50 rounded-lg">
+            <h4 className="font-medium mb-2">Available Variables</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+              <Badge variant="outline">{'{clientName}'}</Badge>
+              <Badge variant="outline">{'{service}'}</Badge>
+              <Badge variant="outline">{'{time}'}</Badge>
+              <Badge variant="outline">{'{date}'}</Badge>
+              <Badge variant="outline">{'{salonName}'}</Badge>
+              <Badge variant="outline">{'{staffName}'}</Badge>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            <Button onClick={saveSettings} disabled={loading} className="flex-1">
+              {loading ? "Saving..." : "Save Settings"}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={processQueue} 
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              <Send className="w-4 h-4" />
+              Process Queue ({queueStats.pending})
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

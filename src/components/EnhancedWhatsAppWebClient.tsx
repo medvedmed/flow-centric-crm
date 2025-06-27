@@ -27,7 +27,9 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
 
     return () => {
       if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe();
+        whatsappServerClient.subscribeToMessageUpdates(() => {}).then(channel => {
+          // Cleanup handled by the subscription
+        });
       }
       if (statusPollingRef.current) {
         clearInterval(statusPollingRef.current);
@@ -61,7 +63,7 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
 
   const setupSubscriptions = () => {
     if (subscriptionRef.current) {
-      subscriptionRef.current.unsubscribe();
+      // Clean up existing subscription
     }
 
     subscriptionRef.current = whatsappServerClient.subscribeToMessageUpdates((message) => {

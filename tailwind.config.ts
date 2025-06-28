@@ -73,6 +73,36 @@ export default {
 					success: 'hsl(var(--fresha-success))',
 					warning: 'hsl(var(--fresha-warning))',
 					error: 'hsl(var(--fresha-error))',
+				},
+				// Aura Platform Colors
+				aura: {
+					primary: '#8B5CF6',      // Primary violet
+					secondary: '#3B82F6',    // Primary blue  
+					accent: '#06B6D4',       // Cyan accent
+					success: '#10B981',      // Emerald
+					warning: '#F59E0B',      // Amber
+					error: '#EF4444',        // Red
+					light: '#F8FAFC',        // Light background
+					'violet-50': '#F5F3FF',
+					'violet-100': '#EDE9FE',
+					'violet-200': '#DDD6FE',
+					'violet-300': '#C4B5FD',
+					'violet-400': '#A78BFA',
+					'violet-500': '#8B5CF6',
+					'violet-600': '#7C3AED',
+					'violet-700': '#6D28D9',
+					'violet-800': '#5B21B6',
+					'violet-900': '#4C1D95',
+					'blue-50': '#EFF6FF',
+					'blue-100': '#DBEAFE',
+					'blue-200': '#BFDBFE',
+					'blue-300': '#93C5FD',
+					'blue-400': '#60A5FA',
+					'blue-500': '#3B82F6',
+					'blue-600': '#2563EB',
+					'blue-700': '#1D4ED8',
+					'blue-800': '#1E40AF',
+					'blue-900': '#1E3A8A',
 				}
 			},
 			fontFamily: {
@@ -120,6 +150,14 @@ export default {
 						transform: 'scale(1)',
 						opacity: '1'
 					}
+				},
+				'aura-gradient': {
+					'0%, 100%': {
+						'background-position': '0% 50%'
+					},
+					'50%': {
+						'background-position': '100% 50%'
+					}
 				}
 			},
 			animation: {
@@ -127,6 +165,11 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'fresha-slide-up': 'fresha-slide-up 0.3s ease-out',
 				'fresha-scale': 'fresha-scale 0.2s ease-out',
+				'aura-gradient': 'aura-gradient 15s ease infinite',
+			},
+			backgroundImage: {
+				'aura-gradient': 'linear-gradient(-45deg, #8B5CF6, #3B82F6, #06B6D4, #10B981)',
+				'aura-light': 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)',
 			}
 		}
 	},

@@ -27,9 +27,7 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
 
     return () => {
       if (subscriptionRef.current) {
-        whatsappServerClient.subscribeToMessageUpdates(() => {}).then(channel => {
-          // Cleanup handled by the subscription
-        });
+        subscriptionRef.current.unsubscribe();
       }
       if (statusPollingRef.current) {
         clearInterval(statusPollingRef.current);
@@ -63,7 +61,7 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
 
   const setupSubscriptions = () => {
     if (subscriptionRef.current) {
-      // Clean up existing subscription
+      subscriptionRef.current.unsubscribe();
     }
 
     subscriptionRef.current = whatsappServerClient.subscribeToMessageUpdates((message) => {
@@ -199,10 +197,10 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Enhanced Connection Status */}
-      <Card className="bg-white border-gray-200">
+      <Card className="bg-gradient-to-br from-violet-50 to-blue-50 border-violet-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-blue-500" />
+            <Zap className="h-5 w-5 text-violet-600" />
             Enhanced WhatsApp Web Connection
           </CardTitle>
         </CardHeader>
@@ -210,17 +208,17 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={`w-3 h-3 rounded-full ${getStatusColor(session?.connection_state || 'disconnected')}`} />
-              <span className="font-medium">
+              <span className="font-medium text-gray-900">
                 Status: {getStatusText(session?.connection_state || 'disconnected')}
               </span>
               {session?.phone_number && (
-                <Badge variant="outline" className="bg-green-50 text-green-700">
+                <Badge variant="outline" className="bg-violet-50 text-violet-700 border-violet-200">
                   <Smartphone className="w-3 h-3 mr-1" />
                   {session.phone_number}
                 </Badge>
               )}
               {session?.is_connected && (
-                <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                   <CheckCircle className="w-3 h-3 mr-1" />
                   Enhanced Features Active
                 </Badge>
@@ -241,7 +239,7 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
                 <Button
                   onClick={handleConnect}
                   disabled={loading}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700"
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Wifi className="w-4 h-4 mr-2" />}
                   Connect Enhanced
@@ -251,17 +249,17 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
           </div>
 
           {session?.qr_code && (
-            <div className="p-4 border rounded-lg bg-gradient-to-br from-blue-50 to-green-50">
+            <div className="p-4 border rounded-lg bg-gradient-to-br from-violet-50 to-blue-50 border-violet-200">
               <div className="flex items-center gap-2 mb-2">
-                <QrCode className="w-4 h-4" />
-                <span className="font-medium">Scan Enhanced QR Code with WhatsApp</span>
-                <Badge variant="outline" className="bg-green-100 text-green-700">Enhanced</Badge>
+                <QrCode className="w-4 h-4 text-violet-600" />
+                <span className="font-medium text-gray-900">Scan Enhanced QR Code with WhatsApp</span>
+                <Badge variant="outline" className="bg-violet-100 text-violet-700 border-violet-200">Enhanced</Badge>
               </div>
               <div className="flex justify-center">
                 <img
                   src={`data:image/png;base64,${session.qr_code}`}
                   alt="WhatsApp QR Code"
-                  className="w-48 h-48 border-2 border-green-200 rounded-lg bg-white"
+                  className="w-48 h-48 border-2 border-violet-200 rounded-lg bg-white shadow-sm"
                 />
               </div>
               <p className="text-sm text-gray-600 text-center mt-2">
@@ -277,11 +275,11 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
           )}
 
           {session?.webjs_session_data?.features && (
-            <div className="p-3 bg-blue-50 rounded-lg">
+            <div className="p-3 bg-gradient-to-r from-blue-50 to-violet-50 rounded-lg border border-blue-200">
               <h4 className="font-medium text-blue-800 mb-2">Enhanced Features Available:</h4>
               <div className="flex flex-wrap gap-2">
                 {session.webjs_session_data.features.map((feature: string, index: number) => (
-                  <Badge key={index} variant="outline" className="bg-blue-100 text-blue-700">
+                  <Badge key={index} variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">
                     {feature.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </Badge>
                 ))}
@@ -293,37 +291,39 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
 
       {/* Enhanced Test Message */}
       {session?.is_connected && (
-        <Card className="bg-white border-gray-200">
+        <Card className="bg-gradient-to-br from-blue-50 to-violet-50 border-blue-200">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-gray-900">
+              <Send className="h-5 w-5 text-blue-600" />
               Send Enhanced Test Message
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="test_phone">Phone Number (with country code)</Label>
+              <Label htmlFor="test_phone" className="text-gray-900">Phone Number (with country code)</Label>
               <Input
                 id="test_phone"
                 placeholder="+1234567890"
                 value={testPhone}
                 onChange={(e) => setTestPhone(e.target.value)}
+                className="bg-white border-gray-300"
               />
             </div>
             <div>
-              <Label htmlFor="test_message">Message</Label>
+              <Label htmlFor="test_message" className="text-gray-900">Message</Label>
               <Textarea
                 id="test_message"
                 placeholder="Enter your test message..."
                 value={testMessage}
                 onChange={(e) => setTestMessage(e.target.value)}
                 rows={3}
+                className="bg-white border-gray-300"
               />
             </div>
             <Button
               onClick={handleSendMessage}
               disabled={loading || !testPhone || !testMessage}
-              className="w-full bg-green-600 hover:bg-green-700"
+              className="w-full bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
               Send Enhanced Message
@@ -333,17 +333,17 @@ export const EnhancedWhatsAppWebClient: React.FC = () => {
       )}
 
       {/* Recent Messages with Enhanced Status */}
-      <Card className="bg-white border-gray-200">
+      <Card className="bg-gradient-to-br from-gray-50 to-blue-50 border-gray-200">
         <CardHeader>
-          <CardTitle>Recent Enhanced Messages</CardTitle>
+          <CardTitle className="text-gray-900">Recent Enhanced Messages</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {messages.map((message) => (
-              <div key={message.id} className="p-3 border rounded-lg">
+              <div key={message.id} className="p-3 border rounded-lg bg-white shadow-sm">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <span className="font-medium">{message.recipient_name || message.recipient_phone}</span>
+                    <span className="font-medium text-gray-900">{message.recipient_name || message.recipient_phone}</span>
                     <Badge
                       variant={message.status === 'sent' ? 'default' : 
                               message.status === 'delivered' ? 'secondary' :

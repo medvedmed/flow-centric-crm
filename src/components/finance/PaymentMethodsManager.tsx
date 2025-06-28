@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, CreditCard, Banknote, Smartphone, Building, Settings, Trash2, Edit } from 'lucide-react';
+import { Plus, CreditCard, Banknote, Smartphone, Building, Trash2, Edit } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -53,17 +53,16 @@ export const PaymentMethodsManager = () => {
       if (!user?.id) return [];
       
       const { data, error } = await supabase
-        .from('payment_methods')
-        .select(`
-          *,
-          transaction_count:financial_transactions(count),
-          total_amount:financial_transactions(amount.sum())
-        `)
+        .from('payment_methods' as any)
+        .select('*')
         .eq('salon_id', user.id)
         .order('is_default', { ascending: false })
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching payment methods:', error);
+        throw error;
+      }
       return data as PaymentMethod[];
     },
     enabled: !!user?.id,
@@ -75,7 +74,7 @@ export const PaymentMethodsManager = () => {
       if (!user?.id) throw new Error('No user');
       
       const { data: result, error } = await supabase
-        .from('payment_methods')
+        .from('payment_methods' as any)
         .insert([{
           salon_id: user.id,
           name: data.name,
@@ -96,6 +95,7 @@ export const PaymentMethodsManager = () => {
       setIsAddDialogOpen(false);
     },
     onError: (error) => {
+      console.error('Error creating payment method:', error);
       toast({ title: 'Error', description: 'Failed to create payment method', variant: 'destructive' });
     },
   });
@@ -104,7 +104,7 @@ export const PaymentMethodsManager = () => {
   const updatePaymentMethodMutation = useMutation({
     mutationFn: async ({ id, ...data }: Partial<PaymentMethod> & { id: string }) => {
       const { error } = await supabase
-        .from('payment_methods')
+        .from('payment_methods' as any)
         .update(data)
         .eq('id', id);
 
@@ -115,13 +115,17 @@ export const PaymentMethodsManager = () => {
       toast({ title: 'Success', description: 'Payment method updated successfully!' });
       setEditingMethod(null);
     },
+    onError: (error) => {
+      console.error('Error updating payment method:', error);
+      toast({ title: 'Error', description: 'Failed to update payment method', variant: 'destructive' });
+    },
   });
 
   // Delete payment method mutation
   const deletePaymentMethodMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('payment_methods')
+        .from('payment_methods' as any)
         .delete()
         .eq('id', id);
 
@@ -130,6 +134,10 @@ export const PaymentMethodsManager = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
       toast({ title: 'Success', description: 'Payment method deleted successfully!' });
+    },
+    onError: (error) => {
+      console.error('Error deleting payment method:', error);
+      toast({ title: 'Error', description: 'Failed to delete payment method', variant: 'destructive' });
     },
   });
 
@@ -158,6 +166,14 @@ export const PaymentMethodsManager = () => {
   const getColorClass = (color: string) => {
     return `bg-${color}-500`;
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="w-6 h-6 mx-auto border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -268,6 +284,7 @@ export const PaymentMethodsManager = () => {
                       size="sm"
                       onClick={() => deletePaymentMethodMutation.mutate(method.id)}
                       className="text-red-500 hover:text-red-700"
+                      disabled={method.is_default}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -275,14 +292,6 @@ export const PaymentMethodsManager = () => {
                 </div>
                 
                 <div className="space-y-2 text-sm text-gray-600">
-                  <div className="flex justify-between">
-                    <span>Transactions:</span>
-                    <span className="font-medium">{method.transaction_count || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Total Amount:</span>
-                    <span className="font-medium">${(method.total_amount || 0).toFixed(2)}</span>
-                  </div>
                   <div className="flex justify-between">
                     <span>Status:</span>
                     <Badge variant={method.is_active ? 'default' : 'secondary'}>
@@ -296,7 +305,7 @@ export const PaymentMethodsManager = () => {
         })}
       </div>
 
-      {paymentMethods.length === 0 && !isLoading && (
+      {paymentMethods.length === 0 && (
         <Card className="bg-gradient-to-br from-violet-50 to-blue-50 border-violet-200">
           <CardContent className="p-8 text-center">
             <CreditCard className="w-12 h-12 mx-auto mb-4 text-violet-400" />

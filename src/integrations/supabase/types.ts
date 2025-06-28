@@ -701,6 +701,42 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_methods: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          salon_id: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          salon_id: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          salon_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_sales: {
         Row: {
           created_at: string

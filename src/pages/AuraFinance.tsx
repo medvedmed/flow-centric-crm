@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, DollarSign, TrendingUp, TrendingDown, Calendar, CreditCard, Banknote, Smartphone, Building } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -19,6 +18,15 @@ import { PaymentMethodsManager } from '@/components/finance/PaymentMethodsManage
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const AURA_COLORS = ['#8B5CF6', '#3B82F6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444'];
+
+interface PaymentMethod {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  is_active: boolean;
+  is_default: boolean;
+}
 
 const AuraFinance = () => {
   const { user } = useAuth();
@@ -38,14 +46,17 @@ const AuraFinance = () => {
       if (!user?.id) return [];
       
       const { data, error } = await supabase
-        .from('payment_methods')
+        .from('payment_methods' as any)
         .select('*')
         .eq('salon_id', user.id)
         .eq('is_active', true)
         .order('is_default', { ascending: false });
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Error fetching payment methods:', error);
+        return [];
+      }
+      return data as PaymentMethod[];
     },
     enabled: !!user?.id,
   });
@@ -85,7 +96,10 @@ const AuraFinance = () => {
       if (dateRange.end) query = query.lte('transaction_date', dateRange.end);
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching payment method stats:', error);
+        return [];
+      }
 
       // Group by payment method
       const stats = data?.reduce((acc: any, transaction) => {
@@ -120,7 +134,8 @@ const AuraFinance = () => {
       toast({ title: 'Success', description: 'Transaction created successfully!' });
       setIsAddDialogOpen(false);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Error creating transaction:', error);
       toast({ title: 'Error', description: 'Failed to create transaction', variant: 'destructive' });
     },
   });

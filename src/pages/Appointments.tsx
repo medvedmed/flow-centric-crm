@@ -10,7 +10,6 @@ import DragDropCalendar from '@/components/DragDropCalendar';
 import { AppointmentDetailsDialog } from '@/components/appointments/AppointmentDetailsDialog';
 import { AddAppointmentDialog } from '@/components/AddAppointmentDialog';
 
-
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);

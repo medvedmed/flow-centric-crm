@@ -2,8 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { AddAppointmentDialog } from '@/components/AddAppointmentDialog';
-
+import { AddAppointmentDialog } from '../AddAppointmentDialog';
 
 interface EmptyTimeSlotProps {
   staffId: string;

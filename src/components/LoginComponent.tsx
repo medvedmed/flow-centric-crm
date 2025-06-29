@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -57,7 +58,10 @@ export const LoginComponent: React.FC<LoginComponentProps> = ({
         title: "Success",
         description: "Logged in successfully!",
       });
-      onSuccess?.();
+      
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error: any) {
       toast({
         title: "Login Failed",
@@ -92,6 +96,7 @@ export const LoginComponent: React.FC<LoginComponentProps> = ({
         title: "Account Created!",
         description: "Please check your email for a confirmation link. After confirming, you can log in.",
       });
+      
       setFormData({ email: '', password: '', fullName: '', salonName: '' });
       setIsLogin(true);
     } catch (error: any) {
@@ -106,103 +111,112 @@ export const LoginComponent: React.FC<LoginComponentProps> = ({
   };
 
   return (
-    <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-lg mx-auto">
-      <div className="text-center mb-6">
-        <h2 className="text-3xl font-bold text-teal-600">{isLogin ? 'Login' : 'Create Account'}</h2>
-        <p className="text-gray-500 text-sm mt-2">
-          {isLogin ? 'Enter your email and password to sign in' : 'Create a new salon account'}
-        </p>
-      </div>
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl">
+          {isLogin ? 'Welcome Back' : 'Create Account'}
+        </CardTitle>
+        <CardDescription>
+          {isLogin 
+            ? 'Sign in to your account to continue' 
+            : 'Create a new account to get started'
+          }
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={isLogin ? handleLogin : handleSignUp} className="space-y-4">
+          {!isLogin && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  name="fullName"
+                  placeholder="Enter your full name"
+                  value={formData.fullName}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="salonName">Salon Name</Label>
+                <Input
+                  id="salonName"
+                  name="salonName"
+                  placeholder="Enter your salon name"
+                  value={formData.salonName}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+            </>
+          )}
 
-      <form onSubmit={isLogin ? handleLogin : handleSignUp} className="space-y-4">
-        {!isLogin && (
-          <>
-            <div>
-              <Label htmlFor="fullName">Full Name</Label>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
-                id="fullName"
-                name="fullName"
-                placeholder="Your full name"
-                value={formData.fullName}
+                id="email"
+                name="email"
+                type="email"
+                placeholder="Enter your email"
+                value={formData.email}
                 onChange={handleInputChange}
+                className="pl-10"
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="salonName">Salon Name</Label>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
-                id="salonName"
-                name="salonName"
-                placeholder="Your salon name"
-                value={formData.salonName}
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                placeholder={isLogin ? "Enter your password" : "Create a password (min 6 characters)"}
+                value={formData.password}
                 onChange={handleInputChange}
+                className="pl-10 pr-10"
+                minLength={6}
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
-          </>
-        )}
-
-        <div>
-          <Label htmlFor="email">Email</Label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="you@example.com"
-              value={formData.email}
-              onChange={handleInputChange}
-              className="pl-10"
-              required
-            />
           </div>
+
+          <Button 
+            type="submit" 
+            className="w-full"
+            disabled={isLoading}
+          >
+            {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {isLogin ? 'Sign In' : 'Create Account'}
+          </Button>
+        </form>
+
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={() => setIsLogin(!isLogin)}
+            className="text-sm text-blue-600 hover:text-blue-800 underline"
+          >
+            {isLogin 
+              ? "Don't have an account? Sign up" 
+              : "Already have an account? Sign in"
+            }
+          </button>
         </div>
-
-        <div>
-          <Label htmlFor="password">Password</Label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              id="password"
-              name="password"
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              value={formData.password}
-              onChange={handleInputChange}
-              className="pl-10 pr-10"
-              minLength={6}
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-gray-600"
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
-        </div>
-
-        <Button
-          type="submit"
-          className="w-full bg-teal-600 hover:bg-teal-700 text-white"
-          disabled={isLoading}
-        >
-          {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          {isLogin ? 'Sign In' : 'Create Account'}
-        </Button>
-      </form>
-
-      <div className="mt-4 text-center">
-        <button
-          type="button"
-          onClick={() => setIsLogin(!isLogin)}
-          className="text-sm text-blue-600 hover:underline"
-        >
-          {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-        </button>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };

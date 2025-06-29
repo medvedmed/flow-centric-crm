@@ -331,4 +331,4 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
   );
 };
 
-export default AuthForm;  
+export default AuthForm;

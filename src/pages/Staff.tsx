@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,7 @@ const Staff = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const { hasPermissionSync } = usePermissions();
 
-  const canCreateStaff = hasPermissionSync('staff', 'create');
+  const canCreateStaff = hasPermissionSync('staff_management', 'create');
 
   // Mock data for now
   const staff = [

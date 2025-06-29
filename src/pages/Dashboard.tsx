@@ -1,394 +1,143 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Users, DollarSign, TrendingUp, Clock, Star, AlertTriangle } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { Calendar, Users, DollarSign, TrendingUp, Clock, Star } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { QuickPaymentSection } from '@/components/QuickPaymentSection';
-import { StaffPerformanceDashboard } from '@/components/StaffPerformanceDashboard';
-import { format, isToday, isTomorrow } from 'date-fns';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { userRole } = usePermissions();
 
-  const { data: dashboardStats, isLoading, refetch } = useQuery({
-    queryKey: ['dashboard-stats'],
-    queryFn: async () => {
-      console.log('Fetching dashboard stats...');
-      const today = new Date().toISOString().split('T')[0];
-      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const stats = [
+    { title: 'Today\'s Appointments', value: '12', icon: Calendar, color: 'bg-gradient-to-r from-violet-500 to-purple-600', change: '+2.5%' },
+    { title: 'Total Clients', value: '1,248', icon: Users, color: 'bg-gradient-to-r from-blue-500 to-indigo-600', change: '+12.3%' },
+    { title: 'Monthly Revenue', value: '$4,850', icon: DollarSign, color: 'bg-gradient-to-r from-green-500 to-emerald-600', change: '+8.1%' },
+    { title: 'Staff Performance', value: '94%', icon: TrendingUp, color: 'bg-gradient-to-r from-orange-500 to-red-600', change: '+5.2%' },
+  ];
 
-      try {
-        // Get today's appointments with all fields
-        const { data: todayAppointments, error: todayError } = await supabase
-          .from('appointments')
-          .select('*, staff!appointments_staff_id_fkey(name)')
-          .eq('salon_id', user?.id)
-          .eq('date', today);
+  const recentActivity = [
+    { type: 'appointment', client: 'Sarah Johnson', service: 'Hair Cut & Style', time: '2 hours ago', status: 'completed' },
+    { type: 'payment', client: 'Mike Chen', amount: '$85', time: '3 hours ago', status: 'paid' },
+    { type: 'booking', client: 'Emma Wilson', service: 'Manicure', time: '5 hours ago', status: 'confirmed' },
+    { type: 'cancellation', client: 'John Doe', service: 'Massage', time: '1 day ago', status: 'cancelled' },
+  ];
 
-        if (todayError) {
-          console.error('Today appointments error:', todayError);
-          throw todayError;
-        }
-
-        // Get tomorrow's appointments
-        const { data: tomorrowAppointments, error: tomorrowError } = await supabase
-          .from('appointments')
-          .select('*')
-          .eq('salon_id', user?.id)
-          .eq('date', tomorrow);
-
-        if (tomorrowError) {
-          console.error('Tomorrow appointments error:', tomorrowError);
-          throw tomorrowError;
-        }
-
-        // Get this month's revenue from financial transactions (more accurate)
-        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-        const { data: monthlyTransactions, error: revenueError } = await supabase
-          .from('financial_transactions')
-          .select('amount')
-          .eq('salon_id', user?.id)
-          .eq('transaction_type', 'income')
-          .gte('transaction_date', startOfMonth);
-
-        if (revenueError) {
-          console.error('Monthly revenue error:', revenueError);
-        }
-
-        // Get pending payments (unpaid completed appointments)
-        const { data: pendingPayments, error: pendingError } = await supabase
-          .from('appointments')
-          .select('price, client_name, service, date')
-          .eq('salon_id', user?.id)
-          .eq('status', 'Completed')
-          .eq('payment_status', 'unpaid');
-
-        if (pendingError) {
-          console.error('Pending payments error:', pendingError);
-        }
-
-        // Get total clients
-        const { count: totalClients, error: clientsError } = await supabase
-          .from('clients')
-          .select('*', { count: 'exact', head: true })
-          .eq('salon_id', user?.id);
-
-        if (clientsError) {
-          console.error('Clients count error:', clientsError);
-        }
-
-        // Fix the low stock query - fetch all items and filter in JavaScript
-        let lowStockItems = [];
-        try {
-          const { data: inventoryItems, error: stockError } = await supabase
-            .from('inventory_items')
-            .select('*')
-            .eq('salon_id', user?.id)
-            .eq('is_active', true);
-
-          if (stockError) {
-            console.error('Inventory error:', stockError);
-          } else if (inventoryItems) {
-            // Filter low stock items in JavaScript to avoid database type issues
-            lowStockItems = inventoryItems.filter(item => {
-              const currentStock = Number(item.current_stock);
-              const minimumStock = Number(item.minimum_stock);
-              return currentStock < minimumStock;
-            });
-            console.log('Low stock items found:', lowStockItems.length);
-          }
-        } catch (error) {
-          console.error('Error fetching inventory items:', error);
-          lowStockItems = []; // Fallback to empty array
-        }
-
-        // Calculate today's revenue from completed appointments
-        const todayRevenue = todayAppointments
-          ?.filter(apt => apt.status === 'Completed')
-          ?.reduce((sum, apt) => sum + (Number(apt.price) || 0), 0) || 0;
-
-        // Calculate monthly revenue
-        const monthlyRevenue = monthlyTransactions?.reduce((sum, txn) => sum + (Number(txn.amount) || 0), 0) || 0;
-
-        // Calculate pending payments total
-        const totalPendingPayments = pendingPayments?.reduce((sum, payment) => sum + (Number(payment.price) || 0), 0) || 0;
-
-        console.log('Dashboard stats calculated:', {
-          todayAppointments: todayAppointments?.length || 0,
-          todayRevenue,
-          monthlyRevenue,
-          totalPendingPayments,
-          lowStockCount: lowStockItems.length
-        });
-
-        return {
-          todayAppointments: todayAppointments || [],
-          tomorrowAppointments: tomorrowAppointments || [],
-          todayRevenue,
-          monthlyRevenue,
-          pendingPayments: pendingPayments || [],
-          totalPendingPayments,
-          totalClients: totalClients || 0,
-          lowStockCount: lowStockItems.length,
-          lowStockItems: lowStockItems.slice(0, 3)
-        };
-      } catch (error) {
-        console.error('Dashboard stats error:', error);
-        // Return fallback data instead of throwing
-        return {
-          todayAppointments: [],
-          tomorrowAppointments: [],
-          todayRevenue: 0,
-          monthlyRevenue: 0,
-          pendingPayments: [],
-          totalPendingPayments: 0,
-          totalClients: 0,
-          lowStockCount: 0,
-          lowStockItems: []
-        };
-      }
-    },
-    enabled: !!user,
-    refetchInterval: 15000, // Refresh every 15 seconds
-    staleTime: 5000, // Consider data stale after 5 seconds
-    retry: 1, // Reduce retry attempts to prevent error loops
-    retryDelay: 1000,
-  });
-
-  // Get upcoming appointments for the sidebar
-  const { data: upcomingAppointments = [] } = useQuery({
-    queryKey: ['upcoming-appointments'],
-    queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
-      
-      const { data, error } = await supabase
-        .from('appointments')
-        .select('*, staff!appointments_staff_id_fkey(name)')
-        .eq('salon_id', user?.id)
-        .gte('date', today)
-        .in('status', ['Scheduled', 'Confirmed'])
-        .order('date')
-        .order('start_time')
-        .limit(5);
-
-      if (error) {
-        console.error('Upcoming appointments error:', error);
-        throw error;
-      }
-
-      return data || [];
-    },
-    enabled: !!user,
-    refetchInterval: 30000,
-  });
-
-  // Force refresh data when payment updates happen
-  React.useEffect(() => {
-    const channel = supabase
-      .channel('dashboard-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => {
-        console.log('Appointment updated, refreshing dashboard...');
-        refetch();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'financial_transactions' }, () => {
-        console.log('Financial transaction updated, refreshing dashboard...');
-        refetch();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [refetch]);
-
-  if (isLoading) {
-    return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50">
+      {/* Header Section */}
+      <div className="bg-white/70 backdrop-blur-sm border-b border-violet-200 px-6 py-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
+                Welcome back, {user?.email?.split('@')[0] || 'Owner'}
+              </h1>
+              <p className="text-gray-600 mt-2">Here's what's happening at your salon today</p>
+              {userRole && (
+                <Badge className="mt-2 bg-gradient-to-r from-violet-500 to-purple-600 text-white">
+                  {userRole.replace('_', ' ').toUpperCase()}
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-violet-600" />
+              <span className="text-gray-600">{new Date().toLocaleDateString()}</span>
+            </div>
           </div>
         </div>
       </div>
-    );
-  }
 
-  return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back! Here's what's happening at your salon.</p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Appointments</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats?.todayAppointments.length || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              {dashboardStats?.todayAppointments.filter(apt => apt.status === 'Completed').length || 0} completed
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tomorrow's Bookings</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats?.tomorrowAppointments.length || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Scheduled for tomorrow
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${dashboardStats?.monthlyRevenue?.toFixed(2) || '0.00'}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              This month's earnings
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">
-              ${dashboardStats?.totalPendingPayments?.toFixed(2) || '0.00'}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {dashboardStats?.pendingPayments?.length || 0} unpaid appointments
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Secondary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats?.totalClients || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Registered clients
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock Alert</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{dashboardStats?.lowStockCount || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Items need restocking
-            </p>
-            {dashboardStats?.lowStockItems && dashboardStats.lowStockItems.length > 0 && (
-              <div className="mt-2 text-xs text-red-600">
-                {dashboardStats.lowStockItems.map(item => item.name).join(', ')}
-                {(dashboardStats.lowStockCount || 0) > 3 && ` +${dashboardStats.lowStockCount - 3} more`}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Revenue</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              ${dashboardStats?.todayRevenue?.toFixed(2) || '0.00'}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              From completed appointments
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Quick Payment Section */}
-        <QuickPaymentSection />
-
-        {/* Upcoming Appointments */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="w-5 h-5" />
-              Upcoming Appointments
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {upcomingAppointments.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">
-                  No upcoming appointments
-                </p>
-              ) : (
-                upcomingAppointments.map((appointment) => (
-                  <div key={appointment.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                    <div>
-                      <div className="font-medium">{appointment.client_name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {appointment.service} with {appointment.staff?.name || 'Unassigned'}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {format(new Date(appointment.date), 'MMM dd')} at {appointment.start_time}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant={appointment.status === 'Confirmed' ? 'default' : 'secondary'}>
-                          {appointment.status}
-                        </Badge>
-                        {appointment.payment_status === 'unpaid' && (
-                          <Badge variant="destructive" className="text-xs">
-                            Unpaid
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-sm font-medium">
-                        ${Number(appointment.price || 0).toFixed(2)}
-                      </div>
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {stats.map((stat, index) => (
+            <Card key={index} className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600 text-sm font-medium">{stat.title}</p>
+                    <p className="text-3xl font-bold mt-2">{stat.value}</p>
+                    <div className="flex items-center mt-2">
+                      <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
+                      <span className="text-sm text-green-600 font-medium">{stat.change}</span>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                  <div className={`p-3 rounded-xl ${stat.color}`}>
+                    <stat.icon className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-      {/* Staff Performance Dashboard */}
-      <StaffPerformanceDashboard />
+        {/* Activity and Quick Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Recent Activity */}
+          <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-violet-600" />
+                Recent Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {recentActivity.map((activity, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-white/50 rounded-lg border border-violet-100">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${
+                      activity.status === 'completed' ? 'bg-green-500' :
+                      activity.status === 'paid' ? 'bg-blue-500' :
+                      activity.status === 'confirmed' ? 'bg-violet-500' :
+                      'bg-red-500'
+                    }`} />
+                    <div>
+                      <p className="font-medium text-gray-900">{activity.client}</p>
+                      <p className="text-sm text-gray-600">
+                        {activity.service || activity.amount} • {activity.time}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className={`
+                    ${activity.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      activity.status === 'paid' ? 'bg-blue-100 text-blue-800' :
+                      activity.status === 'confirmed' ? 'bg-violet-100 text-violet-800' :
+                      'bg-red-100 text-red-800'}
+                  `}>
+                    {activity.status}
+                  </Badge>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-violet-600" />
+                Quick Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <button className="w-full p-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl hover:from-violet-600 hover:to-purple-700 transition-all duration-300 flex items-center justify-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Book New Appointment
+              </button>
+              <button className="w-full p-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center gap-2">
+                <Users className="w-5 h-5" />
+                Add New Client
+              </button>
+              <button className="w-full p-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 flex items-center justify-center gap-2">
+                <DollarSign className="w-5 h-5" />
+                Record Payment
+              </button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };

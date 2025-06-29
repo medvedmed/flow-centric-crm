@@ -1,111 +1,151 @@
 
-import { useState, useEffect } from 'react';
-import { useClients } from '@/hooks/useCrmData';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Users, Search, Plus, Filter, UserPlus, TrendingUp, Star } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
-import { motion } from 'framer-motion';
-import { AddClientDialog } from '@/components/AddClientDialog';
-import { ClientImportDialog } from '@/components/ClientImportDialog';
-import { ClientStatsCards } from '@/components/ClientStatsCards';
-import { ClientSearchFilters } from '@/components/ClientSearchFilters';
-import { ClientGrid } from '@/components/ClientGrid';
-import { ClientPagination } from '@/components/ClientPagination';
 
 const Clients = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(12);
-  const { data: clientsData, isLoading, error } = useClients(searchTerm, page, pageSize, statusFilter);
-  const { toast } = useToast();
-  const { userRole } = usePermissions();
+  const [filterStatus, setFilterStatus] = useState('all');
+  const { hasPermissionSync } = usePermissions();
 
-  const clients = clientsData?.data || [];
-  const totalCount = clientsData?.count || 0;
-  const totalPages = Math.ceil(totalCount / pageSize);
+  const canCreateClients = hasPermissionSync('clients', 'create');
 
-  const isStaff = userRole === 'staff';
+  // Mock data for now
+  const clients = [
+    { id: 1, name: 'Sarah Johnson', email: 'sarah@email.com', phone: '+1234567890', status: 'Active', visits: 12, totalSpent: 850, lastVisit: '2024-01-15' },
+    { id: 2, name: 'Mike Chen', email: 'mike@email.com', phone: '+1234567891', status: 'VIP', visits: 25, totalSpent: 1500, lastVisit: '2024-01-10' },
+    { id: 3, name: 'Emma Wilson', email: 'emma@email.com', phone: '+1234567892', status: 'New', visits: 2, totalSpent: 120, lastVisit: '2024-01-12' },
+  ];
 
-  useEffect(() => {
-    setPage(1);
-  }, [searchTerm, statusFilter]);
+  const stats = [
+    { title: 'Total Clients', value: '1,248', icon: Users, color: 'bg-gradient-to-r from-blue-500 to-indigo-600' },
+    { title: 'New This Month', value: '47', icon: UserPlus, color: 'bg-gradient-to-r from-green-500 to-emerald-600' },
+    { title: 'VIP Clients', value: '89', icon: Star, color: 'bg-gradient-to-r from-purple-500 to-violet-600' },
+    { title: 'Retention Rate', value: '78%', icon: TrendingUp, color: 'bg-gradient-to-r from-orange-500 to-red-600' },
+  ];
 
-  const handleViewHistory = (clientId: string) => {
-    toast({
-      title: 'Client History',
-      description: 'Client history feature will be implemented next.',
-    });
-  };
-
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'VIP': return 'bg-purple-100 text-purple-800';
+      case 'Active': return 'bg-green-100 text-green-800';
+      case 'New': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30">
-      <div className="space-y-8 p-6">
-        {/* Header */}
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6"
-        >
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent">
-              {isStaff ? 'Client Directory' : 'Client Management'}
-            </h1>
-            <p className="text-gray-600 mt-2 text-lg">
-              {isStaff 
-                ? 'Browse client information and history' 
-                : 'Manage your salon clients and their information'
-              }
-            </p>
-          </div>
-
-          {/* Action Buttons - Only for non-staff */}
-          {!isStaff && (
-            <div className="flex gap-3">
-              <ClientImportDialog />
-              <AddClientDialog />
+    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50">
+      {/* Header */}
+      <div className="bg-white/70 backdrop-blur-sm border-b border-violet-200 px-6 py-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
+                Client Management
+              </h1>
+              <p className="text-gray-600 mt-2">Manage your salon's client relationships and history</p>
             </div>
-          )}
-        </motion.div>
+            {canCreateClients && (
+              <Button className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white">
+                <Plus className="w-4 h-4 mr-2" />
+                Add New Client
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
 
-        {/* Stats Cards */}
-        <ClientStatsCards clients={clients} totalCount={totalCount} />
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {stats.map((stat, index) => (
+            <Card key={index} className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600 text-sm font-medium">{stat.title}</p>
+                    <p className="text-3xl font-bold mt-2">{stat.value}</p>
+                  </div>
+                  <div className={`p-3 rounded-xl ${stat.color}`}>
+                    <stat.icon className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-        {/* Search and Filter */}
-        <ClientSearchFilters
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          clientsCount={clients.length}
-          totalCount={totalCount}
-        />
+        {/* Search and Filters */}
+        <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search clients by name, email, or phone..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-white/50"
+                />
+              </div>
+              <Button variant="outline" className="bg-white/50 border-violet-200">
+                <Filter className="w-4 h-4 mr-2" />
+                Filters
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Client Grid */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <ClientGrid
-            clients={clients}
-            isLoading={isLoading}
-            error={error}
-            searchTerm={searchTerm}
-            statusFilter={statusFilter}
-            onViewHistory={handleViewHistory}
-          />
-        </motion.div>
-
-        {/* Pagination */}
-        <ClientPagination
-          page={page}
-          totalPages={totalPages}
-          onPageChange={handlePageChange}
-        />
+        {/* Client List */}
+        <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-violet-600" />
+              Client Directory
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="space-y-0">
+              {clients.map((client) => (
+                <div key={client.id} className="p-6 border-b border-violet-100 last:border-b-0 hover:bg-violet-50/50 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                        {client.name.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{client.name}</h3>
+                        <p className="text-gray-600 text-sm">{client.email}</p>
+                        <p className="text-gray-500 text-sm">{client.phone}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-6">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-gray-900">{client.visits}</p>
+                        <p className="text-xs text-gray-500">Visits</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-green-600">${client.totalSpent}</p>
+                        <p className="text-xs text-gray-500">Total Spent</p>
+                      </div>
+                      <div className="text-center">
+                        <Badge className={getStatusColor(client.status)}>
+                          {client.status}
+                        </Badge>
+                        <p className="text-xs text-gray-500 mt-1">Last: {client.lastVisit}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

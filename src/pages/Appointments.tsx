@@ -1,7 +1,5 @@
 
 import React, { useState } from 'react';
-const [showAddDialog, setShowAddDialog] = useState(false);
-
 import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Shield, Calendar } from 'lucide-react';
@@ -10,7 +8,7 @@ import { format } from 'date-fns';
 import { Appointment } from '@/services/types';
 import DragDropCalendar from '@/components/DragDropCalendar';
 import { AppointmentDetailsDialog } from '@/components/appointments/AppointmentDetailsDialog';
-const [open, setOpen] = useState(false);
+import { AddAppointmentDialog } from '@/components/AddAppointmentDialog';
 
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -58,7 +56,6 @@ const Appointments = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50 flex flex-col">
       {/* Header */}
-
       <div className="bg-white/70 backdrop-blur-sm border-b border-violet-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
@@ -98,6 +95,14 @@ const Appointments = () => {
           >
             Next
           </Button>
+          <AddAppointmentDialog 
+            selectedDate={selectedDate}
+            trigger={
+              <Button className="gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
+                + Add Appointment
+              </Button>
+            }
+          />
         </div>
       </div>
 
@@ -111,14 +116,6 @@ const Appointments = () => {
           </CardContent>
         </Card>
       </div>
-      <Button 
-  size="sm"
-  onClick={() => setShowAddDialog(true)} 
-  className="bg-green-600 hover:bg-green-700 text-white"
->
-  + Add Appointment
-</Button>
-
 
       {/* Calendar Content */}
       <div className="flex-1 px-6 pb-6">
@@ -138,6 +135,5 @@ const Appointments = () => {
     </div>
   );
 };
-
 
 export default Appointments;

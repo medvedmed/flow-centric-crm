@@ -19,9 +19,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
-  Calendar
+  Plus,
+  Trash2,
+  Calendar,
+  Clock,
+  User,
+  DollarSign,
+  CreditCard,
+  Palette
 } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -50,38 +57,26 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editedAppointment, setEditedAppointment] = useState<Partial<Appointment>>({});
+  const [newService, setNewService] = useState({ name: '', price: 0, duration: 60 });
   const [extraServices, setExtraServices] = useState<ExtraService[]>([]);
   const [tipAmount, setTipAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('');
 
   useEffect(() => {
-    if (appointment) {
-      setEditedAppointment(appointment);
-    }
+    if (appointment) setEditedAppointment(appointment);
   }, [appointment]);
 
   const updateAppointment = useMutation({
     mutationFn: async (updates: Partial<Appointment>) => {
-      if (!editedAppointment?.id) throw new Error('Missing appointment ID');
-      const { error } = await supabase
-        .from('appointments')
-        .update(updates)
-        .eq('id', editedAppointment.id);
+      const { error } = await supabase.from('appointments').update(updates).eq('id', appointment?.id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       toast({ title: 'Updated', description: 'Appointment updated successfully.' });
       setIsEditing(false);
-      onClose();
     },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to update appointment.',
-        variant: 'destructive'
-      });
-    }
+    onError: () => toast({ title: 'Error', description: 'Failed to update appointment.', variant: 'destructive' })
   });
 
   const totalExtra = extraServices.reduce((sum, s) => sum + s.price, 0);
@@ -92,10 +87,7 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <div className="flex justify-between items-center">
-            <DialogTitle>
-              <Calendar className="inline-block mr-2 w-5 h-5" />
-              Appointment Details
-            </DialogTitle>
+            <DialogTitle>Appointment Details</DialogTitle>
             <Button variant="ghost" onClick={() => setIsEditing(!isEditing)}>
               {isEditing ? 'Cancel' : 'Edit'}
             </Button>
@@ -146,7 +138,7 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
                 value={editedAppointment.status || ''}
                 onValueChange={(val) => setEditedAppointment({ ...editedAppointment, status: val as any })}
               >
-                <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Scheduled">Scheduled</SelectItem>
                   <SelectItem value="Confirmed">Confirmed</SelectItem>
@@ -174,9 +166,7 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
           </div>
 
           {isEditing && (
-            <Button onClick={() => updateAppointment.mutate(editedAppointment)}>
-              Save Changes
-            </Button>
+            <Button onClick={() => updateAppointment.mutate(editedAppointment)}>Save</Button>
           )}
 
           <Separator />

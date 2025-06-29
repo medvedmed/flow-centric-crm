@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { Appointment } from '@/services/types';
 import DragDropCalendar from '@/components/DragDropCalendar';
 import { AppointmentDetailsDialog } from '@/components/appointments/AppointmentDetailsDialog';
+const [open, setOpen] = useState(false);
 
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -55,6 +56,10 @@ const Appointments = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50 flex flex-col">
       {/* Header */}
+      <Button onClick={() => setOpen(true)} className="bg-primary text-white rounded-xl px-4 py-2">
+  + Add Appointment
+</Button>
+
       <div className="bg-white/70 backdrop-blur-sm border-b border-violet-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">

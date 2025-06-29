@@ -43,10 +43,24 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [extraServices, setExtraServices] = useState<ExtraService[]>([]);
-  const [paymentStatus, setPaymentStatus] = useState<'paid' | 'unpaid' | 'partial'>(appointment?.paymentStatus || 'unpaid');
-  const [paymentMethod, setPaymentMethod] = useState(appointment?.paymentMethod || 'cash');
-  const [basePrice, setBasePrice] = useState(appointment?.price || 0);
-  const [appointmentColor, setAppointmentColor] = useState(appointment?.color || '#007bff');
+  const [paymentStatus, setPaymentStatus] = useState<'paid' | 'unpaid' | 'partial'>('unpaid');
+  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [basePrice, setBasePrice] = useState(0);
+  const [appointmentColor, setAppointmentColor] = useState('#007bff');
+
+  const [formFields, setFormFields] = useState({
+    client_name: '',
+    client_phone: '',
+    service: '',
+    staff_id: '',
+    date: '',
+    start_time: '',
+    end_time: '',
+    price: '',
+    duration: '',
+    status: '',
+    notes: '',
+  });
 
   const { data: services = [] } = useQuery({
     queryKey: ['services-for-appointment'],
@@ -109,8 +123,26 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
       setPaymentMethod(appointment.paymentMethod || 'cash');
       setBasePrice(appointment.price || 0);
       setAppointmentColor(appointment.color || '#007bff');
+      setFormFields({
+        client_name: appointment.clientName || '',
+        client_phone: appointment.clientPhone || '',
+        service: appointment.service || '',
+        staff_id: appointment.staffId || '',
+        date: appointment.date || '',
+        start_time: appointment.startTime || '',
+        end_time: appointment.endTime || '',
+        price: String(appointment.price || ''),
+        duration: String(appointment.duration || ''),
+        status: appointment.status || '',
+        notes: appointment.notes || '',
+      });
     }
   }, [appointment, existingExtraServices]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormFields(prev => ({ ...prev, [name]: value }));
+  };
 
   const updateAppointmentMutation = useMutation({
     mutationFn: async (appointmentData: any) => {
@@ -120,17 +152,9 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
       const { data: updatedAppointment, error: appointmentError } = await supabase
         .from('appointments')
         .update({
-          client_name: appointmentData.client_name,
-          client_phone: appointmentData.client_phone,
-          service: appointmentData.service,
-          staff_id: appointmentData.staff_id,
-          date: appointmentData.date,
-          start_time: appointmentData.start_time,
-          end_time: appointmentData.end_time,
+          ...appointmentData,
           price: finalPrice,
           duration: appointmentData.duration + extraServices.reduce((sum, service) => sum + Number(service.duration), 0),
-          status: appointmentData.status,
-          notes: appointmentData.notes,
           payment_status: paymentStatus,
           payment_method: paymentMethod,
           payment_date: paymentStatus === 'paid' ? new Date().toISOString() : null,
@@ -143,9 +167,9 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
 
       if (appointmentError) throw appointmentError;
 
-      if (extraServices.length > 0) {
-        await supabase.from('appointment_services').delete().eq('appointment_id', appointment?.id);
+      await supabase.from('appointment_services').delete().eq('appointment_id', appointment?.id);
 
+      if (extraServices.length > 0) {
         const serviceInserts = extraServices.map(service => ({
           appointment_id: appointment?.id,
           service_name: service.name,
@@ -156,8 +180,6 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
 
         const { error: servicesError } = await supabase.from('appointment_services').insert(serviceInserts);
         if (servicesError) throw servicesError;
-      } else {
-        await supabase.from('appointment_services').delete().eq('appointment_id', appointment?.id);
       }
 
       if (paymentStatus === 'paid' && appointment?.paymentStatus !== 'paid') {
@@ -186,7 +208,7 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
       onClose();
       setExtraServices([]);
     },
-    onError: (error) => {
+    onError: () => {
       toast({ title: 'Error', description: 'Failed to update appointment', variant: 'destructive' });
     },
   });
@@ -195,19 +217,10 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
     e.preventDefault();
     if (!appointment) return;
 
-    const formData = new FormData(e.currentTarget);
     const appointmentData = {
-      client_name: formData.get('client_name') as string,
-      client_phone: formData.get('client_phone') as string,
-      service: formData.get('service') as string,
-      staff_id: formData.get('staff_id') as string,
-      date: formData.get('date') as string,
-      start_time: formData.get('start_time') as string,
-      end_time: formData.get('end_time') as string,
-      price: parseFloat(formData.get('price') as string) || 0,
-      duration: parseInt(formData.get('duration') as string) || 60,
-      status: formData.get('status') as string,
-      notes: formData.get('notes') as string,
+      ...formFields,
+      price: parseFloat(formFields.price),
+      duration: parseInt(formFields.duration)
     };
 
     updateAppointmentMutation.mutate(appointmentData);
@@ -225,7 +238,6 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
   };
 
   const totalExtraPrice = extraServices.reduce((sum, service) => sum + Number(service.price || 0), 0);
-  const totalExtraDuration = extraServices.reduce((sum, service) => sum + Number(service.duration || 0), 0);
   const finalTotalPrice = Number(basePrice || 0) + totalExtraPrice;
 
   if (!appointment) return null;
@@ -241,9 +253,8 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Color field */}
           <div>
-            <Label htmlFor="color">Color (optional)</Label>
+            <Label htmlFor="color">Color</Label>
             <Input
               type="color"
               id="color"
@@ -253,7 +264,50 @@ export const EditAppointmentDialog: React.FC<EditAppointmentDialogProps> = ({
             />
           </div>
 
-          {/* ... keep existing code (all other form fields remain the same) */}
+          <div>
+            <Label htmlFor="client_name">Client Name</Label>
+            <Input name="client_name" value={formFields.client_name} onChange={handleInputChange} />
+          </div>
+          <div>
+            <Label htmlFor="client_phone">Client Phone</Label>
+            <Input name="client_phone" value={formFields.client_phone} onChange={handleInputChange} />
+          </div>
+          <div>
+            <Label htmlFor="service">Service</Label>
+            <Input name="service" value={formFields.service} onChange={handleInputChange} />
+          </div>
+          <div>
+            <Label htmlFor="staff_id">Staff</Label>
+            <Input name="staff_id" value={formFields.staff_id} onChange={handleInputChange} />
+          </div>
+          <div>
+            <Label htmlFor="date">Date</Label>
+            <Input name="date" value={formFields.date} onChange={handleInputChange} />
+          </div>
+          <div>
+            <Label htmlFor="start_time">Start Time</Label>
+            <Input name="start_time" value={formFields.start_time} onChange={handleInputChange} />
+          </div>
+          <div>
+            <Label htmlFor="end_time">End Time</Label>
+            <Input name="end_time" value={formFields.end_time} onChange={handleInputChange} />
+          </div>
+          <div>
+            <Label htmlFor="price">Base Price</Label>
+            <Input name="price" value={formFields.price} onChange={handleInputChange} />
+          </div>
+          <div>
+            <Label htmlFor="duration">Duration</Label>
+            <Input name="duration" value={formFields.duration} onChange={handleInputChange} />
+          </div>
+          <div>
+            <Label htmlFor="status">Status</Label>
+            <Input name="status" value={formFields.status} onChange={handleInputChange} />
+          </div>
+          <div>
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea name="notes" value={formFields.notes} onChange={handleInputChange} />
+          </div>
 
           <div className="flex gap-2 pt-4">
             <Button type="submit" disabled={updateAppointmentMutation.isPending} className="flex-1">

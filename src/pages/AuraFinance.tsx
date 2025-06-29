@@ -46,7 +46,7 @@ const AuraFinance = () => {
       if (!user?.id) return [];
       
       const { data, error } = await supabase
-        .from('payment_methods' as any)
+        .from('payment_methods')
         .select('*')
         .eq('salon_id', user.id)
         .eq('is_active', true)
@@ -56,7 +56,7 @@ const AuraFinance = () => {
         console.error('Error fetching payment methods:', error);
         return [];
       }
-      return data as PaymentMethod[];
+      return (data || []) as PaymentMethod[];
     },
     enabled: !!user?.id,
   });

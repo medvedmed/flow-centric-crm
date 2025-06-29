@@ -53,7 +53,7 @@ export const PaymentMethodsManager = () => {
       if (!user?.id) return [];
       
       const { data, error } = await supabase
-        .from('payment_methods' as any)
+        .from('payment_methods')
         .select('*')
         .eq('salon_id', user.id)
         .order('is_default', { ascending: false })
@@ -63,7 +63,7 @@ export const PaymentMethodsManager = () => {
         console.error('Error fetching payment methods:', error);
         throw error;
       }
-      return data as PaymentMethod[];
+      return (data || []) as PaymentMethod[];
     },
     enabled: !!user?.id,
   });
@@ -74,7 +74,7 @@ export const PaymentMethodsManager = () => {
       if (!user?.id) throw new Error('No user');
       
       const { data: result, error } = await supabase
-        .from('payment_methods' as any)
+        .from('payment_methods')
         .insert([{
           salon_id: user.id,
           name: data.name,
@@ -104,7 +104,7 @@ export const PaymentMethodsManager = () => {
   const updatePaymentMethodMutation = useMutation({
     mutationFn: async ({ id, ...data }: Partial<PaymentMethod> & { id: string }) => {
       const { error } = await supabase
-        .from('payment_methods' as any)
+        .from('payment_methods')
         .update(data)
         .eq('id', id);
 
@@ -125,7 +125,7 @@ export const PaymentMethodsManager = () => {
   const deletePaymentMethodMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('payment_methods' as any)
+        .from('payment_methods')
         .delete()
         .eq('id', id);
 

@@ -39,10 +39,27 @@ export const useRealTimeUpdates = () => {
           queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
           queryClient.invalidateQueries({ queryKey: ['staff-performance'] });
           queryClient.invalidateQueries({ queryKey: ['enhanced-schedule-appointments'] });
-          // Invalidate retention queries when appointments change
           queryClient.invalidateQueries({ queryKey: ['retention-summary'] });
           queryClient.invalidateQueries({ queryKey: ['staff-retention-metrics'] });
           queryClient.invalidateQueries({ queryKey: ['client-retention-data'] });
+        }
+      )
+      .subscribe();
+
+    // Subscribe to appointment services changes
+    const appointmentServicesChannel = supabase
+      .channel('appointment-services-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointment_services'
+        },
+        (payload) => {
+          console.log('Appointment services change:', payload);
+          queryClient.invalidateQueries({ queryKey: ['appointment-services'] });
+          queryClient.invalidateQueries({ queryKey: ['appointments'] });
         }
       )
       .subscribe();
@@ -83,42 +100,61 @@ export const useRealTimeUpdates = () => {
       )
       .subscribe();
 
-    // Subscribe to staff performance changes
-    const staffPerformanceChannel = supabase
-      .channel('staff-performance-changes')
+    // Subscribe to payment methods changes
+    const paymentMethodsChannel = supabase
+      .channel('payment-methods-changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'staff_performance'
+          table: 'payment_methods'
         },
         (payload) => {
-          console.log('Staff performance change:', payload);
-          queryClient.invalidateQueries({ queryKey: ['staff-performance'] });
+          console.log('Payment methods change:', payload);
+          queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
         }
       )
       .subscribe();
 
-    // Subscribe to staff availability changes
-    const staffAvailabilityChannel = supabase
-      .channel('staff-availability-changes')
+    // Subscribe to financial transaction changes
+    const financeChannel = supabase
+      .channel('finance-changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'staff_availability'
+          table: 'financial_transactions'
         },
         (payload) => {
-          console.log('Staff availability change:', payload);
-          queryClient.invalidateQueries({ queryKey: ['staff-availability'] });
-          queryClient.invalidateQueries({ queryKey: ['availability'] });
+          console.log('Finance change:', payload);
+          queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+          queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+          queryClient.invalidateQueries({ queryKey: ['payment-method-stats'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
         }
       )
       .subscribe();
 
-    // Subscribe to reminder changes
+    // Subscribe to audit logs changes
+    const auditLogsChannel = supabase
+      .channel('audit-logs-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'audit_logs'
+        },
+        (payload) => {
+          console.log('Audit logs change:', payload);
+          queryClient.invalidateQueries({ queryKey: ['audit-logs'] });
+        }
+      )
+      .subscribe();
+
+    // Subscribe to reminders changes
     const remindersChannel = supabase
       .channel('reminders-changes')
       .on(
@@ -172,27 +208,6 @@ export const useRealTimeUpdates = () => {
       )
       .subscribe();
 
-    // Subscribe to financial transaction changes
-    const financeChannel = supabase
-      .channel('finance-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'financial_transactions'
-        },
-        (payload) => {
-          console.log('Finance change:', payload);
-          queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
-          queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
-          queryClient.invalidateQueries({ queryKey: ['income-categories'] });
-          queryClient.invalidateQueries({ queryKey: ['expense-categories'] });
-          queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-        }
-      )
-      .subscribe();
-
     // Subscribe to client retention analytics changes
     const retentionChannel = supabase
       .channel('retention-changes')
@@ -208,25 +223,6 @@ export const useRealTimeUpdates = () => {
           queryClient.invalidateQueries({ queryKey: ['retention-summary'] });
           queryClient.invalidateQueries({ queryKey: ['staff-retention-metrics'] });
           queryClient.invalidateQueries({ queryKey: ['client-retention-data'] });
-        }
-      )
-      .subscribe();
-
-    // Subscribe to appointment services changes
-    const appointmentServicesChannel = supabase
-      .channel('appointment-services-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'appointment_services'
-        },
-        (payload) => {
-          console.log('Appointment services change:', payload);
-          queryClient.invalidateQueries({ queryKey: ['appointment-services'] });
-          queryClient.invalidateQueries({ queryKey: ['appointments'] });
-          queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
         }
       )
       .subscribe();
@@ -252,16 +248,16 @@ export const useRealTimeUpdates = () => {
     return () => {
       supabase.removeChannel(servicesChannel);
       supabase.removeChannel(appointmentsChannel);
+      supabase.removeChannel(appointmentServicesChannel);
       supabase.removeChannel(clientsChannel);
       supabase.removeChannel(staffChannel);
-      supabase.removeChannel(staffPerformanceChannel);
-      supabase.removeChannel(staffAvailabilityChannel);
+      supabase.removeChannel(paymentMethodsChannel);
+      supabase.removeChannel(financeChannel);
+      supabase.removeChannel(auditLogsChannel);
       supabase.removeChannel(remindersChannel);
       supabase.removeChannel(analyticsChannel);
       supabase.removeChannel(inventoryChannel);
-      supabase.removeChannel(financeChannel);
       supabase.removeChannel(retentionChannel);
-      supabase.removeChannel(appointmentServicesChannel);
       supabase.removeChannel(clientPaymentsChannel);
     };
   }, [queryClient]);

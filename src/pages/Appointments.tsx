@@ -1,5 +1,7 @@
 
 import React, { useState } from 'react';
+const [showAddDialog, setShowAddDialog] = useState(false);
+
 import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Shield, Calendar } from 'lucide-react';
@@ -56,9 +58,6 @@ const Appointments = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50 flex flex-col">
       {/* Header */}
-      <Button onClick={() => setOpen(true)} className="bg-primary text-white rounded-xl px-4 py-2">
-  + Add Appointment
-</Button>
 
       <div className="bg-white/70 backdrop-blur-sm border-b border-violet-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
@@ -112,6 +111,14 @@ const Appointments = () => {
           </CardContent>
         </Card>
       </div>
+      <Button 
+  size="sm"
+  onClick={() => setShowAddDialog(true)} 
+  className="bg-green-600 hover:bg-green-700 text-white"
+>
+  + Add Appointment
+</Button>
+
 
       {/* Calendar Content */}
       <div className="flex-1 px-6 pb-6">
@@ -131,5 +138,6 @@ const Appointments = () => {
     </div>
   );
 };
+
 
 export default Appointments;

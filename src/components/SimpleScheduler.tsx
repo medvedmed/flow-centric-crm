@@ -6,7 +6,8 @@ import { Clock, User, DollarSign, Phone, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Appointment, Staff } from '@/services/types';
-import { AppointmentDetailsDialog } from '@/components/AppointmentDetailsDialog';
+import { AddAppointmentDialog } from '@/components/AddAppointmentDialog';
+
 
 interface SimpleSchedulerProps {
   staff: Staff[];

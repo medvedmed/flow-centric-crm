@@ -8,7 +8,8 @@ import { format } from 'date-fns';
 import { Appointment } from '@/services/types';
 import DragDropCalendar from '@/components/DragDropCalendar';
 import { AppointmentDetailsDialog } from '@/components/appointments/AppointmentDetailsDialog';
-import { AppointmentDetailsDialog } from '@/components/AppointmentDetailsDialog';
+import { AddAppointmentDialog } from '@/components/AddAppointmentDialog';
+
 
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());

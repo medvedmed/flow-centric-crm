@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Users, Phone, Plus, Clock, Loader2, RefreshCw } from "lucide-react";
 import { useDashboardStats } from "@/hooks/dashboard/useDashboardData";
 import { useNavigate } from "react-router-dom";
-import { AppointmentDetailsDialog } from '@/components/AppointmentDetailsDialog';
+import { AddAppointmentDialog } from '@/components/AddAppointmentDialog';
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 

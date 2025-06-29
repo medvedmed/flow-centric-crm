@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,198 +8,121 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import {
-  Plus,
-  Trash2,
-  Calendar,
-  Clock,
-  User,
-  DollarSign,
-  CreditCard,
-  Palette
-} from 'lucide-react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { Appointment } from '@/services/types';
 
-interface ExtraService {
-  id: string;
-  name: string;
-  price: number;
-  duration: number;
-}
-
-interface AppointmentDetailsDialogProps {
-  appointment: Appointment | null;
+interface AddAppointmentDialogProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> = ({
-  appointment,
-  isOpen,
-  onClose
-}) => {
+export const AddAppointmentDialog: React.FC<AddAppointmentDialogProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedAppointment, setEditedAppointment] = useState<Partial<Appointment>>({});
-  const [newService, setNewService] = useState({ name: '', price: 0, duration: 60 });
-  const [extraServices, setExtraServices] = useState<ExtraService[]>([]);
-  const [tipAmount, setTipAmount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState('');
 
-  useEffect(() => {
-    if (appointment) setEditedAppointment(appointment);
-  }, [appointment]);
+  const [form, setForm] = useState({
+    clientName: '',
+    clientPhone: '',
+    service: '',
+    date: '',
+    startTime: '',
+    endTime: '',
+    notes: '',
+  });
 
-  const updateAppointment = useMutation({
-    mutationFn: async (updates: Partial<Appointment>) => {
-      const { error } = await supabase.from('appointments').update(updates).eq('id', appointment?.id);
+  const createAppointment = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from('appointments').insert({
+        client_name: form.clientName,
+        client_phone: form.clientPhone,
+        service: form.service,
+        date: form.date,
+        start_time: form.startTime,
+        end_time: form.endTime,
+        notes: form.notes,
+        salon_id: user?.id,
+        status: 'Scheduled',
+        created_at: new Date().toISOString()
+      });
+
       if (error) throw error;
     },
     onSuccess: () => {
+      toast({ title: 'Success', description: 'Appointment added.' });
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
-      toast({ title: 'Updated', description: 'Appointment updated successfully.' });
-      setIsEditing(false);
+      onClose();
+      setForm({
+        clientName: '',
+        clientPhone: '',
+        service: '',
+        date: '',
+        startTime: '',
+        endTime: '',
+        notes: '',
+      });
     },
-    onError: () => toast({ title: 'Error', description: 'Failed to update appointment.', variant: 'destructive' })
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to add appointment.', variant: 'destructive' });
+    }
   });
 
-  const totalExtra = extraServices.reduce((sum, s) => sum + s.price, 0);
-  const total = (Number(appointment?.price || 0) + totalExtra + tipAmount).toFixed(2);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createAppointment.mutate();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <div className="flex justify-between items-center">
-            <DialogTitle>Appointment Details</DialogTitle>
-            <Button variant="ghost" onClick={() => setIsEditing(!isEditing)}>
-              {isEditing ? 'Cancel' : 'Edit'}
-            </Button>
-          </div>
+          <DialogTitle>Add Appointment</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label>Client Name</Label>
-            {isEditing ? (
-              <Input
-                value={editedAppointment.clientName || ''}
-                onChange={(e) => setEditedAppointment({ ...editedAppointment, clientName: e.target.value })}
-              />
-            ) : (
-              <p>{appointment?.clientName}</p>
-            )}
+            <Input name="clientName" value={form.clientName} onChange={handleChange} />
           </div>
-
           <div>
-            <Label>Phone</Label>
-            {isEditing ? (
-              <Input
-                value={editedAppointment.clientPhone || ''}
-                onChange={(e) => setEditedAppointment({ ...editedAppointment, clientPhone: e.target.value })}
-              />
-            ) : (
-              <p>{appointment?.clientPhone}</p>
-            )}
+            <Label>Client Phone</Label>
+            <Input name="clientPhone" value={form.clientPhone} onChange={handleChange} />
           </div>
-
           <div>
             <Label>Service</Label>
-            {isEditing ? (
-              <Input
-                value={editedAppointment.service || ''}
-                onChange={(e) => setEditedAppointment({ ...editedAppointment, service: e.target.value })}
-              />
-            ) : (
-              <p>{appointment?.service}</p>
-            )}
+            <Input name="service" value={form.service} onChange={handleChange} />
           </div>
-
           <div>
-            <Label>Status</Label>
-            {isEditing ? (
-              <Select
-                value={editedAppointment.status || ''}
-                onValueChange={(val) => setEditedAppointment({ ...editedAppointment, status: val as any })}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Scheduled">Scheduled</SelectItem>
-                  <SelectItem value="Confirmed">Confirmed</SelectItem>
-                  <SelectItem value="In Progress">In Progress</SelectItem>
-                  <SelectItem value="Completed">Completed</SelectItem>
-                  <SelectItem value="Cancelled">Cancelled</SelectItem>
-                  <SelectItem value="No Show">No Show</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <Badge>{appointment?.status}</Badge>
-            )}
+            <Label>Date</Label>
+            <Input type="date" name="date" value={form.date} onChange={handleChange} />
           </div>
-
+          <div>
+            <Label>Start Time</Label>
+            <Input type="time" name="startTime" value={form.startTime} onChange={handleChange} />
+          </div>
+          <div>
+            <Label>End Time</Label>
+            <Input type="time" name="endTime" value={form.endTime} onChange={handleChange} />
+          </div>
           <div>
             <Label>Notes</Label>
-            {isEditing ? (
-              <Textarea
-                value={editedAppointment.notes || ''}
-                onChange={(e) => setEditedAppointment({ ...editedAppointment, notes: e.target.value })}
-              />
-            ) : (
-              <p>{appointment?.notes || 'No notes'}</p>
-            )}
+            <Textarea name="notes" value={form.notes} onChange={handleChange} />
           </div>
 
-          {isEditing && (
-            <Button onClick={() => updateAppointment.mutate(editedAppointment)}>Save</Button>
-          )}
-
-          <Separator />
-
-          <div>
-            <Label>Tip</Label>
-            <Input
-              type="number"
-              value={tipAmount}
-              onChange={(e) => setTipAmount(Number(e.target.value))}
-              placeholder="$0.00"
-            />
+          <div className="flex justify-end">
+            <Button type="submit" disabled={createAppointment.isPending}>
+              {createAppointment.isPending ? 'Adding...' : 'Add Appointment'}
+            </Button>
           </div>
-
-          <div>
-            <Label>Payment Method</Label>
-            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose method" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="card">Card</SelectItem>
-                <SelectItem value="wallet">Wallet</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label>Total Amount</Label>
-            <p className="text-lg font-bold text-green-700">${total}</p>
-          </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

@@ -48,6 +48,15 @@ interface AppointmentHistory {
   staff_name?: string;
 }
 
+interface StaffDetails {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  specialties?: string[];
+  rating?: number;
+}
+
 export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps> = ({
   appointment,
   isOpen,
@@ -87,8 +96,7 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
       const { data, error } = await supabase
         .from('appointments')
         .select(`
-          id, date, service, price, status,
-          staff:staff_id (name)
+          id, date, service, price, status
         `)
         .eq('client_id', appointment.clientId)
         .eq('salon_id', user?.id)
@@ -97,10 +105,30 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
         .limit(5);
 
       if (error) throw error;
-      return data.map(apt => ({
-        ...apt,
-        staff_name: apt.staff?.name || 'Unknown'
-      })) as AppointmentHistory[];
+      
+      // Get staff names separately to avoid the relationship conflict
+      const appointmentsWithStaff = await Promise.all(
+        data.map(async (apt) => {
+          if (apt.staff_id) {
+            const { data: staffData } = await supabase
+              .from('staff')
+              .select('name')
+              .eq('id', apt.staff_id)
+              .single();
+            
+            return {
+              ...apt,
+              staff_name: staffData?.name || 'Unknown'
+            };
+          }
+          return {
+            ...apt,
+            staff_name: 'Unknown'
+          };
+        })
+      );
+
+      return appointmentsWithStaff as AppointmentHistory[];
     },
     enabled: !!appointment?.clientId && isOpen,
   });
@@ -112,12 +140,12 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
 
       const { data, error } = await supabase
         .from('staff')
-        .select('name, phone, email, specialties, rating')
+        .select('id, name, phone, email, specialties, rating')
         .eq('id', appointment.staffId)
         .single();
 
       if (error) throw error;
-      return data;
+      return data as StaffDetails;
     },
     enabled: !!appointment?.staffId && isOpen,
   });

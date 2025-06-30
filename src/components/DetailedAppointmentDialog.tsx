@@ -45,6 +45,7 @@ interface AppointmentHistory {
   service: string;
   price: number;
   status: string;
+  staff_id?: string;
   staff_name?: string;
 }
 
@@ -96,7 +97,7 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
       const { data, error } = await supabase
         .from('appointments')
         .select(`
-          id, date, service, price, status
+          id, date, service, price, status, staff_id
         `)
         .eq('client_id', appointment.clientId)
         .eq('salon_id', user?.id)

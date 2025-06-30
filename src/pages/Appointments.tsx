@@ -7,8 +7,10 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { Appointment } from '@/services/types';
 import DragDropCalendar from '@/components/DragDropCalendar';
-import { AppointmentDetailsDialog } from '@/components/appointments/AppointmentDetailsDialog';
+import { DetailedAppointmentDialog } from '@/components/DetailedAppointmentDialog';
 import { AddAppointmentDialog } from '@/components/AddAppointmentDialog';
+import { QuickPaymentDialog } from '@/components/QuickPaymentDialog';
+import { DailyActivityLog } from '@/components/DailyActivityLog';
 
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -103,6 +105,7 @@ const Appointments = () => {
               </Button>
             }
           />
+          <QuickPaymentDialog />
         </div>
       </div>
 
@@ -117,17 +120,21 @@ const Appointments = () => {
         </Card>
       </div>
 
-      {/* Calendar Content */}
-      <div className="flex-1 px-6 pb-6">
-        <Card className="h-full bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
-          <CardContent className="p-6 h-full">
+      {/* Main Content */}
+      <div className="flex-1 px-6 pb-6 space-y-6">
+        {/* Calendar */}
+        <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
+          <CardContent className="p-6">
             <DragDropCalendar onAppointmentClick={handleAppointmentClick} />
           </CardContent>
         </Card>
+
+        {/* Daily Activity Log */}
+        <DailyActivityLog selectedDate={selectedDate} />
       </div>
 
       {/* Enhanced Appointment Details Dialog */}
-      <AppointmentDetailsDialog
+      <DetailedAppointmentDialog
         appointment={selectedAppointment}
         isOpen={!!selectedAppointment}
         onClose={() => setSelectedAppointment(null)}

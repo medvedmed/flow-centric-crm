@@ -2,15 +2,21 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Users, DollarSign, TrendingUp, Clock, Star, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar, Users, DollarSign, TrendingUp, Clock, Star, RefreshCw, Plus, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useDashboardStats } from '@/hooks/dashboard/useDashboardData';
+import { AddAppointmentDialog } from '@/components/AddAppointmentDialog';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { userRole } = usePermissions();
   const { data: dashboardStats, isLoading } = useDashboardStats();
+
+  const handleLogout = async () => {
+    await signOut();
+  };
 
   if (isLoading) {
     return (
@@ -54,13 +60,6 @@ const Dashboard = () => {
     },
   ];
 
-  const recentActivity = [
-    { type: 'appointment', client: 'Sarah Johnson', service: 'Hair Cut & Style', time: '2 hours ago', status: 'completed' },
-    { type: 'payment', client: 'Mike Chen', amount: '$85', time: '3 hours ago', status: 'paid' },
-    { type: 'booking', client: 'Emma Wilson', service: 'Manicure', time: '5 hours ago', status: 'confirmed' },
-    { type: 'cancellation', client: 'John Doe', service: 'Massage', time: '1 day ago', status: 'cancelled' },
-  ];
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50">
       {/* Header Section */}
@@ -78,9 +77,27 @@ const Dashboard = () => {
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-violet-600" />
-              <span className="text-gray-600">{new Date().toLocaleDateString()}</span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-violet-600" />
+                <span className="text-gray-600">{new Date().toLocaleDateString()}</span>
+              </div>
+              <AddAppointmentDialog 
+                trigger={
+                  <Button className="gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
+                    <Plus className="w-4 h-4" />
+                    New Appointment
+                  </Button>
+                }
+              />
+              <Button 
+                variant="outline" 
+                onClick={handleLogout}
+                className="gap-2 border-red-200 text-red-600 hover:bg-red-50"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </Button>
             </div>
           </div>
         </div>
@@ -191,18 +208,22 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button className="p-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl hover:from-violet-600 hover:to-purple-700 transition-all duration-300 flex items-center justify-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Book New Appointment
-              </button>
-              <button className="p-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center gap-2">
+              <AddAppointmentDialog 
+                trigger={
+                  <Button className="p-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl hover:from-violet-600 hover:to-purple-700 transition-all duration-300 flex items-center justify-center gap-2 w-full h-auto">
+                    <Calendar className="w-5 h-5" />
+                    Book New Appointment
+                  </Button>
+                }
+              />
+              <Button className="p-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center gap-2">
                 <Users className="w-5 h-5" />
                 Add New Client
-              </button>
-              <button className="p-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 flex items-center justify-center gap-2">
+              </Button>
+              <Button className="p-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 flex items-center justify-center gap-2">
                 <DollarSign className="w-5 h-5" />
                 Record Payment
-              </button>
+              </Button>
             </div>
           </CardContent>
         </Card>

@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { permissionApi, PermissionArea } from '@/services/permissionApi';
 import { analyticsApi } from '@/services/api/analyticsApi';
@@ -51,10 +52,31 @@ export const usePermissions = () => {
         'reports': { view: false, create: false, edit: false, delete: false },
         'settings': { view: false, create: false, edit: false, delete: false },
         'schedule_management': { view: false, create: false, edit: false, delete: false },
-        'time_off_requests': { view: false, create: false, edit: false, delete: false }
+        'time_off_requests': { view: false, create: false, edit: false, delete: false },
+        'payments': { view: false, create: false, edit: false, delete: false }
       };
       
       const areaPermissions = staffPermissions[area as keyof typeof staffPermissions];
+      return areaPermissions ? areaPermissions[action] : false;
+    }
+
+    // Receptionist permissions
+    if (permissionsData.role === 'receptionist') {
+      const receptionistPermissions = {
+        'dashboard': { view: true, create: false, edit: false, delete: false },
+        'appointments': { view: true, create: true, edit: true, delete: false },
+        'clients': { view: true, create: true, edit: true, delete: false },
+        'services': { view: true, create: false, edit: false, delete: false },
+        'staff_management': { view: true, create: false, edit: false, delete: false },
+        'inventory': { view: false, create: false, edit: false, delete: false },
+        'reports': { view: false, create: false, edit: false, delete: false },
+        'settings': { view: false, create: false, edit: false, delete: false },
+        'schedule_management': { view: true, create: false, edit: false, delete: false },
+        'time_off_requests': { view: false, create: false, edit: false, delete: false },
+        'payments': { view: true, create: true, edit: false, delete: false }
+      };
+      
+      const areaPermissions = receptionistPermissions[area as keyof typeof receptionistPermissions];
       return areaPermissions ? areaPermissions[action] : false;
     }
     

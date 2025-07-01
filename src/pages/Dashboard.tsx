@@ -6,13 +6,76 @@ import { Button } from '@/components/ui/button';
 import { Calendar, Users, DollarSign, TrendingUp, Clock, Star, RefreshCw, Plus, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useDashboardStats } from '@/hooks/dashboard/useDashboardData';
 import { AddAppointmentDialog } from '@/components/AddAppointmentDialog';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const { userRole } = usePermissions();
-  const { data: dashboardStats, isLoading } = useDashboardStats();
+
+  // Fetch real dashboard data
+  const { data: dashboardStats, isLoading } = useQuery({
+    queryKey: ['dashboard-stats', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+
+      const today = new Date().toISOString().split('T')[0];
+      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+
+      // Get today's appointments
+      const { data: todayAppointments } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('salon_id', user.id)
+        .eq('date', today);
+
+      // Get total clients
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('salon_id', user.id);
+
+      // Get monthly revenue
+      const { data: monthlyTransactions } = await supabase
+        .from('financial_transactions')
+        .select('amount')
+        .eq('salon_id', user.id)
+        .eq('transaction_type', 'income')
+        .gte('transaction_date', monthStart);
+
+      // Get upcoming appointments for today
+      const { data: upcomingAppointments } = await supabase
+        .from('appointments')
+        .select(`
+          id, client_name, service, start_time, staff_id,
+          staff:staff(name)
+        `)
+        .eq('salon_id', user.id)
+        .eq('date', today)
+        .eq('status', 'Scheduled')
+        .order('start_time');
+
+      const monthlyRevenue = monthlyTransactions?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+      const completedToday = todayAppointments?.filter(a => a.status === 'Completed').length || 0;
+
+      return {
+        todayAppointments: todayAppointments?.length || 0,
+        totalClients: clients?.length || 0,
+        monthlyRevenue,
+        checkIns: completedToday,
+        upcomingAppointments: upcomingAppointments?.map(apt => ({
+          client: apt.client_name,
+          service: apt.service,
+          time: apt.start_time,
+          staff: apt.staff?.name || 'Unassigned'
+        })) || []
+      };
+    },
+    enabled: !!user?.id,
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
 
   const handleLogout = async () => {
     await signOut();
@@ -35,28 +98,28 @@ const Dashboard = () => {
       value: dashboardStats?.todayAppointments?.toString() || '0', 
       icon: Calendar, 
       color: 'bg-gradient-to-r from-violet-500 to-purple-600', 
-      change: dashboardStats?.appointmentGrowth ? `${dashboardStats.appointmentGrowth > 0 ? '+' : ''}${dashboardStats.appointmentGrowth.toFixed(1)}%` : '0%' 
+      change: '+0%'
     },
     { 
       title: 'Total Clients', 
       value: dashboardStats?.totalClients?.toString() || '0', 
       icon: Users, 
       color: 'bg-gradient-to-r from-blue-500 to-indigo-600', 
-      change: dashboardStats?.clientGrowth ? `${dashboardStats.clientGrowth > 0 ? '+' : ''}${dashboardStats.clientGrowth.toFixed(1)}%` : '0%' 
+      change: '+0%'
     },
     { 
       title: 'Monthly Revenue', 
       value: `$${dashboardStats?.monthlyRevenue?.toLocaleString() || '0'}`, 
       icon: DollarSign, 
       color: 'bg-gradient-to-r from-green-500 to-emerald-600', 
-      change: dashboardStats?.revenueGrowth ? `${dashboardStats.revenueGrowth > 0 ? '+' : ''}${dashboardStats.revenueGrowth.toFixed(1)}%` : '0%' 
+      change: '+0%'
     },
     { 
       title: 'Check-ins Today', 
       value: dashboardStats?.checkIns?.toString() || '0', 
       icon: TrendingUp, 
       color: 'bg-gradient-to-r from-orange-500 to-red-600', 
-      change: '+100%' 
+      change: '+0%'
     },
   ];
 
@@ -80,7 +143,7 @@ const Dashboard = () => {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-violet-600" />
-                <span className="text-gray-600">{new Date().toLocaleDateString()}</span>
+                <span className="text-gray-600">{format(new Date(), 'PPP')}</span>
               </div>
               <AddAppointmentDialog 
                 trigger={
@@ -164,69 +227,36 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Waiting List */}
+          {/* Quick Actions */}
           <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-violet-600" />
-                Waiting List ({dashboardStats?.waitingClients || 0})
+                <TrendingUp className="w-5 h-5 text-violet-600" />
+                Quick Actions
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {dashboardStats?.waitingList?.length ? (
-                dashboardStats.waitingList.map((client, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-white/50 rounded-lg border border-violet-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full bg-orange-500" />
-                      <div>
-                        <p className="font-medium text-gray-900">{client.name}</p>
-                        <p className="text-sm text-gray-600">{client.service}</p>
-                      </div>
-                    </div>
-                    <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                      {client.waitTime}
-                    </Badge>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Clock className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p>No clients waiting</p>
-                </div>
-              )}
+            <CardContent>
+              <div className="grid grid-cols-1 gap-4">
+                <AddAppointmentDialog 
+                  trigger={
+                    <Button className="p-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl hover:from-violet-600 hover:to-purple-700 transition-all duration-300 flex items-center justify-center gap-2 w-full h-auto">
+                      <Calendar className="w-5 h-5" />
+                      Book New Appointment
+                    </Button>
+                  }
+                />
+                <Button className="p-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center gap-2">
+                  <Users className="w-5 h-5" />
+                  Add New Client
+                </Button>
+                <Button className="p-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 flex items-center justify-center gap-2">
+                  <DollarSign className="w-5 h-5" />
+                  Record Payment
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
-
-        {/* Quick Actions */}
-        <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-violet-600" />
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <AddAppointmentDialog 
-                trigger={
-                  <Button className="p-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl hover:from-violet-600 hover:to-purple-700 transition-all duration-300 flex items-center justify-center gap-2 w-full h-auto">
-                    <Calendar className="w-5 h-5" />
-                    Book New Appointment
-                  </Button>
-                }
-              />
-              <Button className="p-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center gap-2">
-                <Users className="w-5 h-5" />
-                Add New Client
-              </Button>
-              <Button className="p-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 flex items-center justify-center gap-2">
-                <DollarSign className="w-5 h-5" />
-                Record Payment
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

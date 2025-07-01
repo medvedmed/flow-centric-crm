@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -45,12 +44,12 @@ const Dashboard = () => {
         .eq('transaction_type', 'income')
         .gte('transaction_date', monthStart);
 
-      // Get upcoming appointments for today
+      // Get upcoming appointments for today - fix the foreign key relationship
       const { data: upcomingAppointments } = await supabase
         .from('appointments')
         .select(`
           id, client_name, service, start_time, staff_id,
-          staff:staff(name)
+          staff!staff_id(name)
         `)
         .eq('salon_id', user.id)
         .eq('date', today)

@@ -191,6 +191,14 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
     'partial': 'bg-yellow-100 text-yellow-800'
   };
 
+  const handleEditClick = () => {
+    setShowEditDialog(true);
+  };
+
+  const handleEditClose = () => {
+    setShowEditDialog(false);
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -206,7 +214,7 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowEditDialog(true)}
+                    onClick={handleEditClick}
                   >
                     <Edit className="w-4 h-4 mr-1" />
                     Edit
@@ -439,7 +447,7 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
       <EditAppointmentDialog
         appointment={appointment}
         isOpen={showEditDialog}
-        onClose={() => setShowEditDialog(false)}
+        onClose={handleEditClose}
       />
     </>
   );

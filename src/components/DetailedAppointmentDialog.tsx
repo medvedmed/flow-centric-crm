@@ -14,7 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Appointment } from '@/services/types';
-import { format } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { EditAppointmentDialog } from './EditAppointmentDialog';
 import { usePermissions } from '@/hooks/usePermissions';
 
@@ -58,6 +58,20 @@ interface StaffDetails {
   rating?: number;
 }
 
+// Helper function to safely format dates
+const formatDate = (dateString: string | undefined | null, formatString: string = 'EEEE, MMMM d, yyyy') => {
+  if (!dateString) return 'N/A';
+  
+  try {
+    const date = typeof dateString === 'string' ? parseISO(dateString) : new Date(dateString);
+    if (!isValid(date)) return 'Invalid Date';
+    return format(date, formatString);
+  } catch (error) {
+    console.error('Date formatting error:', error);
+    return 'Invalid Date';
+  }
+};
+
 export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps> = ({
   appointment,
   isOpen,
@@ -83,7 +97,10 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
         .eq('id', appointment.clientId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching client details:', error);
+        return null;
+      }
       return data as ClientDetails;
     },
     enabled: !!appointment?.clientId && isOpen,
@@ -105,7 +122,10 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
         .order('date', { ascending: false })
         .limit(5);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching client history:', error);
+        return [];
+      }
       
       // Get staff names separately to avoid the relationship conflict
       const appointmentsWithStaff = await Promise.all(
@@ -124,7 +144,7 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
           }
           return {
             ...apt,
-            staff_name: 'Unknown'
+            staff_name: 'Unassigned'
           };
         })
       );
@@ -145,7 +165,10 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
         .eq('id', appointment.staffId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching staff details:', error);
+        return null;
+      }
       return data as StaffDetails;
     },
     enabled: !!appointment?.staffId && isOpen,
@@ -217,7 +240,7 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-600">Date</p>
-                    <p className="font-medium">{format(new Date(appointment.date), 'EEEE, MMMM d, yyyy')}</p>
+                    <p className="font-medium">{formatDate(appointment.date)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Time</p>
@@ -340,18 +363,18 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm text-gray-600">Total Visits</p>
-                          <p className="font-medium">{clientDetails.visits}</p>
+                          <p className="font-medium">{clientDetails.visits || 0}</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Total Spent</p>
-                          <p className="font-medium text-green-600">${clientDetails.total_spent}</p>
+                          <p className="font-medium text-green-600">${clientDetails.total_spent || 0}</p>
                         </div>
                       </div>
 
                       <div>
                         <p className="text-sm text-gray-600">Client Status</p>
                         <Badge variant="secondary" className="capitalize">
-                          {clientDetails.status}
+                          {clientDetails.status || 'New'}
                         </Badge>
                       </div>
 
@@ -389,7 +412,7 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
                           <div>
                             <p className="font-medium text-sm">{visit.service}</p>
                             <p className="text-xs text-gray-600">
-                              {format(new Date(visit.date), 'MMM d, yyyy')} • {visit.staff_name}
+                              {formatDate(visit.date, 'MMM d, yyyy')} • {visit.staff_name}
                             </p>
                           </div>
                           <div className="text-right">

@@ -12,7 +12,7 @@ import { Plus, DollarSign, TrendingUp, TrendingDown, Calendar, Filter, Download,
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { financeApi } from '@/services/api/financeApi';
-import { useRealTimeUpdates } from '@/hooks/useRealTimeUpdates';
+
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
@@ -29,8 +29,6 @@ const EnhancedFinance = () => {
 
   console.log('EnhancedFinance component rendering');
 
-  // Enable real-time updates
-  useRealTimeUpdates();
 
   const { data: transactionsData, isLoading: transactionsLoading, error: transactionsError } = useQuery({
     queryKey: ['financial-transactions', dateRange.start, dateRange.end, transactionType, selectedCategory, currentPage],

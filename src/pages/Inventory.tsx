@@ -12,7 +12,7 @@ import { Plus, Package, AlertTriangle, Search, Filter } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { inventoryApi } from '@/services/api/inventoryApi';
-import { useRealTimeUpdates } from '@/hooks/useRealTimeUpdates';
+
 
 const Inventory = () => {
   const { toast } = useToast();
@@ -24,8 +24,6 @@ const Inventory = () => {
 
   console.log('Inventory component rendering');
 
-  // Enable real-time updates
-  useRealTimeUpdates();
 
   const { data: items = [], isLoading, error } = useQuery({
     queryKey: ['inventory-items', selectedCategory, showLowStock],

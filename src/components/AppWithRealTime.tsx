@@ -3,6 +3,7 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useStaffAuth } from '@/hooks/useStaffAuth';
+import { useRealTimeUpdates } from '@/hooks/useRealTimeUpdates';
 import { AppSidebar } from '@/components/AppSidebar';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Loader2 } from 'lucide-react';
@@ -16,8 +17,11 @@ const AppWithRealTime = ({ children }: AppWithRealTimeProps) => {
   const { user, isLoading: authLoading } = useAuth();
   const { isStaff, isLoading: staffLoading } = useStaffAuth();
   
-  const isLoading = authLoading || staffLoading;
+  // Enable real-time updates globally when authenticated
   const isAuthenticated = user || isStaff;
+  useRealTimeUpdates();
+  
+  const isLoading = authLoading || staffLoading;
   
   // Pages that should not show the sidebar (login, index, etc.)
   const noSidebarPages = ['/', '/auth', '/invite-accept'];

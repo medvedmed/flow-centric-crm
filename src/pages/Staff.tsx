@@ -3,43 +3,66 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { UserCog, Search, Plus, Filter, Users, TrendingUp, Star, Calendar } from 'lucide-react';
+import { UserCog, Search, Plus, Filter, Users, TrendingUp, Star, Calendar, Loader2 } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useStaff } from '@/hooks/staff/useStaffHooks';
+import { useToast } from '@/hooks/use-toast';
+import AddStaffDialog from '@/components/AddStaffDialog';
 
 const Staff = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const { hasPermissionSync } = usePermissions();
+  const { toast } = useToast();
 
   const canCreateStaff = hasPermissionSync('staff_management', 'create');
 
-  // Mock data for now
-  const staff = [
-    { id: 1, name: 'Alice Johnson', role: 'Senior Stylist', email: 'alice@salon.com', phone: '+1234567890', status: 'Active', rating: 4.8, appointments: 45, commission: '45%' },
-    { id: 2, name: 'Bob Smith', role: 'Hair Colorist', email: 'bob@salon.com', phone: '+1234567891', status: 'Active', rating: 4.9, appointments: 38, commission: '40%' },
-    { id: 3, name: 'Carol Davis', role: 'Nail Technician', email: 'carol@salon.com', phone: '+1234567892', status: 'Part-time', rating: 4.7, appointments: 22, commission: '35%' },
-  ];
+  // Get real staff data from database
+  const { data: staff = [], isLoading, error } = useStaff();
+
+  // Calculate real stats from data
+  const totalStaff = staff.length;
+  const activeStaff = staff.filter(s => s.status === 'active').length;
+  const avgRating = staff.length > 0 ? 
+    (staff.reduce((sum, s) => sum + (s.rating || 0), 0) / staff.length).toFixed(1) : '0.0';
+  const topPerformers = staff.filter(s => (s.rating || 0) >= 4.5).length;
 
   const stats = [
-    { title: 'Total Staff', value: '12', icon: Users, color: 'bg-gradient-to-r from-blue-500 to-indigo-600' },
-    { title: 'Active Today', value: '8', icon: Calendar, color: 'bg-gradient-to-r from-green-500 to-emerald-600' },
-    { title: 'Top Performers', value: '3', icon: Star, color: 'bg-gradient-to-r from-purple-500 to-violet-600' },
-    { title: 'Avg Rating', value: '4.8', icon: TrendingUp, color: 'bg-gradient-to-r from-orange-500 to-red-600' },
+    { title: 'Total Staff', value: totalStaff.toString(), icon: Users, color: 'bg-gradient-to-r from-blue-500 to-indigo-600' },
+    { title: 'Active Staff', value: activeStaff.toString(), icon: Calendar, color: 'bg-gradient-to-r from-green-500 to-emerald-600' },
+    { title: 'Top Performers', value: topPerformers.toString(), icon: Star, color: 'bg-gradient-to-r from-purple-500 to-violet-600' },
+    { title: 'Avg Rating', value: avgRating, icon: TrendingUp, color: 'bg-gradient-to-r from-orange-500 to-red-600' },
   ];
 
+  // Filter staff based on search
+  const filteredStaff = staff.filter(member =>
+    member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.specialties?.some(s => s.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  if (error) {
+    toast({
+      title: "Error",
+      description: "Failed to load staff data. Please try again.",
+      variant: "destructive",
+    });
+  }
+
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Active': return 'bg-green-100 text-green-800';
-      case 'Part-time': return 'bg-blue-100 text-blue-800';
-      case 'Inactive': return 'bg-red-100 text-red-800';
+    switch (status?.toLowerCase()) {
+      case 'active': return 'bg-green-100 text-green-800';
+      case 'part-time': return 'bg-blue-100 text-blue-800';
+      case 'inactive': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'Senior Stylist': return 'bg-purple-100 text-purple-800';
-      case 'Hair Colorist': return 'bg-pink-100 text-pink-800';
-      case 'Nail Technician': return 'bg-indigo-100 text-indigo-800';
+  const getSpecialtyColor = (specialty: string) => {
+    switch (specialty?.toLowerCase()) {
+      case 'hair styling': return 'bg-purple-100 text-purple-800';
+      case 'hair coloring': return 'bg-pink-100 text-pink-800';
+      case 'nail care': return 'bg-indigo-100 text-indigo-800';
+      case 'makeup': return 'bg-orange-100 text-orange-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -57,10 +80,12 @@ const Staff = () => {
               <p className="text-gray-600 mt-2">Manage your salon's team and performance</p>
             </div>
             {canCreateStaff && (
-              <Button className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Staff Member
-              </Button>
+              <div className="flex items-center">
+                {/* AddStaffDialog contains its own trigger button */}
+                <div className="[&>*]:!bg-gradient-to-r [&>*]:!from-violet-500 [&>*]:!to-purple-600 [&>*]:!hover:from-violet-600 [&>*]:!hover:to-purple-700">
+                  <AddStaffDialog />
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -116,49 +141,71 @@ const Staff = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="space-y-0">
-              {staff.map((member) => (
-                <div key={member.id} className="p-6 border-b border-violet-100 last:border-b-0 hover:bg-violet-50/50 transition-colors cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                        {member.name.split(' ').map(n => n[0]).join('')}
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{member.name}</h3>
-                        <Badge className={getRoleColor(member.role)} variant="secondary">
-                          {member.role}
-                        </Badge>
-                        <p className="text-gray-600 text-sm mt-1">{member.email}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-6">
-                      <div className="text-center">
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                          <span className="font-bold text-gray-900">{member.rating}</span>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
+                <span className="ml-2 text-gray-600">Loading staff...</span>
+              </div>
+            ) : filteredStaff.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <UserCog className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium mb-2">No staff members found</p>
+                <p className="text-sm">
+                  {staff.length === 0 
+                    ? "Add your first staff member to get started"
+                    : "Try adjusting your search criteria"
+                  }
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-0">
+                {filteredStaff.map((member) => (
+                  <div key={member.id} className="p-6 border-b border-violet-100 last:border-b-0 hover:bg-violet-50/50 transition-colors cursor-pointer">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                          {member.name.split(' ').map(n => n[0]).join('')}
                         </div>
-                        <p className="text-xs text-gray-500">Rating</p>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{member.name}</h3>
+                          <div className="flex gap-1 mt-1">
+                            {member.specialties?.slice(0, 2).map((specialty, idx) => (
+                              <Badge key={idx} className={getSpecialtyColor(specialty)} variant="secondary">
+                                {specialty}
+                              </Badge>
+                            ))}
+                          </div>
+                          <p className="text-gray-600 text-sm mt-1">{member.email}</p>
+                        </div>
                       </div>
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-blue-600">{member.appointments}</p>
-                        <p className="text-xs text-gray-500">This Month</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-lg font-bold text-green-600">{member.commission}</p>
-                        <p className="text-xs text-gray-500">Commission</p>
-                      </div>
-                      <div>
-                        <Badge className={getStatusColor(member.status)}>
-                          {member.status}
-                        </Badge>
+                      
+                      <div className="flex items-center gap-6">
+                        <div className="text-center">
+                          <div className="flex items-center gap-1">
+                            <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                            <span className="font-bold text-gray-900">{member.rating || 'N/A'}</span>
+                          </div>
+                          <p className="text-xs text-gray-500">Rating</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-green-600">{member.commissionRate || 0}%</p>
+                          <p className="text-xs text-gray-500">Commission</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-blue-600">${member.hourlyRate || 0}/hr</p>
+                          <p className="text-xs text-gray-500">Hourly Rate</p>
+                        </div>
+                        <div>
+                          <Badge className={getStatusColor(member.status || 'inactive')}>
+                            {member.status || 'inactive'}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

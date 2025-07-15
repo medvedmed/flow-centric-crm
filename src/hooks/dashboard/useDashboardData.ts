@@ -161,11 +161,14 @@ export const useDashboardStats = () => {
         const clientGrowth = lastMonthClientsCount ? ((totalClientsCount || 0) - lastMonthClientsCount) / lastMonthClientsCount * 100 : 0;
         const revenueGrowth = lastMonthRevenue ? (currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue * 100 : 0;
 
-        // Mock waiting list for now (you can replace with real data later)
-        const waitingList = [
-          { name: 'Lisa Brown', service: 'Walk-in Cut', waitTime: '15 min' },
-          { name: 'James Wilson', service: 'Quick Trim', waitTime: '8 min' },
-        ];
+        // Real waiting list based on appointments with status 'waiting' or similar
+        const waitingList = todayAppts
+          ?.filter(apt => apt.status === 'waiting' || apt.status === 'checked-in')
+          ?.map(apt => ({
+            name: apt.client_name,
+            service: apt.service,
+            waitTime: 'Waiting' // You can calculate actual wait time based on appointment time vs current time
+          })) || [];
 
         return {
           todayAppointments: todayCount || 0,

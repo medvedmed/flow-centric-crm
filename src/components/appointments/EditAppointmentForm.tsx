@@ -42,10 +42,10 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [extraServices, setExtraServices] = useState<ExtraService[]>([]);
-  const [paymentStatus, setPaymentStatus] = useState<'paid' | 'unpaid' | 'partial'>(appointment?.paymentStatus || 'unpaid');
-  const [paymentMethod, setPaymentMethod] = useState(appointment?.paymentMethod || 'cash');
+  const [paymentStatus, setPaymentStatus] = useState<'paid' | 'unpaid' | 'partial'>('unpaid');
+  const [paymentMethod, setPaymentMethod] = useState('cash');
   const [basePrice, setBasePrice] = useState(appointment?.price || 0);
-  const [appointmentColor, setAppointmentColor] = useState(appointment?.color || '#007bff');
+  const [appointmentColor, setAppointmentColor] = useState('#007bff');
 
   const { data: services = [] } = useQuery({
     queryKey: ['services-for-appointment'],
@@ -104,10 +104,22 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   useEffect(() => {
     if (appointment) {
       setExtraServices(existingExtraServices);
-      setPaymentStatus(appointment.paymentStatus || 'unpaid');
-      setPaymentMethod(appointment.paymentMethod || 'cash');
+      setPaymentStatus(
+        appointment.paymentStatus && appointment.paymentStatus.trim() !== '' 
+          ? appointment.paymentStatus 
+          : 'unpaid'
+      );
+      setPaymentMethod(
+        appointment.paymentMethod && appointment.paymentMethod.trim() !== '' 
+          ? appointment.paymentMethod 
+          : 'cash'
+      );
       setBasePrice(appointment.price || 0);
-      setAppointmentColor(appointment.color || '#007bff');
+      setAppointmentColor(
+        appointment.color && appointment.color.trim() !== '' 
+          ? appointment.color 
+          : '#007bff'
+      );
     }
   }, [appointment, existingExtraServices]);
 

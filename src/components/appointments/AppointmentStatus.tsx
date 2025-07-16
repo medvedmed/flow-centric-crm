@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface AppointmentStatusProps {
-  status: string;
+  status?: string;
   paymentStatus: 'paid' | 'unpaid' | 'partial';
   paymentMethod: string;
   appointmentColor: string;

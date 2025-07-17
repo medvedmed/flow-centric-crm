@@ -9,7 +9,11 @@ import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCreateClient } from '@/hooks/clients/useClientHooks';
 
-export const AddClientDialog = () => {
+interface AddClientDialogProps {
+  trigger?: React.ReactNode;
+}
+
+export const AddClientDialog: React.FC<AddClientDialogProps> = ({ trigger }) => {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -59,10 +63,12 @@ export const AddClientDialog = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Add Client
-        </Button>
+        {trigger || (
+          <Button className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Add Client
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

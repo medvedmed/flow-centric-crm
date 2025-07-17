@@ -13,7 +13,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 
-export const QuickPaymentDialog = () => {
+interface QuickPaymentDialogProps {
+  trigger?: React.ReactNode;
+}
+
+export const QuickPaymentDialog: React.FC<QuickPaymentDialogProps> = ({ trigger }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -172,10 +176,12 @@ export const QuickPaymentDialog = () => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700">
-          <DollarSign className="w-4 h-4" />
-          Quick Payment
-        </Button>
+        {trigger || (
+          <Button className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700">
+            <DollarSign className="w-4 h-4" />
+            Quick Payment
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>

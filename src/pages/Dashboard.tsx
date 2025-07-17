@@ -6,6 +6,8 @@ import { Calendar, Users, DollarSign, TrendingUp, Clock, Star, RefreshCw, Plus, 
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { AddAppointmentDialog } from '@/components/AddAppointmentDialog';
+import { AddClientDialog } from '@/components/AddClientDialog';
+import { QuickPaymentDialog } from '@/components/QuickPaymentDialog';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -244,14 +246,22 @@ const Dashboard = () => {
                     </Button>
                   }
                 />
-                <Button className="p-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center gap-2">
-                  <Users className="w-5 h-5" />
-                  Add New Client
-                </Button>
-                <Button className="p-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 flex items-center justify-center gap-2">
-                  <DollarSign className="w-5 h-5" />
-                  Record Payment
-                </Button>
+                <AddClientDialog 
+                  trigger={
+                    <Button className="p-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center gap-2 w-full h-auto">
+                      <Users className="w-5 h-5" />
+                      Add New Client
+                    </Button>
+                  }
+                />
+                <QuickPaymentDialog 
+                  trigger={
+                    <Button className="p-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 flex items-center justify-center gap-2 w-full h-auto">
+                      <DollarSign className="w-5 h-5" />
+                      Record Payment
+                    </Button>
+                  }
+                />
               </div>
             </CardContent>
           </Card>

@@ -30,7 +30,7 @@ interface ExtraService {
 }
 
 interface EditAppointmentFormProps {
-  appointment: Appointment;
+  appointment: Appointment | any; // Allow for database snake_case properties
   onClose: () => void;
 }
 
@@ -105,13 +105,13 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
     if (appointment) {
       setExtraServices(existingExtraServices);
       setPaymentStatus(
-        appointment.paymentStatus && appointment.paymentStatus.trim() !== '' 
-          ? appointment.paymentStatus 
+        (appointment.payment_status || appointment.paymentStatus) && (appointment.payment_status || appointment.paymentStatus).trim() !== '' 
+          ? (appointment.payment_status || appointment.paymentStatus) as 'paid' | 'unpaid' | 'partial'
           : 'unpaid'
       );
       setPaymentMethod(
-        appointment.paymentMethod && appointment.paymentMethod.trim() !== '' 
-          ? appointment.paymentMethod 
+        (appointment.payment_method || appointment.paymentMethod) && (appointment.payment_method || appointment.paymentMethod).trim() !== '' 
+          ? (appointment.payment_method || appointment.paymentMethod)
           : 'cash'
       );
       setBasePrice(appointment.price || 0);
@@ -174,7 +174,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
         await supabase.from('appointment_services').delete().eq('appointment_id', appointment?.id);
       }
 
-      if (paymentStatus === 'paid' && appointment?.paymentStatus !== 'paid') {
+      if (paymentStatus === 'paid' && (appointment?.payment_status !== 'paid' && appointment?.paymentStatus !== 'paid')) {
         await supabase.from('financial_transactions').insert({
           salon_id: user?.id,
           transaction_type: 'income',
@@ -245,18 +245,18 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <AppointmentBasicInfo
-        clientName={appointment.clientName}
-        clientPhone={appointment.clientPhone || ''}
+        clientName={appointment.client_name || appointment.clientName}
+        clientPhone={appointment.client_phone || appointment.clientPhone || ''}
         service={appointment.service}
-        staffId={appointment.staffId || ''}
+        staffId={appointment.staff_id || appointment.staffId || ''}
         services={services}
         staff={staff}
       />
 
       <AppointmentDateTime
         date={appointment.date}
-        startTime={appointment.startTime}
-        endTime={appointment.endTime}
+        startTime={appointment.start_time || appointment.startTime}
+        endTime={appointment.end_time || appointment.endTime}
       />
 
       <AppointmentPricing

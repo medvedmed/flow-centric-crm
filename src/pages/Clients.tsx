@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Users, Search, Plus, Filter, UserPlus, Star } from 'lucide-react';
+import { Users, Search, Plus, Filter, UserPlus, Star, Download } from 'lucide-react';
+import { AddClientDialog } from '@/components/AddClientDialog';
+import { ClientImportDialog } from '@/components/ClientImportDialog';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -125,12 +127,43 @@ const Clients = () => {
             </h1>
             <p className="text-gray-600 mt-2">Manage your salon's client relationships and history</p>
           </div>
-          {canCreateClients && (
-            <Button className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white">
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Client
+          <div className="flex gap-2">
+            <ClientImportDialog />
+            <Button 
+              variant="outline" 
+              className="gap-2"
+              onClick={() => {
+                const csvContent = [
+                  ['Name', 'Email', 'Phone', 'Status', 'Total Spent', 'Visits', 'Notes'],
+                  ...clients.map(client => [
+                    client.name,
+                    client.email,
+                    client.phone || '',
+                    client.status,
+                    client.total_spent || 0,
+                    client.visits || 0,
+                    client.notes || ''
+                  ])
+                ].map(row => row.join(',')).join('\n');
+                
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `clients_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+              }}
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
             </Button>
-          )}
+            {canCreateClients && (
+              <AddClientDialog />
+            )}
+          </div>
         </div>
       </div>
 

@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointment_products: {
+        Row: {
+          appointment_id: string
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+          total_price: number | null
+          unit_price: number
+        }
+        Insert: {
+          appointment_id: string
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity?: number
+          total_price?: number | null
+          unit_price?: number
+        }
+        Update: {
+          appointment_id?: string
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          total_price?: number | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_products_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointment_reminders: {
         Row: {
           appointment_id: string
@@ -1983,7 +2028,7 @@ export type Database = {
         }[]
       }
       get_client_category: {
-        Args: { visit_count: number }
+        Args: { visit_count: number } | { visit_count: number }
         Returns: string
       }
       get_pending_whatsapp_reminders: {

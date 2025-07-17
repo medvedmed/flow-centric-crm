@@ -76,12 +76,12 @@ export const AppointmentBasicInfo: React.FC<AppointmentBasicInfoProps> = ({
         </div>
         <div>
           <Label htmlFor="staff_id">Staff Member</Label>
-          <Select name="staff_id" defaultValue={staffId || ''}>
+          <Select name="staff_id" defaultValue={staffId || 'unassigned'}>
             <SelectTrigger>
               <SelectValue placeholder="Select staff member" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Unassigned</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
               {staff.map((member) => (
                 <SelectItem key={member.id} value={member.id}>
                   {member.name}

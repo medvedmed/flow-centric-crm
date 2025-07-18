@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -324,7 +323,6 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
           category: 'Service Revenue',
           amount: paymentAmount,
           description: `Payment for ${serviceName} - ${parsedClientName}`,
-          payment_method: paymentMethod,
           reference_id: appointment?.id,
           reference_type: 'appointment',
           transaction_date: format(selectedDate, 'yyyy-MM-dd'),
@@ -339,6 +337,8 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
       queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['client-payments'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['appointment-services'] });
+      queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
       toast({ title: 'Success', description: 'Appointment updated successfully!' });
       onClose();
     },

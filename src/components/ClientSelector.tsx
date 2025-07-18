@@ -1,181 +1,228 @@
+
 import React, { useState } from 'react';
-import { useClients, useCreateClient } from '@/hooks/clients/useClientHooks';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Plus, Search } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Plus, User, Phone, Mail } from 'lucide-react';
+
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  status: string;
+}
 
 interface ClientSelectorProps {
-  value: string;
-  onValueChange: (clientId: string, clientName: string, clientPhone?: string) => void;
+  selectedClientId?: string;
+  onClientSelect: (client: Client) => void;
+  onNewClient: (clientData: { name: string; email: string; phone?: string }) => void;
 }
 
 export const ClientSelector: React.FC<ClientSelectorProps> = ({
-  value,
-  onValueChange
+  selectedClientId,
+  onClientSelect,
+  onNewClient
 }) => {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [isAddingNew, setIsAddingNew] = useState(false);
-  const [newClient, setNewClient] = useState({
+  const [showNewClientForm, setShowNewClientForm] = useState(false);
+  const [newClientData, setNewClientData] = useState({
     name: '',
     email: '',
     phone: ''
   });
 
-  const { data: clientsData, isLoading } = useClients(searchTerm, 1, 50);
-  const createClient = useCreateClient();
-  const { toast } = useToast();
+  const { data: clients = [], isLoading } = useQuery({
+    queryKey: ['clients', searchTerm],
+    queryFn: async () => {
+      let query = supabase
+        .from('clients')
+        .select('*')
+        .eq('salon_id', user?.id);
 
-  const clients = clientsData?.data || [];
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (client.phone && client.phone.includes(searchTerm))
-  );
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+      }
 
-  const handleCreateClient = async () => {
-    if (!newClient.name || !newClient.email) return;
+      const { data, error } = await query.order('name').limit(10);
+      if (error) throw error;
+      return data as Client[];
+    },
+    enabled: !!user?.id,
+  });
 
-    try {
-      // Create client data with required fields
-      const clientData = {
-        name: newClient.name,
-        email: newClient.email,
-        phone: newClient.phone,
-        status: 'New' as const, // Required field
-        // Optional fields with defaults
-        assignedStaff: null,
-        notes: null,
-        tags: null,
-        totalSpent: 0,
-        visits: 0,
-        preferredStylist: null,
-        lastVisit: null,
-        clientId: null,
-        clientPassword: null,
-        isPortalEnabled: false
-      };
-
-      const createdClient = await createClient.mutateAsync(clientData);
-      onValueChange(createdClient.id, createdClient.name, createdClient.phone || undefined);
-      setIsAddingNew(false);
-      setNewClient({ name: '', email: '', phone: '' });
-      toast({
-        title: "Client Added",
-        description: `${createdClient.name} has been added successfully.`,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create client",
-        variant: "destructive",
-      });
+  const handleNewClientSubmit = () => {
+    if (newClientData.name && newClientData.email) {
+      onNewClient(newClientData);
+      setNewClientData({ name: '', email: '', phone: '' });
+      setShowNewClientForm(false);
     }
   };
 
+  const selectedClient = clients.find(c => c.id === selectedClientId);
+
   return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        <div className="flex-1">
-          <Select value={value} onValueChange={(clientId) => {
-            const client = clients.find(c => c.id === clientId);
-            if (client) {
-              onValueChange(clientId, client.name, client.phone || undefined);
-            }
-          }}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a client" />
-            </SelectTrigger>
-            <SelectContent>
-              <div className="p-2">
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+    <div className="space-y-4">
+      <div>
+        <Label className="text-sm font-medium text-gray-700 mb-2 block">
+          Select Client
+        </Label>
+        
+        {/* Search Input */}
+        <div className="relative mb-3">
+          <Input
+            placeholder="Search clients by name, email, or phone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full"
+          />
+        </div>
+
+        {/* Selected Client Display */}
+        {selectedClient && (
+          <Card className="mb-3 bg-green-50 border-green-200">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-full">
+                  <User className="w-4 h-4 text-green-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-green-900 truncate">{selectedClient.name}</p>
+                  <div className="flex flex-col gap-1 text-sm text-green-700">
+                    <div className="flex items-center gap-1">
+                      <Mail className="w-3 h-3" />
+                      <span className="truncate">{selectedClient.email}</span>
+                    </div>
+                    {selectedClient.phone && (
+                      <div className="flex items-center gap-1">
+                        <Phone className="w-3 h-3" />
+                        <span>{selectedClient.phone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Client List */}
+        {isLoading ? (
+          <div className="text-center py-4 text-gray-500">Loading clients...</div>
+        ) : (
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {clients.map((client) => (
+              <Card 
+                key={client.id} 
+                className={`cursor-pointer transition-colors hover:bg-gray-50 ${
+                  selectedClientId === client.id ? 'bg-blue-50 border-blue-200' : ''
+                }`}
+                onClick={() => onClientSelect(client)}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 rounded-full">
+                      <User className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 truncate">{client.name}</p>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <Mail className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{client.email}</span>
+                        </div>
+                        {client.phone && (
+                          <div className="flex items-center gap-1">
+                            <Phone className="w-3 h-3" />
+                            <span>{client.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            
+            {clients.length === 0 && searchTerm && (
+              <div className="text-center py-4 text-gray-500">
+                No clients found matching "{searchTerm}"
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* New Client Button */}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setShowNewClientForm(!showNewClientForm)}
+          className="w-full mt-3 gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Add New Client
+        </Button>
+
+        {/* New Client Form */}
+        {showNewClientForm && (
+          <Card className="mt-3 border-dashed border-2 border-gray-300">
+            <CardContent className="p-4 space-y-3">
+              <h4 className="font-medium text-gray-900">Add New Client</h4>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <Label className="text-sm">Name *</Label>
                   <Input
-                    placeholder="Search clients..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-8"
+                    placeholder="Client name"
+                    value={newClientData.name}
+                    onChange={(e) => setNewClientData(prev => ({ ...prev, name: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm">Email *</Label>
+                  <Input
+                    type="email"
+                    placeholder="client@example.com"
+                    value={newClientData.email}
+                    onChange={(e) => setNewClientData(prev => ({ ...prev, email: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm">Phone</Label>
+                  <Input
+                    placeholder="Phone number"
+                    value={newClientData.phone}
+                    onChange={(e) => setNewClientData(prev => ({ ...prev, phone: e.target.value }))}
                   />
                 </div>
               </div>
-              {isLoading ? (
-                <SelectItem value="loading" disabled>Loading clients...</SelectItem>
-              ) : filteredClients.length === 0 ? (
-                <SelectItem value="no-clients" disabled>No clients found</SelectItem>
-              ) : (
-                filteredClients.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    <div className="flex flex-col">
-                      <span>{client.name}</span>
-                      <span className="text-sm text-muted-foreground">{client.email}</span>
-                      {client.phone && (
-                        <span className="text-sm text-muted-foreground">{client.phone}</span>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <Dialog open={isAddingNew} onOpenChange={setIsAddingNew}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="icon">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Client</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="clientName">Name *</Label>
-                <Input
-                  id="clientName"
-                  value={newClient.name}
-                  onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
-                  placeholder="Client name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="clientEmail">Email *</Label>
-                <Input
-                  id="clientEmail"
-                  type="email"
-                  value={newClient.email}
-                  onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
-                  placeholder="Client email"
-                />
-              </div>
-              <div>
-                <Label htmlFor="clientPhone">Phone</Label>
-                <Input
-                  id="clientPhone"
-                  value={newClient.phone}
-                  onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
-                  placeholder="Client phone"
-                />
-              </div>
               <div className="flex gap-2">
                 <Button
-                  onClick={handleCreateClient}
-                  disabled={!newClient.name || !newClient.email || createClient.isPending}
+                  type="button"
+                  size="sm"
+                  onClick={handleNewClientSubmit}
+                  disabled={!newClientData.name || !newClientData.email}
                   className="flex-1"
                 >
-                  {createClient.isPending ? "Adding..." : "Add Client"}
+                  Add Client
                 </Button>
-                <Button variant="outline" onClick={() => setIsAddingNew(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowNewClientForm(false)}
+                  className="flex-1"
+                >
                   Cancel
                 </Button>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

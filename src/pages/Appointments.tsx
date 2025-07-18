@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { Appointment } from '@/services/types';
 import DragDropCalendar from '@/components/DragDropCalendar';
-import { DetailedAppointmentDialog } from '@/components/DetailedAppointmentDialog';
+import { EditAppointmentDialog } from '@/components/EditAppointmentDialog';
 import { AddAppointmentDialog } from '@/components/AddAppointmentDialog';
 import { QuickPaymentDialog } from '@/components/QuickPaymentDialog';
 import { DailyActivityLog } from '@/components/DailyActivityLog';
@@ -15,12 +15,19 @@ import { DailyActivityLog } from '@/components/DailyActivityLog';
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const { hasPermissionSync } = usePermissions();
 
   const canViewAppointments = hasPermissionSync('appointments', 'view');
 
   const handleAppointmentClick = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
+    setShowEditDialog(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setShowEditDialog(false);
+    setSelectedAppointment(null);
   };
 
   const goToPreviousDay = () => {
@@ -133,11 +140,11 @@ const Appointments = () => {
         <DailyActivityLog selectedDate={selectedDate} />
       </div>
 
-      {/* Enhanced Appointment Details Dialog */}
-      <DetailedAppointmentDialog
+      {/* Direct Edit Appointment Dialog */}
+      <EditAppointmentDialog
         appointment={selectedAppointment}
-        isOpen={!!selectedAppointment}
-        onClose={() => setSelectedAppointment(null)}
+        isOpen={showEditDialog}
+        onClose={handleCloseEditDialog}
       />
     </div>
   );

@@ -167,7 +167,7 @@ export const CurrencySettings: React.FC = () => {
           currency_code: 'USD',
           currency_symbol: '$',
           decimal_places: 2,
-          thousand_separator: ',',
+          thousand_separator: 'none',
           decimal_separator: '.'
         });
       }
@@ -221,7 +221,8 @@ export const CurrencySettings: React.FC = () => {
 
   const formatPreview = (amount: number) => {
     const parts = amount.toFixed(settings.decimal_places).split('.');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, settings.thousand_separator);
+    const separator = settings.thousand_separator === 'none' ? '' : settings.thousand_separator;
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, separator);
     return `${settings.currency_symbol}${parts.join(settings.decimal_separator)}`;
   };
 
@@ -317,7 +318,7 @@ export const CurrencySettings: React.FC = () => {
                 <SelectItem value=",">, (Comma)</SelectItem>
                 <SelectItem value=".">{`. (Period)`}</SelectItem>
                 <SelectItem value=" "> (Space)</SelectItem>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
               </SelectContent>
             </Select>
           </div>

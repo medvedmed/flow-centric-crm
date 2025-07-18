@@ -19,6 +19,7 @@ import { AppointmentProductsManager } from './AppointmentProductsManager';
 import { useAppointmentDetails } from '@/hooks/appointments/useAppointmentDetails';
 import { supabase } from '@/integrations/supabase/client';
 import { TimeSelector } from '@/components/forms/TimeSelector';
+import { ClientSelector } from '@/components/ClientSelector';
 
 interface EditAppointmentFormProps {
   appointment: Appointment;
@@ -267,23 +268,21 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="clientName">Client Name</Label>
-              <Input
-                id="clientName"
-                value={formData.clientName}
-                onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="clientPhone">Phone Number</Label>
-              <Input
-                id="clientPhone"
-                value={formData.clientPhone || appointment?.clientPhone || ''}
-                onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })}
-                placeholder="Enter client phone number"
-              />
-            </div>
+            <ClientSelector
+              selectedClientId={formData.clientId}
+              onClientSelect={(client) => {
+                setFormData({
+                  ...formData,
+                  clientId: client.id,
+                  clientName: client.name,
+                  clientPhone: client.phone || ''
+                });
+              }}
+              onNewClient={(clientData) => {
+                // Handle new client creation if needed
+                console.log('New client data:', clientData);
+              }}
+            />
             <div>
               <Label htmlFor="service">Main Service</Label>
               <Select

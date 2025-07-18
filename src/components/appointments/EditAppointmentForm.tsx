@@ -30,7 +30,35 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   onClose
 }) => {
   const { toast } = useToast();
-  const [formData, setFormData] = useState<Appointment>(appointment);
+  
+  // Debug: Log the appointment data
+  console.log('EditAppointmentForm received appointment:', appointment);
+  
+  // Ensure all required fields have default values
+  const initialFormData: Appointment = {
+    id: appointment?.id || '',
+    clientId: appointment?.clientId || '',
+    clientName: appointment?.clientName || '',
+    clientPhone: appointment?.clientPhone || '',
+    staffId: appointment?.staffId || '',
+    service: appointment?.service || '',
+    date: appointment?.date || '',
+    startTime: appointment?.startTime || '',
+    endTime: appointment?.endTime || '',
+    duration: appointment?.duration || 60,
+    price: appointment?.price || 0,
+    status: appointment?.status || 'Scheduled',
+    notes: appointment?.notes || '',
+    salonId: appointment?.salonId || '',
+    createdAt: appointment?.createdAt || '',
+    updatedAt: appointment?.updatedAt || '',
+    paymentStatus: appointment?.paymentStatus || 'unpaid',
+    paymentMethod: appointment?.paymentMethod || '',
+    paymentDate: appointment?.paymentDate || '',
+    color: appointment?.color || ''
+  };
+  
+  const [formData, setFormData] = useState<Appointment>(initialFormData);
   const [services, setServices] = useState<Service[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);

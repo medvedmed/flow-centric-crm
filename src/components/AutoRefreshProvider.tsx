@@ -56,93 +56,110 @@ export const AutoRefreshProvider: React.FC<{ children: React.ReactNode }> = ({ c
   useEffect(() => {
     if (!user) return;
 
-    // Set up real-time subscriptions for automatic refresh
-    const appointmentsChannel = supabase
-      .channel('appointments-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'appointments',
-          filter: `salon_id=eq.${user.id}`
-        },
-        (payload) => {
-          console.log('Appointments change detected:', payload);
-          refreshAppointments();
-          
-          // Show toast for important changes
-          if (payload.eventType === 'INSERT') {
-            toast({
-              title: "New Appointment",
-              description: "A new appointment has been created",
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            toast({
-              title: "Appointment Updated",
-              description: "An appointment has been modified",
-            });
+    let appointmentsChannel: any;
+    let staffChannel: any;
+    let clientsChannel: any;
+    let servicesChannel: any;
+
+    const setupChannels = () => {
+      // Set up real-time subscriptions for automatic refresh
+      appointmentsChannel = supabase
+        .channel(`appointments-changes-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'appointments',
+            filter: `salon_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('Appointments change detected:', payload);
+            refreshAppointments();
+            
+            // Show toast for important changes
+            if (payload.eventType === 'INSERT') {
+              toast({
+                title: "New Appointment",
+                description: "A new appointment has been created",
+              });
+            } else if (payload.eventType === 'UPDATE') {
+              toast({
+                title: "Appointment Updated",
+                description: "An appointment has been modified",
+              });
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
 
-    const staffChannel = supabase
-      .channel('staff-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'staff',
-          filter: `salon_id=eq.${user.id}`
-        },
-        (payload) => {
-          console.log('Staff change detected:', payload);
-          refreshStaff();
-        }
-      )
-      .subscribe();
+      staffChannel = supabase
+        .channel(`staff-changes-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'staff',
+            filter: `salon_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('Staff change detected:', payload);
+            refreshStaff();
+          }
+        )
+        .subscribe();
 
-    const clientsChannel = supabase
-      .channel('clients-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'clients',
-          filter: `salon_id=eq.${user.id}`
-        },
-        (payload) => {
-          console.log('Clients change detected:', payload);
-          refreshClients();
-        }
-      )
-      .subscribe();
+      clientsChannel = supabase
+        .channel(`clients-changes-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'clients',
+            filter: `salon_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('Clients change detected:', payload);
+            refreshClients();
+          }
+        )
+        .subscribe();
 
-    const servicesChannel = supabase
-      .channel('services-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'services',
-          filter: `salon_id=eq.${user.id}`
-        },
-        (payload) => {
-          console.log('Services change detected:', payload);
-          refreshServices();
-        }
-      )
-      .subscribe();
+      servicesChannel = supabase
+        .channel(`services-changes-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'services',
+            filter: `salon_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('Services change detected:', payload);
+            refreshServices();
+          }
+        )
+        .subscribe();
+    };
+
+    setupChannels();
 
     return () => {
-      supabase.removeChannel(appointmentsChannel);
-      supabase.removeChannel(staffChannel);
-      supabase.removeChannel(clientsChannel);
-      supabase.removeChannel(servicesChannel);
+      if (appointmentsChannel) {
+        supabase.removeChannel(appointmentsChannel);
+      }
+      if (staffChannel) {
+        supabase.removeChannel(staffChannel);
+      }
+      if (clientsChannel) {
+        supabase.removeChannel(clientsChannel);
+      }
+      if (servicesChannel) {
+        supabase.removeChannel(servicesChannel);
+      }
     };
   }, [user, toast]);
 

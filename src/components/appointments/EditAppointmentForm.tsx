@@ -72,6 +72,33 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
     loadData();
   }, []);
 
+  // Update form data when appointment prop changes
+  useEffect(() => {
+    console.log('Appointment prop changed:', appointment);
+    setFormData({
+      id: appointment?.id || '',
+      clientId: appointment?.clientId || '',
+      clientName: appointment?.clientName || '',
+      clientPhone: appointment?.clientPhone || '',
+      staffId: appointment?.staffId || '',
+      service: appointment?.service || '',
+      date: appointment?.date || '',
+      startTime: appointment?.startTime || '',
+      endTime: appointment?.endTime || '',
+      duration: appointment?.duration || 60,
+      price: appointment?.price || 0,
+      status: appointment?.status || 'Scheduled',
+      notes: appointment?.notes || '',
+      salonId: appointment?.salonId || '',
+      createdAt: appointment?.createdAt || '',
+      updatedAt: appointment?.updatedAt || '',
+      paymentStatus: appointment?.paymentStatus || 'unpaid',
+      paymentMethod: appointment?.paymentMethod || '',
+      paymentDate: appointment?.paymentDate || '',
+      color: appointment?.color || ''
+    });
+  }, [appointment]);
+
   const loadData = async () => {
     try {
       setLoading(true);

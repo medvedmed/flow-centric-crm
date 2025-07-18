@@ -12,6 +12,7 @@ import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { MobileOptimizedScheduler } from "./MobileOptimizedScheduler";
 
 const localizer = momentLocalizer(moment);
 const DnDCalendar = withDragAndDrop(Calendar);
@@ -206,49 +207,60 @@ const DragDropCalendar = ({ onAppointmentClick, onTimeSlotClick }) => {
 
   return (
     <div className="h-[80vh] bg-white rounded-xl shadow border">
-      <DnDCalendar
-        defaultView={Views.DAY}
-        views={[Views.DAY, Views.WEEK]}
-        events={events}
-        localizer={localizer}
-        resizable
-        resources={resources}
-        resourceIdAccessor={(resource: CalendarResource) => resource.resourceId}
-        resourceTitleAccessor={(resource: CalendarResource) => resource.resourceTitle}
-        onEventDrop={updateAppointment}
-        onEventResize={updateAppointment}
-        onSelectEvent={handleSelectEvent}
-        onSelectSlot={handleSelectSlot}
-        selectable={true}
-        eventPropGetter={(event: CalendarEvent) => ({
-          style: {
-            backgroundColor: event.color || "#007bff",
-            color: "white",
-            borderRadius: "5px",
-            border: `2px solid ${event.paymentStatus === 'paid' ? '#155724' : 
-                                  event.paymentStatus === 'partial' ? '#856404' : '#721c24'}`,
-            fontWeight: '500',
-            fontSize: '12px'
-          },
-        })}
-        components={{
-          event: (props: any) => {
-            const event = props.event as CalendarEvent;
-            return (
-              <div className="flex flex-col p-1">
-                <div className="font-medium truncate">{event.clientName}</div>
-                <div className="text-xs opacity-90 truncate">{event.service}</div>
-                {event.price && <div className="text-xs opacity-75">${event.price}</div>}
-              </div>
-            );
-          }
-        }}
-        style={{ height: "100%" }}
-        timeslots={4}
-        step={15}
-        min={moment().hour(8).minute(0).toDate()}
-        max={moment().hour(20).minute(0).toDate()}
-      />
+      {/* Show mobile-optimized view on small screens */}
+      <div className="block md:hidden">
+        <MobileOptimizedScheduler 
+          onAppointmentClick={onAppointmentClick}
+          onTimeSlotClick={onTimeSlotClick}
+        />
+      </div>
+
+      {/* Show full calendar on larger screens */}
+      <div className="hidden md:block h-full">
+        <DnDCalendar
+          defaultView={Views.DAY}
+          views={[Views.DAY, Views.WEEK]}
+          events={events}
+          localizer={localizer}
+          resizable
+          resources={resources}
+          resourceIdAccessor={(resource: CalendarResource) => resource.resourceId}
+          resourceTitleAccessor={(resource: CalendarResource) => resource.resourceTitle}
+          onEventDrop={updateAppointment}
+          onEventResize={updateAppointment}
+          onSelectEvent={handleSelectEvent}
+          onSelectSlot={handleSelectSlot}
+          selectable={true}
+          eventPropGetter={(event: CalendarEvent) => ({
+            style: {
+              backgroundColor: event.color || "#007bff",
+              color: "white",
+              borderRadius: "5px",
+              border: `2px solid ${event.paymentStatus === 'paid' ? '#155724' : 
+                                     event.paymentStatus === 'partial' ? '#856404' : '#721c24'}`,
+              fontWeight: '500',
+              fontSize: '12px'
+            },
+          })}
+          components={{
+            event: (props: any) => {
+              const event = props.event as CalendarEvent;
+              return (
+                <div className="flex flex-col p-1">
+                  <div className="font-medium truncate">{event.clientName}</div>
+                  <div className="text-xs opacity-90 truncate">{event.service}</div>
+                  {event.price && <div className="text-xs opacity-75">${event.price}</div>}
+                </div>
+              );
+            }
+          }}
+          style={{ height: "100%" }}
+          timeslots={4}
+          step={15}
+          min={moment().hour(8).minute(0).toDate()}
+          max={moment().hour(20).minute(0).toDate()}
+        />
+      </div>
       
       {/* Payment Status Legend */}
       <div className="flex items-center gap-4 p-4 bg-gray-50 border-t">

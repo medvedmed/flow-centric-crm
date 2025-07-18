@@ -57,7 +57,20 @@ const AppHeader = () => {
   const { userRole } = usePermissions();
 
   const handleSignOut = async () => {
-    await signOut();
+    try {
+      await signOut();
+      
+      // Clear any cached data
+      localStorage.removeItem('salon-schedule-cache');
+      localStorage.removeItem('appointment-cache');
+      sessionStorage.clear();
+      
+      // Force navigation to landing page
+      window.location.href = '/';
+      
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { Appointment } from '@/services/types';
 import DragDropCalendar from '@/components/DragDropCalendar';
-import { EditAppointmentForm } from '@/components/EditAppointmentDialog';
+import { EditAppointmentDialog } from '@/components/EditAppointmentDialog';
 import { AddAppointmentDialog } from '@/components/AddAppointmentDialog';
 import { QuickPaymentDialog } from '@/components/QuickPaymentDialog';
 import { DailyActivityLog } from '@/components/DailyActivityLog';
@@ -111,7 +111,7 @@ const Appointments = () => {
       </div>
 
       {/* Direct Edit Appointment Dialog */}
-      <EditAppointmentForm appointment={selectedAppointment} isOpen={showEditDialog} onClose={handleCloseEditDialog} />
+      <EditAppointmentDialog appointment={selectedAppointment} isOpen={showEditDialog} onClose={handleCloseEditDialog} />
 
       {/* Quick Add Appointment Dialog for Time Slot Clicks */}
       <AddAppointmentDialog isOpen={showAddDialog} onClose={handleCloseAddDialog} selectedDate={timeSlotData?.date} selectedTime={timeSlotData?.time} selectedStaffId={timeSlotData?.staffId} />

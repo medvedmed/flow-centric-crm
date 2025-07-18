@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Appointment } from '@/services/types';
-import { EditAppointmentForm } from './EditAppointmentDialog';
+import { EditAppointmentDialog } from './EditAppointmentDialog';
 import { usePermissions } from '@/hooks/usePermissions';
 import { AppointmentHeader } from './appointments/AppointmentHeader';
 import { AppointmentDetailsCard } from './appointments/AppointmentDetailsCard';
@@ -195,7 +195,7 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
         </DialogContent>
       </Dialog>
 
-      <EditAppointmentForm
+      <EditAppointmentDialog
         appointment={appointment}
         isOpen={showEditDialog}
         onClose={handleEditClose}

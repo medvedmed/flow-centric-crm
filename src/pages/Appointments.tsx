@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,56 +10,47 @@ import { EditAppointmentDialog } from '@/components/EditAppointmentDialog';
 import { AddAppointmentDialog } from '@/components/AddAppointmentDialog';
 import { QuickPaymentDialog } from '@/components/QuickPaymentDialog';
 import { DailyActivityLog } from '@/components/DailyActivityLog';
-
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [timeSlotData, setTimeSlotData] = useState<any>(null);
-  const { hasPermissionSync } = usePermissions();
-
+  const {
+    hasPermissionSync
+  } = usePermissions();
   const canViewAppointments = hasPermissionSync('appointments', 'view');
-
   const handleAppointmentClick = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setShowEditDialog(true);
   };
-
   const handleCloseEditDialog = () => {
     setShowEditDialog(false);
     setSelectedAppointment(null);
   };
-
   const handleTimeSlotClick = (slotData: any) => {
     setTimeSlotData(slotData);
     setShowAddDialog(true);
   };
-
   const handleCloseAddDialog = () => {
     setShowAddDialog(false);
     setTimeSlotData(null);
   };
-
   const goToPreviousDay = () => {
     const previousDay = new Date(selectedDate);
     previousDay.setDate(selectedDate.getDate() - 1);
     setSelectedDate(previousDay);
   };
-
   const goToNextDay = () => {
     const nextDay = new Date(selectedDate);
     nextDay.setDate(selectedDate.getDate() + 1);
     setSelectedDate(nextDay);
   };
-
   const goToToday = () => {
     setSelectedDate(new Date());
   };
-
   if (!canViewAppointments) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-violet-50 to-blue-50">
+    return <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-violet-50 to-blue-50">
         <Card className="max-w-md shadow-xl rounded-2xl bg-white/70 backdrop-blur-sm border-violet-200">
           <CardContent className="p-8 text-center">
             <Shield className="h-16 w-16 mx-auto mb-6 text-violet-400" />
@@ -70,12 +60,9 @@ const Appointments = () => {
             <p className="text-gray-600">You don't have permission to view appointments.</p>
           </CardContent>
         </Card>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50 flex flex-col">
+  return <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50 flex flex-col">
       {/* Header */}
       <div className="bg-white/70 backdrop-blur-sm border-b border-violet-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
@@ -92,38 +79,12 @@ const Appointments = () => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={goToPreviousDay} 
-            className="bg-white/70 border-violet-200 hover:bg-violet-50"
-          >
-            Previous
-          </Button>
-          <Button 
-            variant="default" 
-            size="sm" 
-            onClick={goToToday} 
-            className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700"
-          >
-            Today
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={goToNextDay} 
-            className="bg-white/70 border-violet-200 hover:bg-violet-50"
-          >
-            Next
-          </Button>
-          <AddAppointmentDialog 
-            selectedDate={selectedDate}
-            trigger={
-              <Button className="gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
+          
+          
+          
+          <AddAppointmentDialog selectedDate={selectedDate} trigger={<Button className="gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
                 + Add Appointment
-              </Button>
-            }
-          />
+              </Button>} />
           <QuickPaymentDialog />
         </div>
       </div>
@@ -144,10 +105,7 @@ const Appointments = () => {
         {/* Calendar */}
         <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
           <CardContent className="p-6">
-            <DragDropCalendar 
-              onAppointmentClick={handleAppointmentClick} 
-              onTimeSlotClick={handleTimeSlotClick}
-            />
+            <DragDropCalendar onAppointmentClick={handleAppointmentClick} onTimeSlotClick={handleTimeSlotClick} />
           </CardContent>
         </Card>
 
@@ -156,22 +114,10 @@ const Appointments = () => {
       </div>
 
       {/* Direct Edit Appointment Dialog */}
-      <EditAppointmentDialog
-        appointment={selectedAppointment}
-        isOpen={showEditDialog}
-        onClose={handleCloseEditDialog}
-      />
+      <EditAppointmentDialog appointment={selectedAppointment} isOpen={showEditDialog} onClose={handleCloseEditDialog} />
 
       {/* Quick Add Appointment Dialog for Time Slot Clicks */}
-      <AddAppointmentDialog
-        isOpen={showAddDialog}
-        onClose={handleCloseAddDialog}
-        selectedDate={timeSlotData?.date}
-        selectedTime={timeSlotData?.time}
-        selectedStaffId={timeSlotData?.staffId}
-      />
-    </div>
-  );
+      <AddAppointmentDialog isOpen={showAddDialog} onClose={handleCloseAddDialog} selectedDate={timeSlotData?.date} selectedTime={timeSlotData?.time} selectedStaffId={timeSlotData?.staffId} />
+    </div>;
 };
-
 export default Appointments;

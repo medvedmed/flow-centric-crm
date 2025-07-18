@@ -25,6 +25,9 @@ interface ServiceRowProps {
   onDiscountChange: (discount: number) => void;
   services: Service[];
   appointmentService?: string;
+  serviceTotal: number;
+  productsTotal: number;
+  finalTotal: number;
 }
 
 export const ServiceRow: React.FC<ServiceRowProps> = ({
@@ -37,20 +40,17 @@ export const ServiceRow: React.FC<ServiceRowProps> = ({
   discount,
   onDiscountChange,
   services,
-  appointmentService
+  appointmentService,
+  serviceTotal,
+  productsTotal,
+  finalTotal
 }) => {
   console.log('ServiceRow - selectedServiceId:', selectedServiceId, 'appointmentService:', appointmentService);
-  console.log('ServiceRow - services:', services);
 
   const discountAmount = (servicePrice * discount) / 100;
-  const finalTotal = servicePrice - discountAmount;
-
-  // Find the current service to display
   const currentService = services.find(s => s.id === selectedServiceId);
   const displayValue = selectedServiceId || (appointmentService ? 
     services.find(s => s.name === appointmentService)?.id || '' : '');
-
-  console.log('ServiceRow - currentService:', currentService, 'displayValue:', displayValue);
 
   return (
     <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
@@ -61,8 +61,9 @@ export const ServiceRow: React.FC<ServiceRowProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
-          <div className="md:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+          {/* Service Selection - Takes more space */}
+          <div className="lg:col-span-4">
             <Label className="text-sm font-medium text-gray-700">Service</Label>
             <Select value={displayValue} onValueChange={onServiceChange}>
               <SelectTrigger className="w-full">
@@ -86,7 +87,8 @@ export const ServiceRow: React.FC<ServiceRowProps> = ({
             )}
           </div>
 
-          <div>
+          {/* Duration */}
+          <div className="lg:col-span-2">
             <Label className="text-sm font-medium text-gray-700 flex items-center gap-1">
               <Clock className="w-3 h-3" />
               Duration (min)
@@ -100,7 +102,8 @@ export const ServiceRow: React.FC<ServiceRowProps> = ({
             />
           </div>
 
-          <div>
+          {/* Price */}
+          <div className="lg:col-span-2">
             <Label className="text-sm font-medium text-gray-700 flex items-center gap-1">
               <DollarSign className="w-3 h-3" />
               Price ($)
@@ -115,7 +118,8 @@ export const ServiceRow: React.FC<ServiceRowProps> = ({
             />
           </div>
 
-          <div>
+          {/* Discount */}
+          <div className="lg:col-span-2">
             <Label className="text-sm font-medium text-gray-700 flex items-center gap-1">
               <Percent className="w-3 h-3" />
               Discount (%)
@@ -130,22 +134,35 @@ export const ServiceRow: React.FC<ServiceRowProps> = ({
             />
           </div>
 
-          <div className="p-4 bg-white rounded-lg border border-gray-200">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Subtotal:</span>
-                <span className="font-medium">${servicePrice.toFixed(2)}</span>
-              </div>
-              {discount > 0 && (
-                <div className="flex justify-between text-sm text-red-600">
-                  <span>Discount ({discount}%):</span>
-                  <span>-${discountAmount.toFixed(2)}</span>
+          {/* Totals - More space and better layout */}
+          <div className="lg:col-span-2">
+            <div className="p-4 bg-white rounded-lg border border-gray-200 min-w-[200px]">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Service:</span>
+                  <span className="font-medium">${servicePrice.toFixed(2)}</span>
                 </div>
-              )}
-              <Separator />
-              <div className="flex justify-between font-bold text-lg">
-                <span>Total:</span>
-                <span className="text-green-600">${finalTotal.toFixed(2)}</span>
+                {discount > 0 && (
+                  <div className="flex justify-between text-sm text-red-600">
+                    <span>Discount ({discount}%):</span>
+                    <span>-${discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Service Total:</span>
+                  <span className="font-medium">${serviceTotal.toFixed(2)}</span>
+                </div>
+                {productsTotal > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Products:</span>
+                    <span className="font-medium">${productsTotal.toFixed(2)}</span>
+                  </div>
+                )}
+                <Separator />
+                <div className="flex justify-between font-bold text-lg">
+                  <span>Grand Total:</span>
+                  <span className="text-green-600">${finalTotal.toFixed(2)}</span>
+                </div>
               </div>
             </div>
           </div>

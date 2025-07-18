@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { User, Phone, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { User, Phone, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 
 interface ClientInfoSectionProps {
   clientName: string;
@@ -20,7 +20,8 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
   isAttended,
   onAttendanceChange
 }) => {
-  console.log('ClientInfoSection - clientName:', clientName, 'clientPhone:', clientPhone);
+  const displayName = clientName && clientName !== 'Unknown Client' ? clientName : 'Unknown Client';
+  const displayPhone = clientPhone && clientPhone !== 'No phone' ? clientPhone : 'No phone provided';
 
   return (
     <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
@@ -60,7 +61,9 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
             </div>
             <div>
               <p className="text-sm text-gray-600">Client Name</p>
-              <p className="text-lg font-semibold text-gray-900">{clientName}</p>
+              <p className={`text-lg font-semibold ${displayName === 'Unknown Client' ? 'text-orange-600' : 'text-gray-900'}`}>
+                {displayName}
+              </p>
             </div>
           </div>
           
@@ -70,7 +73,9 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
             </div>
             <div>
               <p className="text-sm text-gray-600">Phone</p>
-              <p className="text-lg font-medium text-gray-900">{clientPhone}</p>
+              <p className={`text-lg font-medium ${displayPhone === 'No phone provided' ? 'text-gray-500' : 'text-gray-900'}`}>
+                {displayPhone}
+              </p>
             </div>
           </div>
 
@@ -80,9 +85,16 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
             </div>
             <div>
               <p className="text-sm text-gray-600">Status</p>
-              <Badge variant={clientData?.status === 'New' ? 'secondary' : 'default'}>
-                {clientData?.status || 'New'}
-              </Badge>
+              {clientData === undefined ? (
+                <div className="flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span className="text-sm text-gray-500">Loading...</span>
+                </div>
+              ) : (
+                <Badge variant={clientData?.status === 'New' ? 'secondary' : 'default'}>
+                  {clientData?.status || 'New'}
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -90,6 +102,14 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
         {clientData?.email && (
           <div className="mt-4 pt-4 border-t border-blue-200">
             <p className="text-sm text-gray-600">Email: <span className="font-medium">{clientData.email}</span></p>
+          </div>
+        )}
+
+        {displayName === 'Unknown Client' && (
+          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-800">
+              ⚠️ Client information appears to be incomplete. Consider updating the appointment with proper client details.
+            </p>
           </div>
         )}
       </CardContent>

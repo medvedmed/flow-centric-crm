@@ -176,3 +176,5 @@ export const EditStaffDialog = ({ staff, open, onOpenChange }: EditStaffDialogPr
     </Dialog>
   );
 };
+
+export default EditStaffDialog;

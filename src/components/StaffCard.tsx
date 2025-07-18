@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,8 @@ interface StaffCardProps {
 }
 
 const StaffCard = ({ member, onEdit, onDelete, isDeleting }: StaffCardProps) => {
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
   return (
     <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
       <CardHeader>
@@ -74,20 +77,15 @@ const StaffCard = ({ member, onEdit, onDelete, isDeleting }: StaffCardProps) => 
         </div>
 
         <div className="flex gap-2 pt-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="flex-1"
-                onClick={() => onEdit(member)}
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Edit
-              </Button>
-            </DialogTrigger>
-            <EditStaffDialog staff={member} />
-          </Dialog>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex-1"
+            onClick={() => setIsEditDialogOpen(true)}
+          >
+            <Edit className="w-4 h-4 mr-2" />
+            Edit
+          </Button>
           <Button 
             variant="ghost" 
             size="sm" 
@@ -99,6 +97,11 @@ const StaffCard = ({ member, onEdit, onDelete, isDeleting }: StaffCardProps) => 
           </Button>
         </div>
       </CardContent>
+      <EditStaffDialog 
+        staff={member} 
+        open={isEditDialogOpen} 
+        onOpenChange={setIsEditDialogOpen} 
+      />
     </Card>
   );
 };

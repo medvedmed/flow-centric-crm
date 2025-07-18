@@ -48,7 +48,7 @@ export interface Staff {
   imageUrl?: string;
   hourlyRate?: number;
   commissionRate?: number;
-  status?: 'active' | 'inactive' | 'on_leave';
+  status?: string;
   notes?: string;
   hireDate?: string;
   salonId?: string;

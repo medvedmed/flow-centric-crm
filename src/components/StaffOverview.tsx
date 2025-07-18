@@ -5,10 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, UserCheck, Plus } from "lucide-react";
 import { useStaff, useDeleteStaff } from "@/hooks/useCrmData";
-import type { Staff as StaffType } from "@/services/supabaseApi";
+import type { Database } from "@/integrations/supabase/types";
 import StaffStats from "./StaffStats";
 import StaffCard from "./StaffCard";
 import AddStaffDialog from "./AddStaffDialog";
+
+type StaffType = Database['public']['Tables']['staff']['Row'];
 
 const StaffOverview = () => {
   const { data: staff = [], isLoading } = useStaff();

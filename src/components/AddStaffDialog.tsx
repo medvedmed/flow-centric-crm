@@ -64,11 +64,11 @@ const AddStaffDialog = () => {
     } as StaffType;
 
     createStaffMutation.mutate(staffToCreate, {
-      onSuccess: (createdStaffData) => {
-        setCreatedStaff(createdStaffData);
+      onSuccess: () => {
+        setCreatedStaff(staffToCreate);
         toast({
           title: "Staff Added Successfully",
-          description: `${createdStaffData.name} has been added to your team!`,
+          description: `${staffToCreate.name} has been added to your team!`,
         });
         setTimeout(() => {
           resetForm();

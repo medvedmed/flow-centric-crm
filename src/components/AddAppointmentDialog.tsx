@@ -11,15 +11,21 @@ interface AddAppointmentDialogProps {
   selectedTime?: string;
   selectedStaffId?: string;
   trigger?: React.ReactNode;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 export const AddAppointmentDialog: React.FC<AddAppointmentDialogProps> = ({
   selectedDate,
   selectedTime,
   selectedStaffId,
-  trigger
+  trigger,
+  isOpen: externalIsOpen,
+  onClose: externalOnClose
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+  const setIsOpen = externalOnClose ? (open: boolean) => !open && externalOnClose() : setInternalIsOpen;
   const { hasPermissionSync, userRole } = usePermissions();
 
   const canCreateAppointments = hasPermissionSync('appointments', 'create');

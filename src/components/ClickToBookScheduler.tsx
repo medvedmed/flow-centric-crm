@@ -172,8 +172,8 @@ export const ClickToBookScheduler: React.FC<ClickToBookSchedulerProps> = ({
           setSelectedTimeSlot(null);
         }}
         selectedDate={selectedTimeSlot?.date || selectedDate}
-        initialTime={selectedTimeSlot?.time}
-        initialStaffId={selectedTimeSlot?.staffId}
+        selectedTime={selectedTimeSlot?.time}
+        selectedStaffId={selectedTimeSlot?.staffId}
       />
     </div>
   );

@@ -28,8 +28,9 @@ export const AppointmentClientSection: React.FC<AppointmentClientSectionProps> =
       <div className="space-y-2">
         <Label>Client *</Label>
         <ClientSelector
-          value={clientId}
-          onValueChange={onClientSelect}
+          selectedClientId={clientId}
+          onClientSelect={(client) => onClientSelect(client.id, client.name, client.phone)}
+          onNewClient={(clientData) => onClientSelect('', clientData.name, clientData.phone)}
         />
         {clientId && clientName && (
           <div className="p-3 bg-green-50 rounded-lg border border-green-200">

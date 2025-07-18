@@ -12,9 +12,13 @@ import { appointmentApi } from '@/services/api/appointmentApi';
 import { serviceApi } from '@/services/api/serviceApi';
 import { clientApi } from '@/services/api/clientApi';
 import { Appointment, Service, Client } from '@/services/types';
-import { Calendar, Clock, User, DollarSign, Plus, Trash2, Download } from 'lucide-react';
+import { Calendar, Clock, User, DollarSign, Download, CheckCircle } from 'lucide-react';
 import { ReceiptGenerator } from './ReceiptGenerator';
 import { ClientSelector } from '../ClientSelector';
+import { AppointmentServicesManager } from './AppointmentServicesManager';
+import { AppointmentProductsManager } from './AppointmentProductsManager';
+import { useAppointmentDetails } from '@/hooks/appointments/useAppointmentDetails';
+import { supabase } from '@/integrations/supabase/client';
 
 interface EditAppointmentFormProps {
   appointment: Appointment;
@@ -33,6 +37,10 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
+
+  // Load appointment details including services and products
+  const { data: appointmentDetails, refetch: refetchDetails } = useAppointmentDetails(appointment.id);
 
   useEffect(() => {
     loadData();
@@ -56,9 +64,10 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   const loadData = async () => {
     try {
       setLoading(true);
-      const [servicesData, clientsData] = await Promise.all([
+      const [servicesData, clientsData, productsData] = await Promise.all([
         serviceApi.getServices(),
-        clientApi.getClients()
+        clientApi.getClients(),
+        loadProducts()
       ]);
       
       if (Array.isArray(servicesData)) {
@@ -72,6 +81,8 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
       } else if (clientsData?.data) {
         setClients(clientsData.data);
       }
+
+      setProducts(productsData || []);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -81,6 +92,21 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true);
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error loading products:', error);
+      return [];
     }
   };
 
@@ -96,8 +122,6 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
 
   const handleNewClient = async (clientData: { name: string; email: string; phone?: string }) => {
     try {
-      // This would normally create a new client via API
-      // For now, just update the form with the new client data
       setFormData(prev => ({
         ...prev,
         clientName: clientData.name,
@@ -146,22 +170,8 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
         description: "Appointment updated successfully",
       });
 
-      // Refresh the appointment data
-      const refreshedAppointments = await appointmentApi.getAppointments();
-      const updatedAppointment = Array.isArray(refreshedAppointments) 
-        ? refreshedAppointments.find(apt => apt.id === appointment.id)
-        : (refreshedAppointments as any)?.data?.find((apt: any) => apt.id === appointment.id);
-      
-      if (updatedAppointment) {
-        setFormData(updatedAppointment);
-      }
-
-      // Close the dialog after a short delay to show the success message
-      setTimeout(() => {
-        onClose();
-        // Force a page refresh to update the calendar
-        window.location.reload();
-      }, 1000);
+      // Refresh details
+      await refetchDetails();
 
     } catch (error) {
       console.error('Error updating appointment:', error);
@@ -175,23 +185,47 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
     }
   };
 
-  const addProduct = () => {
-    setProducts([...products, { 
-      id: Date.now().toString(), 
-      name: '', 
-      quantity: 1, 
-      price: 0 
-    }]);
-  };
+  const handleFinalizeSale = async () => {
+    try {
+      setIsFinalizing(true);
 
-  const removeProduct = (index: number) => {
-    setProducts(products.filter((_, i) => i !== index));
-  };
+      // Calculate total with services and products
+      const servicesTotal = appointmentDetails?.services.reduce((sum, service) => sum + Number(service.service_price), 0) || 0;
+      const productsTotal = appointmentDetails?.products.reduce((sum, product) => sum + Number(product.total_price), 0) || 0;
+      const finalTotal = formData.price + servicesTotal + productsTotal;
 
-  const updateProduct = (index: number, field: string, value: any) => {
-    const updatedProducts = [...products];
-    updatedProducts[index] = { ...updatedProducts[index], [field]: value };
-    setProducts(updatedProducts);
+      // Update appointment as completed and paid
+      const updateData = {
+        status: 'Completed' as const,
+        paymentStatus: 'paid' as const,
+        paymentMethod: formData.paymentMethod || 'cash',
+        paymentDate: new Date().toISOString(),
+        price: finalTotal
+      };
+
+      await appointmentApi.updateAppointment(appointment.id, updateData);
+      
+      toast({
+        title: "Sale Finalized",
+        description: `Appointment completed and payment of $${finalTotal.toFixed(2)} recorded!`,
+      });
+
+      // Close dialog and refresh
+      setTimeout(() => {
+        onClose();
+        window.location.reload();
+      }, 1500);
+
+    } catch (error) {
+      console.error('Error finalizing sale:', error);
+      toast({
+        title: "Error",
+        description: "Failed to finalize sale",
+        variant: "destructive",
+      });
+    } finally {
+      setIsFinalizing(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -213,7 +247,9 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
     }
   };
 
-  const totalAmount = formData.price + products.reduce((sum, product) => sum + (product.price * product.quantity), 0);
+  const servicesTotal = appointmentDetails?.services.reduce((sum, service) => sum + Number(service.service_price), 0) || 0;
+  const productsTotal = appointmentDetails?.products.reduce((sum, product) => sum + Number(product.total_price), 0) || 0;
+  const grandTotal = formData.price + servicesTotal + productsTotal;
 
   if (loading) {
     return (
@@ -225,7 +261,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
+      {/* Header - keep existing code */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Calendar className="w-6 h-6 text-violet-600" />
@@ -250,7 +286,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column - Client Information */}
+        {/* Left Column - Client Information - keep existing code */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -282,7 +318,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
               />
             </div>
             <div>
-              <Label htmlFor="service">Service</Label>
+              <Label htmlFor="service">Main Service</Label>
               <Select
                 value={formData.service}
                 onValueChange={(value) => {
@@ -310,7 +346,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
           </CardContent>
         </Card>
 
-        {/* Right Column - Schedule & Payment */}
+        {/* Right Column - Schedule & Payment - keep existing basic structure */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -319,6 +355,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* ... keep existing schedule and payment fields ... */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="date">Date</Label>
@@ -395,96 +432,44 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
               </div>
             </div>
             {formData.paymentStatus !== 'unpaid' && (
-              <>
-                <div>
-                  <Label htmlFor="paymentMethod">Payment Method</Label>
-                  <Select
-                    value={formData.paymentMethod || 'cash'}
-                    onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="card">Card</SelectItem>
-                      <SelectItem value="transfer">Bank Transfer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {formData.paymentDate && (
-                  <div>
-                    <Label htmlFor="paymentDate">Payment Date</Label>
-                    <Input
-                      id="paymentDate"
-                      type="datetime-local"
-                      value={formData.paymentDate ? new Date(formData.paymentDate).toISOString().slice(0, 16) : ''}
-                      onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
-                    />
-                  </div>
-                )}
-              </>
+              <div>
+                <Label htmlFor="paymentMethod">Payment Method</Label>
+                <Select
+                  value={formData.paymentMethod || 'cash'}
+                  onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="card">Card</SelectItem>
+                    <SelectItem value="transfer">Bank Transfer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Products Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5" />
-              Additional Products
-            </CardTitle>
-            <Button onClick={addProduct} variant="outline" size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Product
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {products.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No additional products added</p>
-          ) : (
-            <div className="space-y-3">
-              {products.map((product, index) => (
-                <div key={product.id} className="flex items-center gap-3 p-3 border rounded-lg">
-                  <Input
-                    placeholder="Product name"
-                    value={product.name}
-                    onChange={(e) => updateProduct(index, 'name', e.target.value)}
-                    className="flex-1"
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Qty"
-                    value={product.quantity}
-                    onChange={(e) => updateProduct(index, 'quantity', parseInt(e.target.value) || 1)}
-                    className="w-20"
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Price"
-                    value={product.price}
-                    onChange={(e) => updateProduct(index, 'price', parseFloat(e.target.value) || 0)}
-                    className="w-24"
-                  />
-                  <Button
-                    onClick={() => removeProduct(index)}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Enhanced Services Management */}
+      <AppointmentServicesManager
+        appointmentId={appointment.id}
+        appointmentServices={appointmentDetails?.services || []}
+        availableServices={services}
+        onServicesChange={refetchDetails}
+      />
 
-      {/* Notes Section */}
+      {/* Enhanced Products Management */}
+      <AppointmentProductsManager
+        appointmentId={appointment.id}
+        appointmentProducts={appointmentDetails?.products || []}
+        availableProducts={products}
+        onProductsChange={refetchDetails}
+      />
+
+      {/* Notes Section - keep existing */}
       <Card>
         <CardHeader>
           <CardTitle>Notes</CardTitle>
@@ -499,22 +484,57 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
         </CardContent>
       </Card>
 
-      {/* Summary & Actions */}
+      {/* Enhanced Summary & Actions */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-lg font-semibold">
-              Total Amount: ${totalAmount.toFixed(2)}
+          <div className="space-y-4">
+            {/* Detailed Breakdown */}
+            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span>Main Service:</span>
+                <span>${formData.price.toFixed(2)}</span>
+              </div>
+              {servicesTotal > 0 && (
+                <div className="flex justify-between">
+                  <span>Additional Services:</span>
+                  <span>${servicesTotal.toFixed(2)}</span>
+                </div>
+              )}
+              {productsTotal > 0 && (
+                <div className="flex justify-between">
+                  <span>Products:</span>
+                  <span>${productsTotal.toFixed(2)}</span>
+                </div>
+              )}
+              <Separator />
+              <div className="flex justify-between text-lg font-semibold">
+                <span>Grand Total:</span>
+                <span>${grandTotal.toFixed(2)}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <ReceiptGenerator appointment={formData} />
-              <Button
-                onClick={handleUpdateAppointment}
-                disabled={isUpdating}
-                className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700"
-              >
-                {isUpdating ? 'Updating...' : 'Update Appointment'}
-              </Button>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <ReceiptGenerator appointment={formData} />
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={handleUpdateAppointment}
+                  disabled={isUpdating}
+                  variant="outline"
+                >
+                  {isUpdating ? 'Updating...' : 'Save Changes'}
+                </Button>
+                <Button
+                  onClick={handleFinalizeSale}
+                  disabled={isFinalizing}
+                  className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {isFinalizing ? 'Finalizing...' : `Finalize Sale ($${grandTotal.toFixed(2)})`}
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>

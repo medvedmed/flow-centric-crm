@@ -9,24 +9,32 @@ import { AdminSetupDialog } from "@/components/AdminSetupDialog";
 import { EnhancedSalonProfile } from "@/components/EnhancedSalonProfile";
 import { UnifiedRoleManagement } from "@/components/UnifiedRoleManagement";
 import { WhatsAppSection } from "@/components/WhatsAppSection";
-import { WhatsAppQRIntegration } from "@/components/WhatsAppQRIntegration";
 import { StaffScheduleSection } from "@/components/StaffScheduleSection";
 import ManagerSection from "@/components/ManagerSection";
-import { CurrencySettings } from '@/components/CurrencySettings';
+import { NotificationPreferences } from "@/components/NotificationPreferences";
 import { BusinessAnalytics } from "@/components/BusinessAnalytics";
 import { DatabaseDebugPanel } from "@/components/DatabaseDebugPanel";
 import { AuditTrailHistory } from "@/components/AuditTrailHistory";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-
 const Settings = () => {
-  const { needsAdminSetup } = useAdminSetup();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const { hasPermissionSync, isLoading: permissionsLoading, error } = usePermissions();
-  const { toast } = useToast();
+  const {
+    needsAdminSetup
+  } = useAdminSetup();
+  const {
+    isAuthenticated,
+    isLoading: authLoading
+  } = useAuth();
+  const {
+    hasPermissionSync,
+    isLoading: permissionsLoading,
+    error
+  } = usePermissions();
+  const {
+    toast
+  } = useToast();
   const [showAdminDialog, setShowAdminDialog] = useState(needsAdminSetup);
-
   const isLoading = authLoading || permissionsLoading;
 
   // Show error if permissions failed to load
@@ -35,7 +43,7 @@ const Settings = () => {
       toast({
         title: "Permission Error",
         description: "Failed to load user permissions. Some features may not work correctly.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   }, [error, toast]);
@@ -47,46 +55,37 @@ const Settings = () => {
 
   // Show loading screen while authentication is being verified
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+    return <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="flex items-center gap-2">
           <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
           <span className="text-gray-600">Loading settings...</span>
         </div>
-      </div>
-    );
+      </div>;
   }
 
   // Show authentication error if not authenticated
   if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50 flex items-center justify-center p-6">
+    return <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50 flex items-center justify-center p-6">
         <Alert variant="destructive" className="max-w-md bg-white/70 backdrop-blur-sm">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Authentication required. Please log in to access settings.
           </AlertDescription>
         </Alert>
-      </div>
-    );
+      </div>;
   }
-
   if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50 flex items-center justify-center p-6">
+    return <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50 flex items-center justify-center p-6">
         <Alert variant="destructive" className="max-w-md bg-white/70 backdrop-blur-sm">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Failed to load settings. Please refresh the page or contact support.
           </AlertDescription>
         </Alert>
-      </div>
-    );
+      </div>;
   }
-
   if (!canViewSettings) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+    return <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50 flex items-center justify-center">
         <Card className="max-w-md bg-white/70 backdrop-blur-sm border-violet-200 shadow-xl">
           <CardContent className="p-6 text-center">
             <Shield className="h-12 w-12 mx-auto mb-4 text-violet-400" />
@@ -94,16 +93,10 @@ const Settings = () => {
             <p className="text-gray-600">You don't have permission to view settings.</p>
           </CardContent>
         </Card>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50">
-      <AdminSetupDialog 
-        open={showAdminDialog} 
-        onClose={() => setShowAdminDialog(false)} 
-      />
+  return <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50">
+      <AdminSetupDialog open={showAdminDialog} onClose={() => setShowAdminDialog(false)} />
 
       {/* Header */}
       <div className="bg-white/70 backdrop-blur-sm border-b border-violet-200 px-6 py-8">
@@ -121,7 +114,7 @@ const Settings = () => {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         <Tabs defaultValue="salon" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-11 bg-white/70 backdrop-blur-sm border-violet-200 overflow-x-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-10 bg-white/70 backdrop-blur-sm border-violet-200 overflow-x-auto">
             <TabsTrigger value="salon" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
               <Building className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden xs:inline">Salon</span>
@@ -129,10 +122,6 @@ const Settings = () => {
             <TabsTrigger value="whatsapp" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
               <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden xs:inline">WhatsApp</span>
-            </TabsTrigger>
-            <TabsTrigger value="qr-integration" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
-              <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="hidden xs:inline">QR Connect</span>
             </TabsTrigger>
             <TabsTrigger value="manager" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
               <UserCog className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -162,18 +151,14 @@ const Settings = () => {
               <History className="w-4 h-4" />
               <span className="hidden sm:inline">History</span>
             </TabsTrigger>
-            <TabsTrigger value="debug" className="flex items-center gap-2">
-              <Database className="w-4 h-4" />
-              <span className="hidden sm:inline">Debug</span>
-            </TabsTrigger>
+            
           </TabsList>
 
           <TabsContent value="salon" className="space-y-6">
             <ErrorBoundary>
               <EnhancedSalonProfile />
             </ErrorBoundary>
-              <CurrencySettings />
-            </TabsContent>
+          </TabsContent>
 
           <TabsContent value="whatsapp" className="space-y-6">
             <ErrorBoundary>
@@ -181,69 +166,47 @@ const Settings = () => {
             </ErrorBoundary>
           </TabsContent>
 
-          <TabsContent value="qr-integration" className="space-y-6">
-            <ErrorBoundary>
-              <WhatsAppQRIntegration />
-            </ErrorBoundary>
-          </TabsContent>
-
           <TabsContent value="manager" className="space-y-6">
             <ErrorBoundary>
-              {canEditSettings ? (
-                <ManagerSection />
-              ) : (
-                <Card className="bg-white/70 backdrop-blur-sm border-violet-200">
+              {canEditSettings ? <ManagerSection /> : <Card className="bg-white/70 backdrop-blur-sm border-violet-200">
                   <CardContent className="p-6 text-center">
                     <Shield className="h-8 w-8 mx-auto mb-4 text-violet-400" />
                     <p className="text-gray-600">You need edit permissions to access the Manager section.</p>
                   </CardContent>
-                </Card>
-              )}
+                </Card>}
             </ErrorBoundary>
           </TabsContent>
 
           <TabsContent value="roles" className="space-y-6">
             <ErrorBoundary>
-              {canEditSettings ? (
-                <UnifiedRoleManagement />
-              ) : (
-                <Card className="bg-white/70 backdrop-blur-sm border-violet-200">
+              {canEditSettings ? <UnifiedRoleManagement /> : <Card className="bg-white/70 backdrop-blur-sm border-violet-200">
                   <CardContent className="p-6 text-center">
                     <Shield className="h-8 w-8 mx-auto mb-4 text-violet-400" />
                     <p className="text-gray-600">You need edit permissions to manage roles and permissions.</p>
                   </CardContent>
-                </Card>
-              )}
+                </Card>}
             </ErrorBoundary>
           </TabsContent>
 
           <TabsContent value="schedule" className="space-y-6">
             <ErrorBoundary>
-              {canEditSettings ? (
-                <StaffScheduleSection />
-              ) : (
-                <Card className="bg-white/70 backdrop-blur-sm border-violet-200">
+              {canEditSettings ? <StaffScheduleSection /> : <Card className="bg-white/70 backdrop-blur-sm border-violet-200">
                   <CardContent className="p-6 text-center">
                     <Shield className="h-8 w-8 mx-auto mb-4 text-violet-400" />
                     <p className="text-gray-600">You need edit permissions to manage staff schedules.</p>
                   </CardContent>
-                </Card>
-              )}
+                </Card>}
             </ErrorBoundary>
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">
             <ErrorBoundary>
-              {canViewReports ? (
-                <BusinessAnalytics />
-              ) : (
-                <Card className="bg-white/70 backdrop-blur-sm border-violet-200">
+              {canViewReports ? <BusinessAnalytics /> : <Card className="bg-white/70 backdrop-blur-sm border-violet-200">
                   <CardContent className="p-6 text-center">
                     <BarChart3 className="h-8 w-8 mx-auto mb-4 text-violet-400" />
                     <p className="text-gray-600">You need report permissions to view business analytics.</p>
                   </CardContent>
-                </Card>
-              )}
+                </Card>}
             </ErrorBoundary>
           </TabsContent>
 
@@ -281,17 +244,7 @@ const Settings = () => {
 
           <TabsContent value="notifications" className="space-y-6">
             <ErrorBoundary>
-              <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Bell className="h-5 w-5 text-violet-600" />
-                    Notification Preferences
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Notification settings will be available in the next update.</p>
-                </CardContent>
-              </Card>
+              <NotificationPreferences />
             </ErrorBoundary>
           </TabsContent>
 
@@ -308,8 +261,6 @@ const Settings = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Settings;

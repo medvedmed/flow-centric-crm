@@ -3,19 +3,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Users, Search, Plus, Filter, UserPlus, Star, Download } from 'lucide-react';
+import { Users, Search, Plus, Filter, UserPlus, Star, Download, Upload } from 'lucide-react';
 import { AddClientDialog } from '@/components/AddClientDialog';
 import { ClientImportDialog } from '@/components/ClientImportDialog';
+import { ImportCSVDialog } from '@/components/ImportCSVDialog';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
 const Clients = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const { hasPermissionSync } = usePermissions();
+  const { toast } = useToast();
 
   const canCreateClients = hasPermissionSync('clients', 'create');
 
@@ -96,6 +100,22 @@ const Clients = () => {
     },
   ];
 
+  const handleImportCSV = async (data: any[]) => {
+    const importPromises = data.map(async (row) => {
+      const { error } = await supabase.from('clients').insert({
+        salon_id: user?.id,
+        name: row.name || 'Unknown',
+        email: row.email || '',
+        phone: row.phone || '',
+        notes: row.notes || '',
+        status: row.status || 'New',
+      });
+      if (error) throw error;
+    });
+
+    await Promise.all(importPromises);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'vip':
@@ -128,8 +148,15 @@ const Clients = () => {
             <p className="text-gray-600 mt-2">Manage your salon's client relationships and history</p>
           </div>
           <div className="flex gap-2">
-            <ClientImportDialog />
             <Button 
+              variant="outline" 
+              className="gap-2"
+              onClick={() => setShowImportDialog(true)}
+            >
+              <Upload className="w-4 h-4" />
+              Import CSV
+            </Button>
+            <Button
               variant="outline" 
               className="gap-2"
               onClick={() => {
@@ -274,6 +301,15 @@ const Clients = () => {
             )}
           </CardContent>
         </Card>
+
+        <ImportCSVDialog
+          open={showImportDialog}
+          onOpenChange={setShowImportDialog}
+          onImport={handleImportCSV}
+          title="Import Clients"
+          description="Upload a CSV file to import multiple clients at once."
+          sampleHeaders={['name', 'email', 'phone', 'notes', 'status']}
+        />
       </div>
     </div>
   );

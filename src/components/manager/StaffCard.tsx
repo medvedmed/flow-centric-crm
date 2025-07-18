@@ -10,6 +10,7 @@ interface StaffCardProps {
   showPassword: boolean;
   onTogglePassword: () => void;
   onCopyCredentials: () => void;
+  onEditStaff: () => void;
   onDeleteStaff: () => void;
 }
 
@@ -18,6 +19,7 @@ export const StaffCard = ({
   showPassword,
   onTogglePassword,
   onCopyCredentials,
+  onEditStaff,
   onDeleteStaff
 }: StaffCardProps) => {
   return (
@@ -54,6 +56,7 @@ export const StaffCard = ({
           <StaffActions
             staffId={staff.id}
             staffName={staff.name}
+            onEditStaff={onEditStaff}
             onDeleteStaff={onDeleteStaff}
           />
         </div>

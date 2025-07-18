@@ -6,10 +6,13 @@ import { useStaff, useDeleteStaff } from '@/hooks/useCrmData';
 import { useToast } from '@/hooks/use-toast';
 import { StaffSearch } from './manager/StaffSearch';
 import { StaffCard } from './manager/StaffCard';
+import { EditStaffDialog } from './EditStaffDialog';
+import { Staff } from '@/services/types';
 
 const ManagerSection = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   
   const { data: staffData = [], isLoading: staffLoading } = useStaff();
   const deleteStaff = useDeleteStaff();
@@ -96,9 +99,10 @@ const ManagerSection = () => {
                   showPassword={showPasswords[member.id] || false}
                   onTogglePassword={() => togglePasswordVisibility(member.id)}
                   onCopyCredentials={() => 
-                    member.staffLoginId && member.staffLoginPassword && 
-                    handleCopyCredentials(member.staffLoginId, member.staffLoginPassword)
+    member.staff_login_id && member.staff_login_password && 
+                    handleCopyCredentials(member.staff_login_id, member.staff_login_password)
                   }
+                  onEditStaff={() => setEditingStaff(member)}
                   onDeleteStaff={() => handleDeleteStaff(member.id, member.name)}
                 />
               ))
@@ -106,6 +110,12 @@ const ManagerSection = () => {
           </div>
         </CardContent>
       </Card>
+      
+      <EditStaffDialog
+        staff={editingStaff}
+        open={!!editingStaff}
+        onOpenChange={(open) => !open && setEditingStaff(null)}
+      />
     </div>
   );
 };

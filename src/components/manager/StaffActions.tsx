@@ -1,21 +1,26 @@
 
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Edit } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface StaffActionsProps {
   staffId: string;
   staffName: string;
+  onEditStaff: () => void;
   onDeleteStaff: () => void;
 }
 
 export const StaffActions = ({
   staffId,
   staffName,
+  onEditStaff,
   onDeleteStaff
 }: StaffActionsProps) => {
   return (
     <div className="flex items-center gap-2 ml-4">
+      <Button size="sm" variant="outline" onClick={onEditStaff}>
+        <Edit className="h-3 w-3" />
+      </Button>
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button size="sm" variant="destructive">

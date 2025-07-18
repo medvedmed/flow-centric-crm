@@ -27,14 +27,14 @@ export const ClientRetentionChart: React.FC<ClientRetentionChartProps> = ({
   if (isLoading || !summary) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-gray-800 border-gray-700">
+        <Card className="bg-white/70 backdrop-blur-sm border-violet-200">
           <CardContent className="p-6">
-            <div className="animate-pulse h-64 bg-gray-700 rounded"></div>
+            <div className="animate-pulse h-64 bg-violet-100 rounded"></div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-800 border-gray-700">
+        <Card className="bg-white/70 backdrop-blur-sm border-violet-200">
           <CardContent className="p-6">
-            <div className="animate-pulse h-64 bg-gray-700 rounded"></div>
+            <div className="animate-pulse h-64 bg-violet-100 rounded"></div>
           </CardContent>
         </Card>
       </div>
@@ -43,8 +43,8 @@ export const ClientRetentionChart: React.FC<ClientRetentionChartProps> = ({
 
   const pieData = [
     { name: 'New Clients', value: summary.newClients, color: '#10B981' },
-    { name: 'Returning Clients', value: summary.returningClients, color: '#F59E0B' },
-    { name: 'Loyal Clients', value: summary.loyalClients, color: '#8B5CF6' }
+    { name: 'Returning Clients', value: summary.returningClients, color: '#8B5CF6' },
+    { name: 'Loyal Clients', value: summary.loyalClients, color: '#3B82F6' }
   ].filter(item => item.value > 0);
 
   const barData = staffMetrics?.slice(0, 8).map(staff => ({
@@ -77,9 +77,9 @@ export const ClientRetentionChart: React.FC<ClientRetentionChartProps> = ({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Client Category Distribution */}
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-white">Client Category Distribution</CardTitle>
+          <CardTitle className="text-violet-800">Client Category Distribution</CardTitle>
         </CardHeader>
         <CardContent>
           {pieData.length > 0 ? (
@@ -101,10 +101,10 @@ export const ClientRetentionChart: React.FC<ClientRetentionChartProps> = ({
                 </Pie>
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: '#374151', 
-                    border: 'none', 
+                    backgroundColor: 'white', 
+                    border: '1px solid #8B5CF6', 
                     borderRadius: '8px',
-                    color: 'white'
+                    color: '#6B46C1'
                   }}
                 />
               </PieChart>
@@ -112,8 +112,8 @@ export const ClientRetentionChart: React.FC<ClientRetentionChartProps> = ({
           ) : (
             <div className="h-64 flex items-center justify-center">
               <div className="text-center">
-                <div className="text-gray-400 mb-2">No client data available</div>
-                <div className="text-gray-500 text-sm">Complete appointments to see client distribution</div>
+                <div className="text-violet-600 mb-2">No client data available</div>
+                <div className="text-violet-500 text-sm">Complete appointments to see client distribution</div>
               </div>
             </div>
           )}
@@ -126,7 +126,7 @@ export const ClientRetentionChart: React.FC<ClientRetentionChartProps> = ({
                   className="w-3 h-3 rounded-full" 
                   style={{ backgroundColor: entry.color }}
                 ></div>
-                <span className="text-gray-300 text-sm">{entry.name}</span>
+                <span className="text-violet-700 text-sm">{entry.name}</span>
               </div>
             ))}
           </div>
@@ -134,46 +134,46 @@ export const ClientRetentionChart: React.FC<ClientRetentionChartProps> = ({
       </Card>
 
       {/* Staff Retention Rates */}
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-white">Staff Retention Rates</CardTitle>
+          <CardTitle className="text-violet-800">Staff Retention Rates</CardTitle>
         </CardHeader>
         <CardContent>
           {barData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={barData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#C7D2FE" />
                 <XAxis 
                   dataKey="name" 
-                  tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                  tick={{ fill: '#6B46C1', fontSize: 12 }}
                   angle={-45}
                   textAnchor="end"
                   height={80}
                 />
                 <YAxis 
-                  tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                  tick={{ fill: '#6B46C1', fontSize: 12 }}
                   domain={[0, 100]}
                 />
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: '#374151', 
-                    border: 'none', 
+                    backgroundColor: 'white', 
+                    border: '1px solid #8B5CF6', 
                     borderRadius: '8px',
-                    color: 'white'
+                    color: '#6B46C1'
                   }}
                   formatter={(value: any, name: string) => [
                     name === 'retention' ? `${value.toFixed(1)}%` : value,
                     name === 'retention' ? 'Retention Rate' : 'Total Clients'
                   ]}
                 />
-                <Bar dataKey="retention" fill="#3B82F6" name="retention" />
+                <Bar dataKey="retention" fill="#8B5CF6" name="retention" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
             <div className="h-64 flex items-center justify-center">
               <div className="text-center">
-                <div className="text-gray-400 mb-2">No staff data available</div>
-                <div className="text-gray-500 text-sm">Complete appointments to see retention rates</div>
+                <div className="text-violet-600 mb-2">No staff data available</div>
+                <div className="text-violet-500 text-sm">Complete appointments to see retention rates</div>
               </div>
             </div>
           )}

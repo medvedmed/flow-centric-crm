@@ -15,7 +15,7 @@ interface EditStaffDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export const EditStaffDialog = ({ staff, open, onOpenChange }: EditStaffDialogProps) => {
+const EditStaffDialog = ({ staff, open, onOpenChange }: EditStaffDialogProps) => {
   const [formData, setFormData] = useState({
     name: staff?.name || '',
     email: staff?.email || '',

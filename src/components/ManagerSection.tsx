@@ -6,7 +6,7 @@ import { useStaff, useDeleteStaff } from '@/hooks/useCrmData';
 import { useToast } from '@/hooks/use-toast';
 import { StaffSearch } from './manager/StaffSearch';
 import { StaffCard } from './manager/StaffCard';
-import { EditStaffDialog } from './EditStaffDialog';
+import EditStaffDialog from './EditStaffDialog';
 import { Staff } from '@/services/types';
 
 const ManagerSection = () => {

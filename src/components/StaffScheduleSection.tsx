@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar, Clock, Users, Save, Edit, Trash2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface StaffMember {
   id: string;
@@ -23,6 +26,7 @@ interface BulkEditSession {
 
 export const StaffScheduleSection: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [bulkEditMode, setBulkEditMode] = useState(false);
   const [bulkEdit, setBulkEdit] = useState<BulkEditSession>({
     selectedDays: [],
@@ -31,51 +35,71 @@ export const StaffScheduleSection: React.FC = () => {
   });
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  
-  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([
-    {
-      id: '1',
-      name: 'Sarah Johnson',
-      role: 'Senior Stylist',
-      schedule: {
-        Monday: { start: '09:00', end: '17:00', isWorking: true },
-        Tuesday: { start: '09:00', end: '17:00', isWorking: true },
-        Wednesday: { start: '09:00', end: '17:00', isWorking: true },
-        Thursday: { start: '09:00', end: '17:00', isWorking: true },
-        Friday: { start: '09:00', end: '17:00', isWorking: true },
-        Saturday: { start: '10:00', end: '16:00', isWorking: true },
-        Sunday: { start: '00:00', end: '00:00', isWorking: false }
-      }
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+
+  // Fetch real staff data from database
+  const { data: staffData = [] } = useQuery({
+    queryKey: ['staff-schedule', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('salon_id', user?.id)
+        .eq('status', 'active')
+        .order('name');
+
+      if (error) throw error;
+      return data;
     },
-    {
-      id: '2',
-      name: 'Mike Chen',
-      role: 'Barber',
-      schedule: {
-        Monday: { start: '00:00', end: '00:00', isWorking: false },
-        Tuesday: { start: '10:00', end: '18:00', isWorking: true },
-        Wednesday: { start: '10:00', end: '18:00', isWorking: true },
-        Thursday: { start: '10:00', end: '18:00', isWorking: true },
-        Friday: { start: '10:00', end: '18:00', isWorking: true },
-        Saturday: { start: '09:00', end: '17:00', isWorking: true },
-        Sunday: { start: '11:00', end: '15:00', isWorking: true }
-      }
+    enabled: !!user,
+  });
+
+  // Get salon profile for default working hours
+  const { data: salonProfile } = useQuery({
+    queryKey: ['salon-profile', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
+
+      if (error) throw error;
+      return data;
     },
-    {
-      id: '3',
-      name: 'Emma Davis',
-      role: 'Nail Technician',
-      schedule: {
-        Monday: { start: '08:00', end: '16:00', isWorking: true },
-        Tuesday: { start: '08:00', end: '16:00', isWorking: true },
-        Wednesday: { start: '08:00', end: '16:00', isWorking: true },
-        Thursday: { start: '08:00', end: '16:00', isWorking: true },
-        Friday: { start: '08:00', end: '16:00', isWorking: true },
-        Saturday: { start: '00:00', end: '00:00', isWorking: false },
-        Sunday: { start: '00:00', end: '00:00', isWorking: false }
-      }
+    enabled: !!user,
+  });
+
+  // Convert staff data to schedule format
+  useEffect(() => {
+    if (staffData.length > 0) {
+      const defaultStart = salonProfile?.opening_hours || '09:00:00';
+      const defaultEnd = salonProfile?.closing_hours || '17:00:00';
+      const defaultWorkingDays = salonProfile?.working_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+      
+      const formattedStaff = staffData.map(staff => {
+        const schedule: { [key: string]: { start: string; end: string; isWorking: boolean } } = {};
+        
+        days.forEach(day => {
+          const isWorkingDay = staff.working_days?.includes(day) || defaultWorkingDays.includes(day);
+          schedule[day] = {
+            start: isWorkingDay ? (staff.working_hours_start || defaultStart).slice(0, 5) : '00:00',
+            end: isWorkingDay ? (staff.working_hours_end || defaultEnd).slice(0, 5) : '00:00',
+            isWorking: isWorkingDay
+          };
+        });
+
+        return {
+          id: staff.id,
+          name: staff.name,
+          role: staff.specialties?.join(', ') || 'Staff Member',
+          schedule
+        };
+      });
+      
+      setStaffMembers(formattedStaff);
     }
-  ]);
+  }, [staffData, salonProfile]);
 
   const toggleDaySelection = (day: string) => {
     setBulkEdit(prev => ({

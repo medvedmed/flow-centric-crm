@@ -147,8 +147,9 @@ const Auth = () => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
+      <div className="relative z-10 min-h-screen flex items-center justify-between p-4">
+        <div className="flex-1 flex justify-center">
+          <Card className="w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
           <CardHeader className="text-center">
             <div className="mx-auto w-16 h-16 bg-gradient-to-r from-cyan-400 to-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
               <Scissors className="w-8 h-8 text-white" />
@@ -348,6 +349,37 @@ const Auth = () => {
             </Tabs>
           </CardContent>
         </Card>
+        </div>
+        
+        {/* Right side decorative content */}
+        <div className="hidden lg:flex flex-1 items-center justify-center">
+          <div className="text-center text-white/80 max-w-md">
+            <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+              Transform Your Salon
+            </h2>
+            <p className="text-lg mb-6">
+              Complete salon management with advanced scheduling, client retention tracking, and automated WhatsApp communications.
+            </p>
+            <div className="space-y-3 text-left">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-cyan-400 rounded-full"></div>
+                <span>Smart appointment scheduling</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                <span>Client retention analytics</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                <span>Automated notifications</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-pink-400 rounded-full"></div>
+                <span>Financial management</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div>

@@ -4,16 +4,16 @@ import { ClientRetentionDashboard } from '@/components/retention/ClientRetention
 
 const ClientRetention = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
       {/* Header Section */}
-      <div className="bg-white/70 backdrop-blur-sm border-b border-violet-200 px-6 py-8">
+      <div className="bg-white/90 backdrop-blur-sm border-b border-gray-200 px-6 py-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 Client Retention Dashboard
               </h1>
-              <p className="text-gray-600 mt-2">Track client loyalty and staff retention performance</p>
+              <p className="text-gray-700 mt-2">Track client loyalty and staff retention performance</p>
             </div>
           </div>
         </div>

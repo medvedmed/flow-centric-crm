@@ -17,8 +17,9 @@ import { AppointmentSummary } from './AppointmentSummary';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Trash2, Plus, User, Calendar, DollarSign, Phone } from 'lucide-react';
+import { Trash2, Plus, User, Calendar, DollarSign, Phone, Clock, MapPin, FileText, CreditCard } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 interface Service {
   id: string;
@@ -468,6 +469,135 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
           </CardContent>
         </Card>
       )}
+
+      {/* Current Appointment Details */}
+      <Card className="bg-primary/5 border-primary/20">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Calendar className="w-5 h-5" />
+            Appointment Details
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Appointment Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="flex items-center gap-2 p-3 bg-background rounded-lg border">
+              <Clock className="w-4 h-4 text-primary" />
+              <div>
+                <p className="text-sm text-muted-foreground">Duration</p>
+                <p className="font-semibold">{appointment.duration || 60} mins</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 p-3 bg-background rounded-lg border">
+              <DollarSign className="w-4 h-4 text-primary" />
+              <div>
+                <p className="text-sm text-muted-foreground">Base Price</p>
+                <p className="font-semibold">${(appointment.price || 0).toFixed(2)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 p-3 bg-background rounded-lg border">
+              <FileText className="w-4 h-4 text-primary" />
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <Badge variant={appointment.status === 'Completed' ? 'default' : 'secondary'}>
+                  {appointment.status || 'Scheduled'}
+                </Badge>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 p-3 bg-background rounded-lg border">
+              <CreditCard className="w-4 h-4 text-primary" />
+              <div>
+                <p className="text-sm text-muted-foreground">Payment</p>
+                <Badge variant={paymentStatus === 'paid' ? 'default' : 'secondary'}>
+                  {paymentStatus || 'unpaid'}
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Appointment Timeline */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-sm font-medium">Appointment Time</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm">
+                  {appointment.start_time || appointment.startTime} - {appointment.end_time || appointment.endTime}
+                </span>
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Date</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <Calendar className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm">
+                  {new Date(appointment.date).toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Staff Information */}
+          {appointment.staff_id && (
+            <div>
+              <Label className="text-sm font-medium">Assigned Staff</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <User className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm">
+                  {staff.find(s => s.id === appointment.staff_id)?.name || 'Staff Member'}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Service Information */}
+          <div>
+            <Label className="text-sm font-medium">Service Details</Label>
+            <div className="mt-2 p-3 bg-background rounded-lg border">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">{appointment.service}</span>
+                <span className="text-muted-foreground">${(appointment.price || 0).toFixed(2)}</span>
+              </div>
+              {extraServices.length > 0 && (
+                <div className="mt-2 pt-2 border-t">
+                  <p className="text-xs text-muted-foreground mb-1">Extra Services:</p>
+                  {extraServices.map((service, index) => (
+                    <div key={index} className="flex justify-between items-center text-sm">
+                      <span>{service.name}</span>
+                      <span className="text-muted-foreground">${service.price.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Created/Updated Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-muted-foreground">
+            <div>
+              <span>Created: </span>
+              {appointment.created_at 
+                ? new Date(appointment.created_at).toLocaleString()
+                : 'N/A'
+              }
+            </div>
+            <div>
+              <span>Last Updated: </span>
+              {appointment.updated_at 
+                ? new Date(appointment.updated_at).toLocaleString()
+                : 'N/A'
+              }
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <AppointmentDateTime
         date={appointment.date}

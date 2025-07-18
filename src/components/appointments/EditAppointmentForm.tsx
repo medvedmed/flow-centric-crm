@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,63 +7,64 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { appointmentApi } from '@/services/api/appointmentApi';
 import { serviceApi } from '@/services/api/serviceApi';
 import { clientApi } from '@/services/api/clientApi';
 import { Appointment, Service, Client } from '@/services/types';
-import { Calendar, Clock, User, DollarSign, Plus, Trash2, Download } from 'lucide-react';
+import { Calendar, Clock, User, DollarSign, Plus, Trash2 } from 'lucide-react';
 import { ReceiptGenerator } from './ReceiptGenerator';
-import { ClientSelector } from '../ClientSelector';
+
 interface EditAppointmentFormProps {
   appointment: Appointment;
   onClose: () => void;
 }
+
 export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   appointment,
   onClose
 }) => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [formData, setFormData] = useState<Appointment>(appointment);
   const [services, setServices] = useState<Service[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [client, setClient] = useState<Client | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+
   useEffect(() => {
     loadData();
   }, []);
-  useEffect(() => {
-    // Auto-populate client data when appointment has client_id
-    if (appointment.clientId && clients.length > 0) {
-      const client = clients.find(c => c.id === appointment.clientId);
-      if (client) {
-        setSelectedClient(client);
-        setFormData(prev => ({
-          ...prev,
-          clientName: client.name,
-          clientPhone: client.phone || ''
-        }));
-      }
-    }
-  }, [appointment.clientId, clients]);
+
   const loadData = async () => {
     try {
       setLoading(true);
-      const [servicesData, clientsData] = await Promise.all([serviceApi.getServices(), clientApi.getClients()]);
-      if (Array.isArray(servicesData)) {
-        setServices(servicesData);
-      } else if (servicesData?.data) {
-        setServices(servicesData.data);
-      }
-      if (Array.isArray(clientsData)) {
-        setClients(clientsData);
-      } else if (clientsData?.data) {
-        setClients(clientsData.data);
+      
+      // Load services
+      const servicesResponse = await serviceApi.getServices();
+      const servicesData = Array.isArray(servicesResponse) ? servicesResponse : servicesResponse?.data || [];
+      setServices(servicesData);
+
+      // Load client data if clientId exists
+      if (appointment.clientId) {
+        try {
+          const clientsResponse = await clientApi.getClients();
+          const clientsData = Array.isArray(clientsResponse) ? clientsResponse : clientsResponse?.data || [];
+          const foundClient = clientsData.find(c => c.id === appointment.clientId);
+          
+          if (foundClient) {
+            setClient(foundClient);
+            // Update form data with client phone if not already present
+            if (!formData.clientPhone && foundClient.phone) {
+              setFormData(prev => ({
+                ...prev,
+                clientPhone: foundClient.phone || ''
+              }));
+            }
+          }
+        } catch (error) {
+          console.error('Error loading client data:', error);
+        }
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -75,46 +77,13 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
       setLoading(false);
     }
   };
-  const handleClientSelect = (client: Client) => {
-    setSelectedClient(client);
-    setFormData(prev => ({
-      ...prev,
-      clientId: client.id,
-      clientName: client.name,
-      clientPhone: client.phone || ''
-    }));
-  };
-  const handleNewClient = async (clientData: {
-    name: string;
-    email: string;
-    phone?: string;
-  }) => {
-    try {
-      // This would normally create a new client via API
-      // For now, just update the form with the new client data
-      setFormData(prev => ({
-        ...prev,
-        clientName: clientData.name,
-        clientPhone: clientData.phone || ''
-      }));
-      toast({
-        title: "Client Added",
-        description: "New client information has been added to the appointment"
-      });
-    } catch (error) {
-      console.error('Error creating client:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create new client",
-        variant: "destructive"
-      });
-    }
-  };
+
   const handleUpdateAppointment = async () => {
     try {
       setIsUpdating(true);
+      
       const updateData = {
-        clientId: selectedClient?.id || formData.clientId,
+        clientId: formData.clientId,
         clientName: formData.clientName,
         clientPhone: formData.clientPhone,
         service: formData.service,
@@ -129,23 +98,16 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
         notes: formData.notes,
         staffId: formData.staffId
       };
+
       await appointmentApi.updateAppointment(appointment.id, updateData);
+      
       toast({
         title: "Success",
         description: "Appointment updated successfully"
       });
 
-      // Refresh the appointment data
-      const refreshedAppointments = await appointmentApi.getAppointments();
-      const updatedAppointment = Array.isArray(refreshedAppointments) ? refreshedAppointments.find(apt => apt.id === appointment.id) : (refreshedAppointments as any)?.data?.find((apt: any) => apt.id === appointment.id);
-      if (updatedAppointment) {
-        setFormData(updatedAppointment);
-      }
-
-      // Close the dialog after a short delay to show the success message
       setTimeout(() => {
         onClose();
-        // Force a page refresh to update the calendar
         window.location.reload();
       }, 1000);
     } catch (error) {
@@ -159,6 +121,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
       setIsUpdating(false);
     }
   };
+
   const addProduct = () => {
     setProducts([...products, {
       id: Date.now().toString(),
@@ -167,9 +130,11 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
       price: 0
     }]);
   };
+
   const removeProduct = (index: number) => {
     setProducts(products.filter((_, i) => i !== index));
   };
+
   const updateProduct = (index: number, field: string, value: any) => {
     const updatedProducts = [...products];
     updatedProducts[index] = {
@@ -178,6 +143,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
     };
     setProducts(updatedProducts);
   };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Completed':
@@ -192,6 +158,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
+
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
       case 'paid':
@@ -204,20 +171,25 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
+
   const totalAmount = formData.price + products.reduce((sum, product) => sum + product.price * product.quantity, 0);
+
   if (loading) {
-    return <div className="flex items-center justify-center p-8">
+    return (
+      <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div>
-      </div>;
+      </div>
+    );
   }
-  return <div className="max-w-4xl mx-auto space-y-6">
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Calendar className="w-6 h-6 text-violet-600" />
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Edit Appointment</h2>
-            
             <p className="text-sm text-gray-500">
               Last updated: {new Date(formData.updatedAt || '').toLocaleString()}
             </p>
@@ -243,40 +215,56 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <ClientSelector selectedClientId={selectedClient?.id} onClientSelect={handleClientSelect} onNewClient={handleNewClient} />
+            {client && (
+              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-800 font-medium">Current Client</p>
+                <p className="text-sm text-blue-600">{client.name} • {client.email}</p>
+                {client.phone && <p className="text-sm text-blue-600">Phone: {client.phone}</p>}
+              </div>
+            )}
             
             <div>
               <Label htmlFor="clientName">Client Name</Label>
-              <Input id="clientName" value={formData.clientName} onChange={e => setFormData({
-              ...formData,
-              clientName: e.target.value
-            })} />
+              <Input 
+                id="clientName" 
+                value={formData.clientName} 
+                onChange={e => setFormData({ ...formData, clientName: e.target.value })} 
+              />
             </div>
+            
             <div>
               <Label htmlFor="clientPhone">Phone Number</Label>
-              <Input id="clientPhone" value={formData.clientPhone || ''} onChange={e => setFormData({
-              ...formData,
-              clientPhone: e.target.value
-            })} />
+              <Input 
+                id="clientPhone" 
+                value={formData.clientPhone || ''} 
+                onChange={e => setFormData({ ...formData, clientPhone: e.target.value })} 
+                placeholder={client?.phone || "Enter phone number"}
+              />
             </div>
+            
             <div>
               <Label htmlFor="service">Service</Label>
-              <Select value={formData.service} onValueChange={value => {
-              const selectedService = services.find(s => s.name === value);
-              setFormData({
-                ...formData,
-                service: value,
-                price: selectedService?.price || formData.price,
-                duration: selectedService?.duration || formData.duration
-              });
-            }}>
+              <Select 
+                value={formData.service} 
+                onValueChange={value => {
+                  const selectedService = services.find(s => s.name === value);
+                  setFormData({
+                    ...formData,
+                    service: value,
+                    price: selectedService?.price || formData.price,
+                    duration: selectedService?.duration || formData.duration
+                  });
+                }}
+              >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
                 <SelectContent>
-                  {services.map(service => <SelectItem key={service.id} value={service.name}>
+                  {services.map(service => (
+                    <SelectItem key={service.id} value={service.name}>
                       {service.name} - ${service.price}
-                    </SelectItem>)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -295,42 +283,54 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="date">Date</Label>
-                <Input id="date" type="date" value={formData.date} onChange={e => setFormData({
-                ...formData,
-                date: e.target.value
-              })} />
+                <Input 
+                  id="date" 
+                  type="date" 
+                  value={formData.date} 
+                  onChange={e => setFormData({ ...formData, date: e.target.value })} 
+                />
               </div>
               <div>
                 <Label htmlFor="startTime">Start Time</Label>
-                <Input id="startTime" type="time" value={formData.startTime} onChange={e => setFormData({
-                ...formData,
-                startTime: e.target.value
-              })} />
+                <Input 
+                  id="startTime" 
+                  type="time" 
+                  value={formData.startTime} 
+                  onChange={e => setFormData({ ...formData, startTime: e.target.value })} 
+                />
               </div>
             </div>
+            
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="price">Service Price</Label>
-                <Input id="price" type="number" value={formData.price} onChange={e => setFormData({
-                ...formData,
-                price: parseFloat(e.target.value) || 0
-              })} />
+                <Input 
+                  id="price" 
+                  type="number" 
+                  value={formData.price} 
+                  onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })} 
+                />
               </div>
               <div>
                 <Label htmlFor="duration">Duration (min)</Label>
-                <Input id="duration" type="number" value={formData.duration} onChange={e => setFormData({
-                ...formData,
-                duration: parseInt(e.target.value) || 60
-              })} />
+                <Input 
+                  id="duration" 
+                  type="number" 
+                  value={formData.duration} 
+                  onChange={e => setFormData({ ...formData, duration: parseInt(e.target.value) || 60 })} 
+                />
               </div>
             </div>
+            
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={(value: "Scheduled" | "Confirmed" | "In Progress" | "Completed" | "Cancelled" | "No Show") => setFormData({
-                ...formData,
-                status: value
-              })}>
+                <Select 
+                  value={formData.status} 
+                  onValueChange={(value: "Scheduled" | "Confirmed" | "In Progress" | "Completed" | "Cancelled" | "No Show") => 
+                    setFormData({ ...formData, status: value })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -344,10 +344,12 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
               </div>
               <div>
                 <Label htmlFor="paymentStatus">Payment Status</Label>
-                <Select value={formData.paymentStatus} onValueChange={(value: "paid" | "partial" | "unpaid") => setFormData({
-                ...formData,
-                paymentStatus: value
-              })}>
+                <Select 
+                  value={formData.paymentStatus} 
+                  onValueChange={(value: "paid" | "partial" | "unpaid") => 
+                    setFormData({ ...formData, paymentStatus: value })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -359,31 +361,25 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
                 </Select>
               </div>
             </div>
-            {formData.paymentStatus !== 'unpaid' && <>
-                <div>
-                  <Label htmlFor="paymentMethod">Payment Method</Label>
-                  <Select value={formData.paymentMethod || 'cash'} onValueChange={value => setFormData({
-                ...formData,
-                paymentMethod: value
-              })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="card">Card</SelectItem>
-                      <SelectItem value="transfer">Bank Transfer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {formData.paymentDate && <div>
-                    <Label htmlFor="paymentDate">Payment Date</Label>
-                    <Input id="paymentDate" type="datetime-local" value={formData.paymentDate ? new Date(formData.paymentDate).toISOString().slice(0, 16) : ''} onChange={e => setFormData({
-                ...formData,
-                paymentDate: e.target.value
-              })} />
-                  </div>}
-              </>}
+            
+            {formData.paymentStatus !== 'unpaid' && (
+              <div>
+                <Label htmlFor="paymentMethod">Payment Method</Label>
+                <Select 
+                  value={formData.paymentMethod || 'cash'} 
+                  onValueChange={value => setFormData({ ...formData, paymentMethod: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="card">Card</SelectItem>
+                    <SelectItem value="transfer">Bank Transfer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -403,16 +399,39 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
           </div>
         </CardHeader>
         <CardContent>
-          {products.length === 0 ? <p className="text-gray-500 text-center py-4">No additional products added</p> : <div className="space-y-3">
-              {products.map((product, index) => <div key={product.id} className="flex items-center gap-3 p-3 border rounded-lg">
-                  <Input placeholder="Product name" value={product.name} onChange={e => updateProduct(index, 'name', e.target.value)} className="flex-1" />
-                  <Input type="number" placeholder="Qty" value={product.quantity} onChange={e => updateProduct(index, 'quantity', parseInt(e.target.value) || 1)} className="w-20" />
-                  <Input type="number" placeholder="Price" value={product.price} onChange={e => updateProduct(index, 'price', parseFloat(e.target.value) || 0)} className="w-24" />
+          {products.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">No additional products added</p>
+          ) : (
+            <div className="space-y-3">
+              {products.map((product, index) => (
+                <div key={product.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                  <Input 
+                    placeholder="Product name" 
+                    value={product.name} 
+                    onChange={e => updateProduct(index, 'name', e.target.value)} 
+                    className="flex-1" 
+                  />
+                  <Input 
+                    type="number" 
+                    placeholder="Qty" 
+                    value={product.quantity} 
+                    onChange={e => updateProduct(index, 'quantity', parseInt(e.target.value) || 1)} 
+                    className="w-20" 
+                  />
+                  <Input 
+                    type="number" 
+                    placeholder="Price" 
+                    value={product.price} 
+                    onChange={e => updateProduct(index, 'price', parseFloat(e.target.value) || 0)} 
+                    className="w-24" 
+                  />
                   <Button onClick={() => removeProduct(index)} variant="outline" size="sm">
                     <Trash2 className="w-4 h-4" />
                   </Button>
-                </div>)}
-            </div>}
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -422,10 +441,12 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
           <CardTitle>Notes</CardTitle>
         </CardHeader>
         <CardContent>
-          <Textarea value={formData.notes || ''} onChange={e => setFormData({
-          ...formData,
-          notes: e.target.value
-        })} placeholder="Add any additional notes..." rows={3} />
+          <Textarea 
+            value={formData.notes || ''} 
+            onChange={e => setFormData({ ...formData, notes: e.target.value })} 
+            placeholder="Add any additional notes..." 
+            rows={3} 
+          />
         </CardContent>
       </Card>
 
@@ -438,12 +459,17 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
             </div>
             <div className="flex items-center gap-3">
               <ReceiptGenerator appointment={formData} />
-              <Button onClick={handleUpdateAppointment} disabled={isUpdating} className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700">
+              <Button 
+                onClick={handleUpdateAppointment} 
+                disabled={isUpdating} 
+                className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700"
+              >
                 {isUpdating ? 'Updating...' : 'Update Appointment'}
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
-    </div>;
+    </div>
+  );
 };

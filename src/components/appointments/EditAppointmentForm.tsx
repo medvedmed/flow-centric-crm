@@ -279,8 +279,9 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
               <Label htmlFor="clientPhone">Phone Number</Label>
               <Input
                 id="clientPhone"
-                value={formData.clientPhone || ''}
+                value={formData.clientPhone || appointment?.clientPhone || ''}
                 onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })}
+                placeholder="Enter client phone number"
               />
             </div>
             <div>

@@ -154,9 +154,7 @@ export const OfflineHandler: React.FC<{
       {/* Connection Status Indicator */}
       <div className="fixed bottom-4 right-4 z-50">
         <Card className={`transition-all duration-300 ${isOnline ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-          <CardContent className="p-3">
-            
-          </CardContent>
+          
         </Card>
       </div>
 

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,7 +11,6 @@ import { AddAppointmentDialog } from '@/components/AddAppointmentDialog';
 import { QuickPaymentDialog } from '@/components/QuickPaymentDialog';
 import { DailyActivityLog } from '@/components/DailyActivityLog';
 import { WorkingHoursManager } from '@/components/WorkingHoursManager';
-
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -23,43 +21,35 @@ const Appointments = () => {
     hasPermissionSync
   } = usePermissions();
   const canViewAppointments = hasPermissionSync('appointments', 'view');
-
   const handleAppointmentClick = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setShowEditDialog(true);
   };
-
   const handleCloseEditDialog = () => {
     setShowEditDialog(false);
     setSelectedAppointment(null);
   };
-
   const handleTimeSlotClick = (slotData: any) => {
     setTimeSlotData(slotData);
     setShowAddDialog(true);
   };
-
   const handleCloseAddDialog = () => {
     setShowAddDialog(false);
     setTimeSlotData(null);
   };
-
   const goToPreviousDay = () => {
     const previousDay = new Date(selectedDate);
     previousDay.setDate(selectedDate.getDate() - 1);
     setSelectedDate(previousDay);
   };
-
   const goToNextDay = () => {
     const nextDay = new Date(selectedDate);
     nextDay.setDate(selectedDate.getDate() + 1);
     setSelectedDate(nextDay);
   };
-
   const goToToday = () => {
     setSelectedDate(new Date());
   };
-
   if (!canViewAppointments) {
     return <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-violet-50 to-blue-50">
         <Card className="max-w-md shadow-xl rounded-2xl bg-white/70 backdrop-blur-sm border-violet-200">
@@ -73,7 +63,6 @@ const Appointments = () => {
         </Card>
       </div>;
   }
-
   return <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50 flex flex-col">
       {/* Header */}
       <div className="bg-white/70 backdrop-blur-sm border-b border-violet-200 px-6 py-4 flex items-center justify-between shadow-sm">
@@ -90,18 +79,14 @@ const Appointments = () => {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <WorkingHoursManager 
-            trigger={
-              <Button variant="outline" className="gap-2">
+        <div className="flex items-center gap-3 bg-slate-50">
+          <WorkingHoursManager trigger={<Button variant="outline" className="gap-2">
                 <Settings className="w-4 h-4" />
                 Working Hours
-              </Button>
-            }
-          />
+              </Button>} />
           <AddAppointmentDialog selectedDate={selectedDate} trigger={<Button className="gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
                 + Add Appointment
-              </Button>} />
+              </Button>} className="text-lg bg-purple-800 hover:bg-purple-700" />
           <QuickPaymentDialog />
         </div>
       </div>
@@ -137,5 +122,4 @@ const Appointments = () => {
       <AddAppointmentDialog isOpen={showAddDialog} onClose={handleCloseAddDialog} selectedDate={timeSlotData?.date} selectedTime={timeSlotData?.time} selectedStaffId={timeSlotData?.staffId} />
     </div>;
 };
-
 export default Appointments;

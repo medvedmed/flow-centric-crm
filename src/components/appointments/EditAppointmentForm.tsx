@@ -288,10 +288,20 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
           });
 
           // Update product inventory
-          await supabase.rpc('update_inventory_on_sale', {
-            product_id: product.id,
-            quantity_sold: product.quantity
-          });
+          const { data: currentProduct } = await supabase
+            .from('products')
+            .select('current_stock')
+            .eq('id', product.id)
+            .single();
+          
+          if (currentProduct) {
+            await supabase
+              .from('products')
+              .update({ 
+                current_stock: Math.max(0, currentProduct.current_stock - product.quantity)
+              })
+              .eq('id', product.id);
+          }
         }
       }
 

@@ -438,6 +438,18 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
       />
 
       <div className="flex gap-2 pt-4">
+        <Button 
+          type="button" 
+          variant="outline" 
+          className="flex-1"
+          onClick={() => {
+            // Logic for scheduling/booking another appointment
+            toast({ title: 'Schedule', description: 'Opening schedule view...' });
+            // You can navigate to schedule or open schedule dialog here
+          }}
+        >
+          Schedule
+        </Button>
         <Button type="submit" disabled={updateAppointmentMutation.isPending} className="flex-1">
           {updateAppointmentMutation.isPending ? 'Updating...' : 'Update Appointment'}
         </Button>

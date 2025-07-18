@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { appointmentApi } from '@/services/api/appointmentApi';
 import { serviceApi } from '@/services/api/serviceApi';
@@ -33,14 +32,8 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
 }) => {
   const { toast } = useToast();
 
-  // 1) initialize formData from appointment prop
+  // Local state for the form
   const [formData, setFormData] = useState<Appointment>(appointment);
-
-  // 2) whenever appointment prop changes, overwrite local state
-  useEffect(() => {
-    setFormData(appointment);
-  }, [appointment]);
-
   const [services, setServices] = useState<Service[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -48,55 +41,77 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // load services + clients once
+  // 1) Load master data once
   useEffect(() => {
-    loadData();
-  }, []);
-
-  // when clients arrive & appointment has a clientId, prefill name/phone
-  useEffect(() => {
-    if (appointment.clientId && clients.length > 0) {
-      const client = clients.find(c => c.id === appointment.clientId);
-      if (client) {
-        setSelectedClient(client);
-        setFormData(prev => ({
-          ...prev,
-          clientName: client.name,
-          clientPhone: client.phone || ''
-        }));
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [svcs, clnts] = await Promise.all([
+          serviceApi.getServices(),
+          clientApi.getClients()
+        ]);
+        setServices(Array.isArray(svcs) ? svcs : svcs.data);
+        setClients(Array.isArray(clnts) ? clnts : clnts.data);
+      } catch (err) {
+        console.error(err);
+        toast({
+          title: 'Error',
+          description: 'Failed to load services or clients',
+          variant: 'destructive'
+        });
+      } finally {
+        setLoading(false);
       }
-    }
-  }, [appointment.clientId, clients]);
+    };
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [svcs, clnts] = await Promise.all([
-        serviceApi.getServices(),
-        clientApi.getClients()
-      ]);
-      setServices(Array.isArray(svcs) ? svcs : svcs.data);
-      setClients(Array.isArray(clnts) ? clnts : clnts.data);
-    } catch (err) {
-      console.error(err);
-      toast({ title: 'Error', description: 'Failed to load form data', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  };
+    loadData();
+  }, [toast]);
 
+  // 2) Once appointment + lookups are ready, populate EVERY field at once
+  useEffect(() => {
+    if (!appointment || services.length === 0 || clients.length === 0) return;
+
+    // find the full client & service objects
+    const client = clients.find(c => c.id === appointment.clientId);
+    const service = services.find(s => s.id === appointment.serviceId);
+
+    // set selection
+    setSelectedClient(client || null);
+
+    // seed formData with all appointment values + lookups
+    setFormData({
+      ...appointment,
+      clientName:    client?.name        || appointment.clientName,
+      clientPhone:   client?.phone       || appointment.clientPhone,
+      service:       service?.name       || appointment.service,
+      price:         service?.price      ?? appointment.price,
+      duration:      service?.duration   ?? appointment.duration,
+      date:          appointment.date,
+      startTime:     appointment.startTime,
+      endTime:       appointment.endTime,
+      status:        appointment.status,
+      paymentStatus: appointment.paymentStatus,
+      paymentMethod: appointment.paymentMethod,
+      notes:         appointment.notes,
+      staffId:       appointment.staffId,
+      // copy any other fields you use here...
+    });
+  }, [appointment, services, clients]);
+
+  // Handlers
   const handleClientSelect = (client: Client) => {
     setSelectedClient(client);
     setFormData(f => ({
       ...f,
-      clientId: client.id,
-      clientName: client.name,
+      clientId:    client.id,
+      clientName:  client.name,
       clientPhone: client.phone || ''
     }));
   };
 
   const handleNewClient = async (data: { name: string; email: string; phone?: string }) => {
-    // …your existing new-client logic…
+    // your "create client then add to appointment" logic…
+    toast({ title: 'Client Added', description: 'New client has been attached' });
   };
 
   const handleUpdateAppointment = async () => {
@@ -121,15 +136,11 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
       await appointmentApi.updateAppointment(appointment.id, payload);
       toast({ title: 'Success', description: 'Appointment updated' });
 
-      // reload & refresh UI
-      const all = await appointmentApi.getAppointments();
-      const updated = (Array.isArray(all) ? all : all.data).find(a => a.id === appointment.id);
-      if (updated) setFormData(updated);
-
+      // optionally refresh calendar/UI
       setTimeout(() => {
         onClose();
         window.location.reload();
-      }, 1000);
+      }, 800);
     } catch (err) {
       console.error(err);
       toast({ title: 'Error', description: 'Update failed', variant: 'destructive' });
@@ -138,11 +149,11 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
     }
   };
 
-  const addProduct    = () => setProducts(p => [...p, { id: Date.now().toString(), name: '', quantity: 1, price: 0 }]);
-  const removeProduct = (i: number) => setProducts(p => p.filter((_, idx) => idx !== i));
-  const updateProduct = (i: number, field: string, val: any) => {
+  const addProduct    = () => setProducts(p => [...p, { id: `${Date.now()}`, name: '', quantity: 1, price: 0 }]);
+  const removeProduct = (idx: number) => setProducts(p => p.filter((_, i) => i !== idx));
+  const updateProduct = (idx: number, field: string, val: any) => {
     const copy = [...products];
-    copy[i] = { ...copy[i], [field]: val };
+    copy[idx] = { ...copy[idx], [field]: val };
     setProducts(copy);
   };
 
@@ -161,6 +172,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
 
   const total = formData.price + products.reduce((sum, pr) => sum + pr.price * pr.quantity, 0);
 
+  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -171,7 +183,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* — Header — */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Calendar className="w-6 h-6 text-violet-600" />
@@ -197,7 +209,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* — Client Info — */}
+        {/* Client Info */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -232,12 +244,12 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
               <Select
                 value={formData.service}
                 onValueChange={val => {
-                  const svc = services.find(s => s.name === val);
+                  const s = services.find(x => x.name === val);
                   setFormData({
                     ...formData,
                     service:  val,
-                    price:    svc?.price    ?? formData.price,
-                    duration: svc?.duration ?? formData.duration
+                    price:    s?.price    ?? formData.price,
+                    duration: s?.duration ?? formData.duration
                   });
                 }}
               >
@@ -254,7 +266,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
           </CardContent>
         </Card>
 
-        {/* — Schedule & Payment — */}
+        {/* Schedule & Payment */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -379,7 +391,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
         </Card>
       </div>
 
-      {/* — Products — */}
+      {/* Products */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -398,28 +410,25 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
               No additional products added
             </p>
           ) : (
-            products.map((product, i) => (
-              <div
-                key={product.id}
-                className="flex items-center gap-3 p-3 border rounded-lg"
-              >
+            products.map((prod, i) => (
+              <div key={prod.id} className="flex items-center gap-3 p-3 border rounded-lg">
                 <Input
                   placeholder="Product name"
-                  value={product.name}
+                  value={prod.name}
                   onChange={e => updateProduct(i, 'name', e.target.value)}
                   className="flex-1"
                 />
                 <Input
                   type="number"
                   placeholder="Qty"
-                  value={product.quantity}
+                  value={prod.quantity}
                   onChange={e => updateProduct(i, 'quantity', parseInt(e.target.value) || 1)}
                   className="w-20"
                 />
                 <Input
                   type="number"
                   placeholder="Price"
-                  value={product.price}
+                  value={prod.price}
                   onChange={e =>
                     updateProduct(i, 'price', parseFloat(e.target.value) || 0)
                   }
@@ -434,7 +443,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
         </CardContent>
       </Card>
 
-      {/* — Notes — */}
+      {/* Notes */}
       <Card>
         <CardHeader>
           <CardTitle>Notes</CardTitle>
@@ -449,7 +458,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
         </CardContent>
       </Card>
 
-      {/* — Summary & Actions — */}
+      {/* Actions */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-4">

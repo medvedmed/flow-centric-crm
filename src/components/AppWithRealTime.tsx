@@ -54,12 +54,7 @@ const AppWithRealTime = ({
   return <div className="min-h-screen flex w-full">
       <AppSidebar />
       <SidebarInset className="flex-1">
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
-          <SidebarTrigger className="-ml-1" />
-          <div className="ml-auto">
-            
-          </div>
-        </header>
+        
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
           <div className="min-h-[calc(100vh-5rem)] flex-1 rounded-xl bg-white p-4">
             {children}

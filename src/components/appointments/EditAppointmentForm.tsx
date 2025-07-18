@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,15 +11,14 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { appointmentApi } from '@/services/api/appointmentApi';
 import { serviceApi } from '@/services/api/serviceApi';
-import { clientApi } from '@/services/api/clientApi';
-import { Appointment, Service, Client } from '@/services/types';
-import { Calendar, Clock, User, DollarSign, Download, CheckCircle } from 'lucide-react';
+import { Appointment, Service } from '@/services/types';
+import { Calendar, Clock, User, DollarSign, CheckCircle } from 'lucide-react';
 import { ReceiptGenerator } from './ReceiptGenerator';
-import { ClientSelector } from '../ClientSelector';
 import { AppointmentServicesManager } from './AppointmentServicesManager';
 import { AppointmentProductsManager } from './AppointmentProductsManager';
 import { useAppointmentDetails } from '@/hooks/appointments/useAppointmentDetails';
 import { supabase } from '@/integrations/supabase/client';
+import { TimeSelector } from '@/components/forms/TimeSelector';
 
 interface EditAppointmentFormProps {
   appointment: Appointment;
@@ -32,8 +32,6 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   const { toast } = useToast();
   const [formData, setFormData] = useState<Appointment>(appointment);
   const [services, setServices] = useState<Service[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -46,27 +44,11 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
     loadData();
   }, []);
 
-  useEffect(() => {
-    // Auto-populate client data when appointment has client_id
-    if (appointment.clientId && clients.length > 0) {
-      const client = clients.find(c => c.id === appointment.clientId);
-      if (client) {
-        setSelectedClient(client);
-        setFormData(prev => ({
-          ...prev,
-          clientName: client.name,
-          clientPhone: client.phone || ''
-        }));
-      }
-    }
-  }, [appointment.clientId, clients]);
-
   const loadData = async () => {
     try {
       setLoading(true);
-      const [servicesData, clientsData, productsData] = await Promise.all([
+      const [servicesData, productsData] = await Promise.all([
         serviceApi.getServices(),
-        clientApi.getClients(),
         loadProducts()
       ]);
       
@@ -74,12 +56,6 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
         setServices(servicesData);
       } else if (servicesData?.data) {
         setServices(servicesData.data);
-      }
-      
-      if (Array.isArray(clientsData)) {
-        setClients(clientsData);
-      } else if (clientsData?.data) {
-        setClients(clientsData.data);
       }
 
       setProducts(productsData || []);
@@ -110,44 +86,12 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
     }
   };
 
-  const handleClientSelect = (client: Client) => {
-    setSelectedClient(client);
-    setFormData(prev => ({
-      ...prev,
-      clientId: client.id,
-      clientName: client.name,
-      clientPhone: client.phone || ''
-    }));
-  };
-
-  const handleNewClient = async (clientData: { name: string; email: string; phone?: string }) => {
-    try {
-      setFormData(prev => ({
-        ...prev,
-        clientName: clientData.name,
-        clientPhone: clientData.phone || ''
-      }));
-      
-      toast({
-        title: "Client Added",
-        description: "New client information has been added to the appointment",
-      });
-    } catch (error) {
-      console.error('Error creating client:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create new client",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleUpdateAppointment = async () => {
     try {
       setIsUpdating(true);
       
       const updateData = {
-        clientId: selectedClient?.id || formData.clientId,
+        clientId: formData.clientId,
         clientName: formData.clientName,
         clientPhone: formData.clientPhone,
         service: formData.service,
@@ -261,7 +205,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header - keep existing code */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Calendar className="w-6 h-6 text-violet-600" />
@@ -286,7 +230,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column - Client Information - keep existing code */}
+        {/* Left Column - Client Information */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -295,12 +239,6 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <ClientSelector
-              selectedClientId={selectedClient?.id}
-              onClientSelect={handleClientSelect}
-              onNewClient={handleNewClient}
-            />
-            
             <div>
               <Label htmlFor="clientName">Client Name</Label>
               <Input
@@ -346,7 +284,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
           </CardContent>
         </Card>
 
-        {/* Right Column - Schedule & Payment - keep existing basic structure */}
+        {/* Right Column - Schedule & Payment */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -355,7 +293,6 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* ... keep existing schedule and payment fields ... */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="date">Date</Label>
@@ -368,11 +305,10 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
               </div>
               <div>
                 <Label htmlFor="startTime">Start Time</Label>
-                <Input
-                  id="startTime"
-                  type="time"
+                <TimeSelector
                   value={formData.startTime}
-                  onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                  onValueChange={(time) => setFormData({ ...formData, startTime: time })}
+                  placeholder="Select start time"
                 />
               </div>
             </div>
@@ -469,7 +405,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
         onProductsChange={refetchDetails}
       />
 
-      {/* Notes Section - keep existing */}
+      {/* Notes Section */}
       <Card>
         <CardHeader>
           <CardTitle>Notes</CardTitle>

@@ -250,7 +250,7 @@ const DragDropCalendar = ({ onAppointmentClick, onTimeSlotClick }) => {
         style: {
           backgroundColor: '#f3f4f6',
           opacity: 0.5,
-          pointerEvents: 'none'
+          pointerEvents: 'none' as const
         }
       };
     }
@@ -354,7 +354,7 @@ const DragDropCalendar = ({ onAppointmentClick, onTimeSlotClick }) => {
                   </div>
                 );
               },
-              resourceHeader: ({ resource }: { resource: CalendarResource }) => (
+              resourceHeader: ({ resource }: { resource: any }) => (
                 <ResourceHeader resource={resource} />
               )
             }}

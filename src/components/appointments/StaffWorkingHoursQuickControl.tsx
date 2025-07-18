@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, Plus, Minus, User } from 'lucide-react';
+import { Clock, Plus, Minus, Save, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { TimeSelector } from '@/components/forms/TimeSelector';
 
 interface StaffWorkingHoursQuickControlProps {
   staffId: string;
@@ -22,11 +23,33 @@ export const StaffWorkingHoursQuickControl: React.FC<StaffWorkingHoursQuickContr
   currentEndTime,
   onClose
 }) => {
+  const [startTime, setStartTime] = useState(currentStartTime);
+  const [endTime, setEndTime] = useState(currentEndTime);
+  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  const updateWorkingHoursMutation = useMutation({
-    mutationFn: async ({ startTime, endTime }: { startTime: string; endTime: string }) => {
+  const adjustTime = (time: string, minutes: number): string => {
+    const [hours, mins] = time.split(':').map(Number);
+    const totalMinutes = hours * 60 + mins + minutes;
+    
+    // Clamp between 6:00 and 22:00 (6 AM to 10 PM)
+    const clampedMinutes = Math.max(360, Math.min(1320, totalMinutes));
+    
+    const newHours = Math.floor(clampedMinutes / 60);
+    const newMins = clampedMinutes % 60;
+    
+    return `${newHours.toString().padStart(2, '0')}:${newMins.toString().padStart(2, '0')}`;
+  };
+
+  const extendStart = () => setStartTime(prev => adjustTime(prev, -60)); // Start 1 hour earlier
+  const shortenStart = () => setStartTime(prev => adjustTime(prev, 60)); // Start 1 hour later
+  const extendEnd = () => setEndTime(prev => adjustTime(prev, 60)); // End 1 hour later
+  const shortenEnd = () => setEndTime(prev => adjustTime(prev, -60)); // End 1 hour earlier
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+
       const { error } = await supabase
         .from('staff')
         .update({
@@ -37,139 +60,178 @@ export const StaffWorkingHoursQuickControl: React.FC<StaffWorkingHoursQuickContr
         .eq('id', staffId);
 
       if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['staff'] });
-      toast({ title: 'Success', description: 'Working hours updated successfully!' });
-    },
-    onError: (error) => {
+
+      toast({
+        title: "Success",
+        description: `Working hours updated for ${staffName}`,
+      });
+
+      onClose();
+    } catch (error) {
       console.error('Error updating working hours:', error);
-      toast({ title: 'Error', description: 'Failed to update working hours', variant: 'destructive' });
-    }
-  });
-
-  const adjustTime = (time: string, minutes: number): string => {
-    const [hours, mins] = time.split(':').map(Number);
-    const date = new Date();
-    date.setHours(hours, mins + minutes);
-    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-  };
-
-  const handleExtendStart = () => {
-    const newStartTime = adjustTime(currentStartTime, -60);
-    updateWorkingHoursMutation.mutate({ startTime: newStartTime, endTime: currentEndTime });
-  };
-
-  const handleShortenStart = () => {
-    const newStartTime = adjustTime(currentStartTime, 60);
-    if (newStartTime < currentEndTime) {
-      updateWorkingHoursMutation.mutate({ startTime: newStartTime, endTime: currentEndTime });
-    } else {
-      toast({ title: 'Error', description: 'Start time cannot be after end time', variant: 'destructive' });
+      toast({
+        title: "Error",
+        description: "Failed to update working hours",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleExtendEnd = () => {
-    const newEndTime = adjustTime(currentEndTime, 60);
-    updateWorkingHoursMutation.mutate({ startTime: currentStartTime, endTime: newEndTime });
-  };
-
-  const handleShortenEnd = () => {
-    const newEndTime = adjustTime(currentEndTime, -60);
-    if (newEndTime > currentStartTime) {
-      updateWorkingHoursMutation.mutate({ startTime: currentStartTime, endTime: newEndTime });
-    } else {
-      toast({ title: 'Error', description: 'End time cannot be before start time', variant: 'destructive' });
-    }
+  const getCurrentHours = () => {
+    const start = new Date(`2000-01-01T${startTime}:00`);
+    const end = new Date(`2000-01-01T${endTime}:00`);
+    const diffMs = end.getTime() - start.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    return diffHours.toFixed(1);
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5" />
-              {staffName}
-            </CardTitle>
-            <Button variant="outline" size="sm" onClick={onClose}>
-              Close
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Clock className="w-5 h-5 text-violet-600" />
+            Working Hours - {staffName}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* Current Schedule Display */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Current Schedule</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-gradient-to-r from-violet-50 to-blue-50 p-4 rounded-lg">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-violet-700">
+                    {startTime} - {endTime}
+                  </div>
+                  <div className="text-sm text-gray-600 mt-1">
+                    {getCurrentHours()} hours per day
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Controls */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Quick Adjustments</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Start Time Controls */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">Start Time</span>
+                  <span className="text-lg font-mono">{startTime}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={extendStart}
+                    disabled={startTime <= '06:00'}
+                    className="flex-1"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-1" />
+                    Extend (1h earlier)
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={shortenStart}
+                    disabled={startTime >= endTime}
+                    className="flex-1"
+                  >
+                    <ArrowRight className="w-4 h-4 mr-1" />
+                    Shorten (1h later)
+                  </Button>
+                </div>
+              </div>
+
+              {/* End Time Controls */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">End Time</span>
+                  <span className="text-lg font-mono">{endTime}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={shortenEnd}
+                    disabled={endTime <= startTime}
+                    className="flex-1"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-1" />
+                    Shorten (1h earlier)
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={extendEnd}
+                    disabled={endTime >= '22:00'}
+                    className="flex-1"
+                  >
+                    <ArrowRight className="w-4 h-4 mr-1" />
+                    Extend (1h later)
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Manual Time Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Custom Times</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Start Time</label>
+                  <TimeSelector
+                    value={startTime}
+                    onValueChange={setStartTime}
+                    startHour={6}
+                    endHour={22}
+                    placeholder="Select start time"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">End Time</label>
+                  <TimeSelector
+                    value={endTime}
+                    onValueChange={setEndTime}
+                    startHour={6}
+                    endHour={22}
+                    placeholder="Select end time"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={handleSave}
+              disabled={saving || startTime >= endTime}
+              className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+            <Button variant="outline" onClick={onClose} disabled={saving}>
+              Cancel
             </Button>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Clock className="w-5 h-5 text-blue-600" />
-              <span className="text-lg font-semibold">
-                {currentStartTime} - {currentEndTime}
-              </span>
-            </div>
-          </div>
-
-          {/* Start Time Controls */}
-          <div className="space-y-2">
-            <h4 className="font-medium flex items-center gap-2">
-              Start Time: {currentStartTime}
-            </h4>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExtendStart}
-                disabled={updateWorkingHoursMutation.isPending}
-                className="flex-1"
-              >
-                <Minus className="w-4 h-4 mr-2" />
-                Extend (Start Earlier)
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleShortenStart}
-                disabled={updateWorkingHoursMutation.isPending}
-                className="flex-1"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Shorten (Start Later)
-              </Button>
-            </div>
-          </div>
-
-          {/* End Time Controls */}
-          <div className="space-y-2">
-            <h4 className="font-medium flex items-center gap-2">
-              End Time: {currentEndTime}
-            </h4>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExtendEnd}
-                disabled={updateWorkingHoursMutation.isPending}
-                className="flex-1"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Extend (End Later)
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleShortenEnd}
-                disabled={updateWorkingHoursMutation.isPending}
-                className="flex-1"
-              >
-                <Minus className="w-4 h-4 mr-2" />
-                Shorten (End Earlier)
-              </Button>
-            </div>
-          </div>
-
-          <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
-            <p><strong>Note:</strong> Changes will immediately affect appointment booking availability. Slots outside these hours will be blocked.</p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };

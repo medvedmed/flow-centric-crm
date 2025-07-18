@@ -50,8 +50,8 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
           serviceApi.getServices(),
           clientApi.getClients()
         ]);
-        setServices(Array.isArray(svcs) ? svcs : svcs.data);
-        setClients(Array.isArray(clnts) ? clnts : clnts.data);
+        setServices(Array.isArray(svcs) ? svcs : (svcs as any)?.data || []);
+        setClients(Array.isArray(clnts) ? clnts : (clnts as any)?.data || []);
       } catch (err) {
         console.error(err);
         toast({
@@ -73,7 +73,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
 
     // find the full client & service objects
     const client = clients.find(c => c.id === appointment.clientId);
-    const service = services.find(s => s.id === appointment.serviceId);
+    const service = services.find(s => s.name === appointment.service);
 
     // set selection
     setSelectedClient(client || null);

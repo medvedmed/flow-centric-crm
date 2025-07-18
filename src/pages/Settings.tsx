@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +9,7 @@ import { AdminSetupDialog } from "@/components/AdminSetupDialog";
 import { EnhancedSalonProfile } from "@/components/EnhancedSalonProfile";
 import { UnifiedRoleManagement } from "@/components/UnifiedRoleManagement";
 import { WhatsAppSection } from "@/components/WhatsAppSection";
+import { WhatsAppQRIntegration } from "@/components/WhatsAppQRIntegration";
 import { StaffScheduleSection } from "@/components/StaffScheduleSection";
 import ManagerSection from "@/components/ManagerSection";
 import { NotificationPreferences } from "@/components/NotificationPreferences";
@@ -121,7 +121,7 @@ const Settings = () => {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         <Tabs defaultValue="salon" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-10 bg-white/70 backdrop-blur-sm border-violet-200 overflow-x-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-11 bg-white/70 backdrop-blur-sm border-violet-200 overflow-x-auto">
             <TabsTrigger value="salon" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
               <Building className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden xs:inline">Salon</span>
@@ -129,6 +129,10 @@ const Settings = () => {
             <TabsTrigger value="whatsapp" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
               <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden xs:inline">WhatsApp</span>
+            </TabsTrigger>
+            <TabsTrigger value="qr-integration" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+              <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">QR Connect</span>
             </TabsTrigger>
             <TabsTrigger value="manager" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
               <UserCog className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -173,6 +177,12 @@ const Settings = () => {
           <TabsContent value="whatsapp" className="space-y-6">
             <ErrorBoundary>
               <WhatsAppSection />
+            </ErrorBoundary>
+          </TabsContent>
+
+          <TabsContent value="qr-integration" className="space-y-6">
+            <ErrorBoundary>
+              <WhatsAppQRIntegration />
             </ErrorBoundary>
           </TabsContent>
 

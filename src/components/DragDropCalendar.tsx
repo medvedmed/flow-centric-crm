@@ -23,6 +23,10 @@ interface CalendarEvent {
   end: Date;
   resourceId: string;
   color: string;
+  paymentStatus?: string;
+  clientName?: string;
+  service?: string;
+  price?: number;
 }
 
 interface CalendarResource {
@@ -55,15 +59,36 @@ const DragDropCalendar = ({ onAppointmentClick, onTimeSlotClick }) => {
         .eq("salon_id", user.id);
       if (aptError) throw aptError;
 
-      // Format appointments with optional color
-      const formattedEvents: CalendarEvent[] = appointments.map((apt) => ({
-        id: apt.id,
-        title: `${apt.client_name} - ${apt.service}`,
-        start: moment(`${apt.date} ${apt.start_time}`).toDate(),
-        end: moment(`${apt.date} ${apt.end_time}`).toDate(),
-        resourceId: apt.staff_id || "unassigned",
-        color: apt.color || "#007bff",
-      }));
+      // Format appointments with payment status styling
+      const formattedEvents: CalendarEvent[] = appointments.map((apt) => {
+        let color = "#007bff"; // Default blue
+        
+        // Color coding based on payment status
+        if (apt.payment_status === 'paid') {
+          color = "#28a745"; // Green for paid
+        } else if (apt.payment_status === 'partial') {
+          color = "#ffc107"; // Yellow for partial
+        } else if (apt.payment_status === 'unpaid') {
+          color = "#dc3545"; // Red for unpaid
+        }
+
+        // Add status indicator to title
+        const statusIndicator = apt.payment_status === 'paid' ? '💰' : 
+                              apt.payment_status === 'partial' ? '⚠️' : '❌';
+
+        return {
+          id: apt.id,
+          title: `${statusIndicator} ${apt.client_name} - ${apt.service}`,
+          start: moment(`${apt.date} ${apt.start_time}`).toDate(),
+          end: moment(`${apt.date} ${apt.end_time}`).toDate(),
+          resourceId: apt.staff_id || "unassigned",
+          color: color,
+          paymentStatus: apt.payment_status,
+          clientName: apt.client_name,
+          service: apt.service,
+          price: apt.price
+        };
+      });
 
       // Map staff as resources
       const formattedResources: CalendarResource[] = staffData.map((staff) => ({
@@ -104,6 +129,14 @@ const DragDropCalendar = ({ onAppointmentClick, onTimeSlotClick }) => {
         .eq("id", event.id);
 
       if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Appointment moved successfully",
+      });
+
+      // Refresh calendar data
+      await fetchEvents();
     } catch (err) {
       console.error("Error updating appointment:", err);
       toast({
@@ -111,6 +144,8 @@ const DragDropCalendar = ({ onAppointmentClick, onTimeSlotClick }) => {
         description: "Could not update appointment",
         variant: "destructive",
       });
+      // Revert the optimistic update
+      await fetchEvents();
     }
   };
 
@@ -128,12 +163,39 @@ const DragDropCalendar = ({ onAppointmentClick, onTimeSlotClick }) => {
     }
   };
 
+  // Real-time subscription for appointment updates
   useEffect(() => {
     fetchEvents();
+
+    const channel = supabase
+      .channel('calendar-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments'
+        },
+        (payload) => {
+          console.log('Appointment change detected:', payload);
+          // Refresh calendar when appointments change
+          fetchEvents();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchEvents]);
 
   if (loading) {
-    return <div className="text-center py-8">Loading calendar...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div>
+        <span className="ml-2">Loading calendar...</span>
+      </div>
+    );
   }
 
   return (
@@ -157,14 +219,43 @@ const DragDropCalendar = ({ onAppointmentClick, onTimeSlotClick }) => {
             backgroundColor: event.color || "#007bff",
             color: "white",
             borderRadius: "5px",
+            border: `2px solid ${event.paymentStatus === 'paid' ? '#155724' : 
+                                  event.paymentStatus === 'partial' ? '#856404' : '#721c24'}`,
+            fontWeight: '500',
+            fontSize: '12px'
           },
         })}
+        components={{
+          event: ({ event }) => (
+            <div className="flex flex-col p-1">
+              <div className="font-medium truncate">{event.clientName}</div>
+              <div className="text-xs opacity-90 truncate">{event.service}</div>
+              {event.price && <div className="text-xs opacity-75">${event.price}</div>}
+            </div>
+          )
+        }}
         style={{ height: "100%" }}
         timeslots={4}
         step={15}
         min={moment().hour(8).minute(0).toDate()}
         max={moment().hour(20).minute(0).toDate()}
       />
+      
+      {/* Payment Status Legend */}
+      <div className="flex items-center gap-4 p-4 bg-gray-50 border-t">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 bg-green-500 rounded border-2 border-green-700"></div>
+          <span className="text-sm">💰 Paid</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 bg-yellow-500 rounded border-2 border-yellow-700"></div>
+          <span className="text-sm">⚠️ Partial</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 bg-red-500 rounded border-2 border-red-700"></div>
+          <span className="text-sm">❌ Unpaid</span>
+        </div>
+      </div>
     </div>
   );
 };

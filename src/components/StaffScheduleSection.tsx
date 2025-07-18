@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar, Clock, Users, Save, Edit, Trash2 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -15,7 +15,11 @@ interface StaffMember {
   id: string;
   name: string;
   role: string;
-  schedule: { [key: string]: { start: string; end: string; isWorking: boolean } };
+  working_hours_start?: string;
+  working_hours_end?: string;
+  working_days?: string[];
+  break_start?: string;
+  break_end?: string;
 }
 
 interface BulkEditSession {
@@ -27,6 +31,7 @@ interface BulkEditSession {
 export const StaffScheduleSection: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [bulkEditMode, setBulkEditMode] = useState(false);
   const [bulkEdit, setBulkEdit] = useState<BulkEditSession>({
     selectedDays: [],
@@ -35,10 +40,9 @@ export const StaffScheduleSection: React.FC = () => {
   });
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
 
-  // Fetch real staff data from database
-  const { data: staffData = [] } = useQuery({
+  // Fetch staff data
+  const { data: staffData = [], isLoading } = useQuery({
     queryKey: ['staff-schedule', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -49,7 +53,7 @@ export const StaffScheduleSection: React.FC = () => {
         .order('name');
 
       if (error) throw error;
-      return data;
+      return data as StaffMember[];
     },
     enabled: !!user,
   });
@@ -70,36 +74,36 @@ export const StaffScheduleSection: React.FC = () => {
     enabled: !!user,
   });
 
-  // Convert staff data to schedule format
-  useEffect(() => {
-    if (staffData.length > 0) {
-      const defaultStart = salonProfile?.opening_hours || '09:00:00';
-      const defaultEnd = salonProfile?.closing_hours || '17:00:00';
-      const defaultWorkingDays = salonProfile?.working_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-      
-      const formattedStaff = staffData.map(staff => {
-        const schedule: { [key: string]: { start: string; end: string; isWorking: boolean } } = {};
-        
-        days.forEach(day => {
-          const isWorkingDay = staff.working_days?.includes(day) || defaultWorkingDays.includes(day);
-          schedule[day] = {
-            start: isWorkingDay ? (staff.working_hours_start || defaultStart).slice(0, 5) : '00:00',
-            end: isWorkingDay ? (staff.working_hours_end || defaultEnd).slice(0, 5) : '00:00',
-            isWorking: isWorkingDay
-          };
-        });
+  // Update staff working hours mutation
+  const updateStaffMutation = useMutation({
+    mutationFn: async ({ staffId, updates }: { staffId: string; updates: Partial<StaffMember> }) => {
+      const { error } = await supabase
+        .from('staff')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', staffId)
+        .eq('salon_id', user?.id);
 
-        return {
-          id: staff.id,
-          name: staff.name,
-          role: staff.specialties?.join(', ') || 'Staff Member',
-          schedule
-        };
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff-schedule'] });
+      toast({
+        title: "Success",
+        description: "Staff schedule updated successfully",
       });
-      
-      setStaffMembers(formattedStaff);
+    },
+    onError: (error: any) => {
+      console.error('Error updating staff schedule:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update staff schedule",
+        variant: "destructive",
+      });
     }
-  }, [staffData, salonProfile]);
+  });
 
   const toggleDaySelection = (day: string) => {
     setBulkEdit(prev => ({
@@ -119,7 +123,7 @@ export const StaffScheduleSection: React.FC = () => {
     }));
   };
 
-  const applyBulkEdit = () => {
+  const applyBulkEdit = async () => {
     if (bulkEdit.selectedDays.length === 0 || bulkEdit.selectedStaff.length === 0) {
       toast({
         title: "Selection Required",
@@ -129,48 +133,67 @@ export const StaffScheduleSection: React.FC = () => {
       return;
     }
 
-    setStaffMembers(prev => prev.map(staff => {
-      if (bulkEdit.selectedStaff.includes(staff.id)) {
-        const updatedSchedule = { ...staff.schedule };
-        bulkEdit.selectedDays.forEach(day => {
-          updatedSchedule[day] = {
-            start: bulkEdit.workingHours.start,
-            end: bulkEdit.workingHours.end,
-            isWorking: true
-          };
-        });
-        return { ...staff, schedule: updatedSchedule };
-      }
-      return staff;
-    }));
-
-    setBulkEdit({
-      selectedDays: [],
-      selectedStaff: [],
-      workingHours: { start: '09:00', end: '17:00' }
-    });
-    setBulkEditMode(false);
-
-    toast({
-      title: "Schedule Updated",
-      description: `Applied working hours to ${bulkEdit.selectedStaff.length} staff members for ${bulkEdit.selectedDays.length} days`,
-    });
-  };
-
-  const updateIndividualSchedule = (staffId: string, day: string, schedule: { start: string; end: string; isWorking: boolean }) => {
-    setStaffMembers(prev => prev.map(staff => {
-      if (staff.id === staffId) {
-        return {
-          ...staff,
-          schedule: {
-            ...staff.schedule,
-            [day]: schedule
+    try {
+      // Update each selected staff member
+      for (const staffId of bulkEdit.selectedStaff) {
+        await updateStaffMutation.mutateAsync({
+          staffId,
+          updates: {
+            working_hours_start: bulkEdit.workingHours.start + ':00',
+            working_hours_end: bulkEdit.workingHours.end + ':00',
+            working_days: bulkEdit.selectedDays
           }
-        };
+        });
       }
-      return staff;
-    }));
+
+      setBulkEdit({
+        selectedDays: [],
+        selectedStaff: [],
+        workingHours: { start: '09:00', end: '17:00' }
+      });
+      setBulkEditMode(false);
+
+      toast({
+        title: "Schedule Updated",
+        description: `Applied working hours to ${bulkEdit.selectedStaff.length} staff members for ${bulkEdit.selectedDays.length} days`,
+      });
+    } catch (error) {
+      console.error('Error applying bulk edit:', error);
+    }
   };
+
+  const updateIndividualSchedule = async (staffId: string, field: string, value: any) => {
+    const updates: any = {};
+    
+    if (field === 'working_hours_start' || field === 'working_hours_end') {
+      updates[field] = value + ':00'; // Add seconds for time format
+    } else if (field === 'working_days') {
+      updates[field] = value;
+    } else {
+      updates[field] = value;
+    }
+
+    await updateStaffMutation.mutateAsync({ staffId, updates });
+  };
+
+  const getWorkingDaysForStaff = (staff: StaffMember): string[] => {
+    return staff.working_days || salonProfile?.working_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  };
+
+  const getWorkingHoursForStaff = (staff: StaffMember) => {
+    return {
+      start: staff.working_hours_start?.slice(0, 5) || salonProfile?.opening_hours?.slice(0, 5) || '09:00',
+      end: staff.working_hours_end?.slice(0, 5) || salonProfile?.closing_hours?.slice(0, 5) || '17:00'
+    };
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -196,7 +219,7 @@ export const StaffScheduleSection: React.FC = () => {
             <div>
               <Label>Select Staff Members</Label>
               <div className="flex flex-wrap gap-2 mt-2">
-                {staffMembers.map(staff => (
+                {staffData.map(staff => (
                   <Badge
                     key={staff.id}
                     variant={bulkEdit.selectedStaff.includes(staff.id) ? "default" : "outline"}
@@ -254,9 +277,13 @@ export const StaffScheduleSection: React.FC = () => {
               </div>
             </div>
 
-            <Button onClick={applyBulkEdit} className="w-full">
+            <Button 
+              onClick={applyBulkEdit} 
+              className="w-full"
+              disabled={updateStaffMutation.isPending}
+            >
               <Save className="w-4 h-4 mr-2" />
-              Apply to Selected Days & Staff
+              {updateStaffMutation.isPending ? "Applying..." : "Apply to Selected Days & Staff"}
             </Button>
           </CardContent>
         )}
@@ -282,94 +309,122 @@ export const StaffScheduleSection: React.FC = () => {
               </div>
 
               {/* Staff Rows */}
-              {staffMembers.map(staff => (
-                <div key={staff.id} className="grid grid-cols-8 gap-2 mb-3 items-center">
-                  <div className="pr-2">
-                    <p className="font-medium text-sm">{staff.name}</p>
-                    <p className="text-xs text-gray-500">{staff.role}</p>
+              {staffData.map(staff => {
+                const workingDays = getWorkingDaysForStaff(staff);
+                const workingHours = getWorkingHoursForStaff(staff);
+                
+                return (
+                  <div key={staff.id} className="grid grid-cols-8 gap-2 mb-3 items-center">
+                    <div className="pr-2">
+                      <p className="font-medium text-sm">{staff.name}</p>
+                      <p className="text-xs text-gray-500">{staff.role || 'Staff Member'}</p>
+                    </div>
+                    {days.map(day => {
+                      const isWorkingDay = workingDays.includes(day);
+                      return (
+                        <div key={day} className="text-center">
+                          <div className="flex items-center justify-center mb-1">
+                            <input
+                              type="checkbox"
+                              checked={isWorkingDay}
+                              onChange={(e) => {
+                                const newWorkingDays = e.target.checked
+                                  ? [...workingDays, day]
+                                  : workingDays.filter(d => d !== day);
+                                updateIndividualSchedule(staff.id, 'working_days', newWorkingDays);
+                              }}
+                              className="rounded"
+                            />
+                          </div>
+                          {isWorkingDay ? (
+                            <div className="bg-green-50 border border-green-200 rounded p-1">
+                              <div className="space-y-1">
+                                <Input
+                                  type="time"
+                                  value={workingHours.start}
+                                  onChange={(e) => updateIndividualSchedule(staff.id, 'working_hours_start', e.target.value)}
+                                  className="h-6 text-xs"
+                                />
+                                <Input
+                                  type="time"
+                                  value={workingHours.end}
+                                  onChange={(e) => updateIndividualSchedule(staff.id, 'working_hours_end', e.target.value)}
+                                  className="h-6 text-xs"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="bg-gray-50 border border-gray-200 rounded p-1">
+                              <p className="text-xs text-gray-500">Off</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                  {days.map(day => {
-                    const daySchedule = staff.schedule[day];
-                    return (
-                      <div key={day} className="text-center">
-                        {daySchedule.isWorking ? (
-                          <div className="bg-green-50 border border-green-200 rounded p-1">
-                            <p className="text-xs text-green-800 font-medium">
-                              {daySchedule.start} - {daySchedule.end}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="bg-gray-50 border border-gray-200 rounded p-1">
-                            <p className="text-xs text-gray-500">Off</p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Individual Schedule Cards */}
+      {/* Individual Schedule Management */}
       <div className="grid gap-4">
-        {staffMembers.map(staff => (
-          <Card key={staff.id}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Users className="h-5 w-5" />
-                {staff.name} - {staff.role}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                {days.map(day => {
-                  const daySchedule = staff.schedule[day];
-                  return (
-                    <div key={day} className="space-y-2">
-                      <Label className="text-sm font-medium">{day}</Label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={daySchedule.isWorking}
-                          onChange={(e) => updateIndividualSchedule(staff.id, day, {
-                            ...daySchedule,
-                            isWorking: e.target.checked
-                          })}
-                          className="rounded"
-                        />
-                        {daySchedule.isWorking && (
-                          <div className="flex gap-1 text-xs">
-                            <Input
-                              type="time"
-                              value={daySchedule.start}
-                              onChange={(e) => updateIndividualSchedule(staff.id, day, {
-                                ...daySchedule,
-                                start: e.target.value
-                              })}
-                              className="h-7 text-xs"
-                            />
-                            <Input
-                              type="time"
-                              value={daySchedule.end}
-                              onChange={(e) => updateIndividualSchedule(staff.id, day, {
-                                ...daySchedule,
-                                end: e.target.value
-                              })}
-                              className="h-7 text-xs"
-                            />
-                          </div>
-                        )}
-                      </div>
+        {staffData.map(staff => {
+          const workingHours = getWorkingHoursForStaff(staff);
+          
+          return (
+            <Card key={staff.id}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Users className="h-5 w-5" />
+                  {staff.name} - Schedule Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Default Working Hours</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        type="time"
+                        value={workingHours.start}
+                        onChange={(e) => updateIndividualSchedule(staff.id, 'working_hours_start', e.target.value)}
+                        className="flex-1"
+                      />
+                      <span className="self-center">to</span>
+                      <Input
+                        type="time"
+                        value={workingHours.end}
+                        onChange={(e) => updateIndividualSchedule(staff.id, 'working_hours_end', e.target.value)}
+                        className="flex-1"
+                      />
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                  </div>
+                  <div>
+                    <Label>Break Time</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        type="time"
+                        value={staff.break_start?.slice(0, 5) || '12:00'}
+                        onChange={(e) => updateIndividualSchedule(staff.id, 'break_start', e.target.value)}
+                        className="flex-1"
+                      />
+                      <span className="self-center">to</span>
+                      <Input
+                        type="time"
+                        value={staff.break_end?.slice(0, 5) || '13:00'}
+                        onChange={(e) => updateIndividualSchedule(staff.id, 'break_end', e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

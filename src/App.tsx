@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AuthProvider } from '@/hooks/useAuth';
 import { StaffAuthProvider } from '@/hooks/useStaffAuth';
+import { AutoRefreshProvider } from '@/components/AutoRefreshProvider';
 import AppWithRealTime from '@/components/AppWithRealTime';
 
 // Pages
@@ -45,10 +46,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <AuthProvider>
-          <StaffAuthProvider>
-            <Router>
-              <SidebarProvider>
-                <AppWithRealTime>
+          <AutoRefreshProvider>
+            <StaffAuthProvider>
+              <Router>
+                <SidebarProvider>
+                  <AppWithRealTime>
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/landing" element={<Landing />} />
@@ -75,7 +77,8 @@ function App() {
               </SidebarProvider>
             </Router>
           </StaffAuthProvider>
-        </AuthProvider>
+        </AutoRefreshProvider>
+      </AuthProvider>
       </LanguageProvider>
       <Toaster />
     </QueryClientProvider>

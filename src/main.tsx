@@ -6,8 +6,6 @@ import { OfflineHandler } from './components/OfflineHandler';
 
 createRoot(document.getElementById("root")!).render(
   <OfflineHandler>
-    <AutoRefreshProvider>
-      <App />
-    </AutoRefreshProvider>
+    <App />
   </OfflineHandler>
 );

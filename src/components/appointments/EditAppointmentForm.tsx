@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +14,7 @@ import { clientApi } from '@/services/api/clientApi';
 import { Appointment, Service, Client } from '@/services/types';
 import { Calendar, Clock, User, DollarSign, Plus, Trash2, Download } from 'lucide-react';
 import { ReceiptGenerator } from './ReceiptGenerator';
+import { ClientSelector } from '../ClientSelector';
 
 interface EditAppointmentFormProps {
   appointment: Appointment;
@@ -29,6 +29,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   const [formData, setFormData] = useState<Appointment>(appointment);
   const [services, setServices] = useState<Service[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -36,6 +37,21 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    // Auto-populate client data when appointment has client_id
+    if (appointment.clientId && clients.length > 0) {
+      const client = clients.find(c => c.id === appointment.clientId);
+      if (client) {
+        setSelectedClient(client);
+        setFormData(prev => ({
+          ...prev,
+          clientName: client.name,
+          clientPhone: client.phone || ''
+        }));
+      }
+    }
+  }, [appointment.clientId, clients]);
 
   const loadData = async () => {
     try {
@@ -68,11 +84,46 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
     }
   };
 
+  const handleClientSelect = (client: Client) => {
+    setSelectedClient(client);
+    setFormData(prev => ({
+      ...prev,
+      clientId: client.id,
+      clientName: client.name,
+      clientPhone: client.phone || ''
+    }));
+  };
+
+  const handleNewClient = async (clientData: { name: string; email: string; phone?: string }) => {
+    try {
+      // This would normally create a new client via API
+      // For now, just update the form with the new client data
+      setFormData(prev => ({
+        ...prev,
+        clientName: clientData.name,
+        clientPhone: clientData.phone || ''
+      }));
+      
+      toast({
+        title: "Client Added",
+        description: "New client information has been added to the appointment",
+      });
+    } catch (error) {
+      console.error('Error creating client:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create new client",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleUpdateAppointment = async () => {
     try {
       setIsUpdating(true);
       
       const updateData = {
+        clientId: selectedClient?.id || formData.clientId,
         clientName: formData.clientName,
         clientPhone: formData.clientPhone,
         service: formData.service,
@@ -199,7 +250,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column - Basic Info */}
+        {/* Left Column - Client Information */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -208,6 +259,12 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <ClientSelector
+              selectedClientId={selectedClient?.id}
+              onClientSelect={handleClientSelect}
+              onNewClient={handleNewClient}
+            />
+            
             <div>
               <Label htmlFor="clientName">Client Name</Label>
               <Input

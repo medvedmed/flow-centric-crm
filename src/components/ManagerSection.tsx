@@ -55,7 +55,7 @@ const ManagerSection = () => {
   const filteredStaff = staff.filter(member =>
     member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (member.email && member.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (member.staffLoginId && member.staffLoginId.toLowerCase().includes(searchTerm.toLowerCase()))
+    (member.staff_login_id && member.staff_login_id.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   if (staffLoading) {
@@ -95,14 +95,14 @@ const ManagerSection = () => {
               filteredStaff.map((member) => (
                 <StaffCard
                   key={member.id}
-                  staff={member}
+                  staff={member as any}
                   showPassword={showPasswords[member.id] || false}
                   onTogglePassword={() => togglePasswordVisibility(member.id)}
                   onCopyCredentials={() => 
-    member.staff_login_id && member.staff_login_password && 
+                    member.staff_login_id && member.staff_login_password && 
                     handleCopyCredentials(member.staff_login_id, member.staff_login_password)
                   }
-                  onEditStaff={() => setEditingStaff(member)}
+                  onEditStaff={() => setEditingStaff(member as any)}
                   onDeleteStaff={() => handleDeleteStaff(member.id, member.name)}
                 />
               ))

@@ -1,23 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Appointment } from '@/services/types';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Trash2, Plus, User, Calendar as CalendarIcon, DollarSign, Phone, Clock, FileText, CreditCard, UserCheck, Percent } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
+import { AppointmentTopBar } from './AppointmentTopBar';
+import { ServiceRow } from './ServiceRow';
+import { ProductRow } from './ProductRow';
+import { ClientInfoSection } from './ClientInfoSection';
+import { PaymentSection } from './PaymentSection';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 
 interface Service {
   id: string;
@@ -39,11 +33,14 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // Add debug logging
+  console.log('EditAppointmentForm - appointment data:', appointment);
+  
   // State management
   const [selectedDate, setSelectedDate] = useState<Date>(new Date(appointment?.date || new Date()));
   const [startTime, setStartTime] = useState(appointment?.start_time || '09:00');
   const [endTime, setEndTime] = useState(appointment?.end_time || '10:00');
-  const [selectedService, setSelectedService] = useState(appointment?.service || '');
+  const [selectedServiceId, setSelectedServiceId] = useState<string>('');
   const [serviceDuration, setServiceDuration] = useState(appointment?.duration || 60);
   const [servicePrice, setServicePrice] = useState(appointment?.price || 0);
   const [discount, setDiscount] = useState(0);
@@ -53,6 +50,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   const [paymentMethod, setPaymentMethod] = useState(appointment?.payment_method || 'cash');
   const [paymentStatus, setPaymentStatus] = useState(appointment?.payment_status || 'unpaid');
   const [notes, setNotes] = useState(appointment?.notes || '');
+  const [products, setProducts] = useState<any[]>([]);
 
   // Fetch services
   const { data: services = [] } = useQuery({
@@ -120,11 +118,34 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
     enabled: !!user,
   });
 
+  // Initialize form with appointment data
+  useEffect(() => {
+    if (appointment && services.length > 0) {
+      console.log('Initializing form with appointment:', appointment);
+      console.log('Available services:', services);
+      
+      // Find the service that matches the appointment's service name
+      const matchedService = services.find(s => s.name === appointment.service);
+      console.log('Matched service:', matchedService);
+      
+      if (matchedService) {
+        setSelectedServiceId(matchedService.id);
+        setServicePrice(appointment.price || matchedService.price);
+        setServiceDuration(appointment.duration || matchedService.duration);
+      } else {
+        // If no service found, use the appointment data as-is
+        setServicePrice(appointment.price || 0);
+        setServiceDuration(appointment.duration || 60);
+      }
+    }
+  }, [appointment, services]);
+
   // Handle service selection
   const handleServiceChange = (serviceId: string) => {
+    console.log('Service changed to:', serviceId);
     const service = services.find(s => s.id === serviceId);
     if (service) {
-      setSelectedService(service.name);
+      setSelectedServiceId(serviceId);
       setServicePrice(service.price);
       setServiceDuration(service.duration);
       // Auto-calculate end time based on duration
@@ -141,10 +162,13 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   // Update appointment mutation
   const updateAppointmentMutation = useMutation({
     mutationFn: async () => {
+      const selectedService = services.find(s => s.id === selectedServiceId);
+      const serviceName = selectedService ? selectedService.name : appointment.service;
+      
       const updateData = {
         client_name: appointment.client_name,
         client_phone: appointment.client_phone,
-        service: selectedService,
+        service: serviceName,
         staff_id: selectedStaff,
         date: format(selectedDate, 'yyyy-MM-dd'),
         start_time: startTime,
@@ -178,7 +202,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
           amount: paymentAmount,
           payment_method: paymentMethod,
           payment_date: new Date().toISOString(),
-          notes: `Payment for ${selectedService}`,
+          notes: `Payment for ${serviceName}`,
         });
 
         // Create financial transaction
@@ -187,18 +211,13 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
           transaction_type: 'income',
           category: 'Service Revenue',
           amount: paymentAmount,
-          description: `Payment for ${selectedService} - ${appointment.client_name}`,
+          description: `Payment for ${serviceName} - ${appointment.client_name}`,
           payment_method: paymentMethod,
           reference_id: appointment?.id,
           reference_type: 'appointment',
           transaction_date: format(selectedDate, 'yyyy-MM-dd'),
           created_by: user?.id
         });
-      }
-
-      // Update client retention stats if appointment is completed
-      if (isAttended && appointment?.status !== 'Completed') {
-        // This will be handled by the database trigger
       }
 
       return updatedAppointment;
@@ -218,287 +237,62 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   });
 
   return (
-    <div className="space-y-6">
-      {/* Client Info (Read-only) */}
-      <Card className="bg-muted/30">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <User className="w-5 h-5" />
-            Client Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-sm font-medium">Name</Label>
-              <p className="text-lg font-semibold">{appointment.client_name}</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Phone</Label>
-              <p className="text-lg">{appointment.client_phone || 'Not provided'}</p>
-            </div>
-            {clientData?.email && (
-              <div>
-                <Label className="text-sm font-medium">Email</Label>
-                <p className="text-sm text-muted-foreground">{clientData.email}</p>
-              </div>
-            )}
-            {clientData?.status && (
-              <div>
-                <Label className="text-sm font-medium">Status</Label>
-                <Badge variant={clientData.status === 'New' ? 'secondary' : 'default'}>
-                  {clientData.status}
-                </Badge>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-6 p-6">
+      {/* Top Bar - Staff, Date, Time */}
+      <AppointmentTopBar
+        selectedStaff={selectedStaff}
+        onStaffChange={setSelectedStaff}
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+        startTime={startTime}
+        onStartTimeChange={setStartTime}
+        endTime={endTime}
+        onEndTimeChange={setEndTime}
+        staff={staff}
+      />
 
-      {/* Date/Time Pickers */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <CalendarIcon className="w-5 h-5" />
-            Date & Time
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <Label>Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !selectedDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  initialFocus
-                  className="pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div>
-            <Label>Start Time</Label>
-            <Input
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label>End Time</Label>
-            <Input
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Client Information */}
+      <ClientInfoSection
+        clientName={appointment?.client_name || 'Unknown Client'}
+        clientPhone={appointment?.client_phone || 'No phone'}
+        clientData={clientData}
+        isAttended={isAttended}
+        onAttendanceChange={setIsAttended}
+      />
 
       {/* Service Row */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <FileText className="w-5 h-5" />
-            Service Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-            <div className="md:col-span-2">
-              <Label>Service</Label>
-              <Select value={services.find(s => s.name === selectedService)?.id || ''} onValueChange={handleServiceChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select service" />
-                </SelectTrigger>
-                <SelectContent>
-                  {services.map((service) => (
-                    <SelectItem key={service.id} value={service.id}>
-                      {service.name} - ${service.price} ({service.duration}min)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Duration (min)</Label>
-              <Input
-                type="number"
-                value={serviceDuration}
-                onChange={(e) => setServiceDuration(Number(e.target.value))}
-                min="1"
-              />
-            </div>
-            <div>
-              <Label>Price ($)</Label>
-              <Input
-                type="number"
-                value={servicePrice}
-                onChange={(e) => setServicePrice(Number(e.target.value))}
-                min="0"
-                step="0.01"
-              />
-            </div>
-            <div>
-              <Label>Discount (%)</Label>
-              <div className="flex items-center gap-2">
-                <Percent className="w-4 h-4" />
-                <Input
-                  type="number"
-                  value={discount}
-                  onChange={(e) => setDiscount(Number(e.target.value))}
-                  min="0"
-                  max="100"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 p-3 bg-muted rounded-lg">
-            <div className="flex justify-between items-center">
-              <span>Subtotal:</span>
-              <span>${servicePrice.toFixed(2)}</span>
-            </div>
-            {discount > 0 && (
-              <div className="flex justify-between items-center text-red-600">
-                <span>Discount ({discount}%):</span>
-                <span>-${discountAmount.toFixed(2)}</span>
-              </div>
-            )}
-            <Separator className="my-2" />
-            <div className="flex justify-between items-center font-semibold text-lg">
-              <span>Total:</span>
-              <span>${finalTotal.toFixed(2)}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <ServiceRow
+        selectedServiceId={selectedServiceId}
+        onServiceChange={handleServiceChange}
+        serviceDuration={serviceDuration}
+        onDurationChange={setServiceDuration}
+        servicePrice={servicePrice}
+        onPriceChange={setServicePrice}
+        discount={discount}
+        onDiscountChange={setDiscount}
+        services={services}
+        appointmentService={appointment?.service}
+      />
 
-      {/* Staff Assignment & Attendance */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <UserCheck className="w-5 h-5" />
-            Staff & Attendance
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Assign Staff</Label>
-            <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select staff member" />
-              </SelectTrigger>
-              <SelectContent>
-                {staff.map((member) => (
-                  <SelectItem key={member.id} value={member.id}>
-                    {member.name} - {member.specialties?.join(', ') || 'All Services'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base font-medium">Mark as Attended</Label>
-              <p className="text-sm text-muted-foreground">Client showed up for the appointment</p>
-            </div>
-            <Switch
-              checked={isAttended}
-              onCheckedChange={setIsAttended}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Product Row */}
+      <ProductRow
+        products={products}
+        onProductsChange={setProducts}
+      />
 
-      {/* Payment Form */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <CreditCard className="w-5 h-5" />
-            Payment Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label>Payment Amount</Label>
-              <Input
-                type="number"
-                value={paymentAmount}
-                onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-              />
-            </div>
-            <div>
-              <Label>Payment Method</Label>
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="card">Card</SelectItem>
-                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                  {paymentMethods.map((method) => (
-                    <SelectItem key={method.id} value={method.name.toLowerCase()}>
-                      {method.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Payment Status</Label>
-              <Select value={paymentStatus} onValueChange={setPaymentStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unpaid">Unpaid</SelectItem>
-                  <SelectItem value="partial">Partial</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          {paymentAmount > 0 && paymentAmount !== finalTotal && (
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800">
-                Payment amount (${paymentAmount.toFixed(2)}) differs from service total (${finalTotal.toFixed(2)})
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Notes */}
-      <div>
-        <Label htmlFor="notes">Additional Notes</Label>
-        <Textarea
-          id="notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Add any additional notes about the appointment..."
-          rows={3}
-        />
-      </div>
+      {/* Payment Section */}
+      <PaymentSection
+        paymentAmount={paymentAmount}
+        onPaymentAmountChange={setPaymentAmount}
+        paymentMethod={paymentMethod}
+        onPaymentMethodChange={setPaymentMethod}
+        paymentStatus={paymentStatus}
+        onPaymentStatusChange={setPaymentStatus}
+        notes={notes}
+        onNotesChange={setNotes}
+        finalTotal={finalTotal}
+        paymentMethods={paymentMethods}
+      />
 
       {/* Actions */}
       <div className="flex gap-2 pt-4">

@@ -180,7 +180,12 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
           <Calendar className="w-6 h-6 text-violet-600" />
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Edit Appointment</h2>
-            <p className="text-gray-600">Update appointment details and manage payment</p>
+            <p className="text-gray-600">
+              ID: {formData.id} • Created: {new Date(formData.createdAt || '').toLocaleDateString()}
+            </p>
+            <p className="text-sm text-gray-500">
+              Last updated: {new Date(formData.updatedAt || '').toLocaleString()}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -333,22 +338,35 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
               </div>
             </div>
             {formData.paymentStatus !== 'unpaid' && (
-              <div>
-                <Label htmlFor="paymentMethod">Payment Method</Label>
-                <Select
-                  value={formData.paymentMethod || 'cash'}
-                  onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="card">Card</SelectItem>
-                    <SelectItem value="transfer">Bank Transfer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <>
+                <div>
+                  <Label htmlFor="paymentMethod">Payment Method</Label>
+                  <Select
+                    value={formData.paymentMethod || 'cash'}
+                    onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                      <SelectItem value="transfer">Bank Transfer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {formData.paymentDate && (
+                  <div>
+                    <Label htmlFor="paymentDate">Payment Date</Label>
+                    <Input
+                      id="paymentDate"
+                      type="datetime-local"
+                      value={formData.paymentDate ? new Date(formData.paymentDate).toISOString().slice(0, 16) : ''}
+                      onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

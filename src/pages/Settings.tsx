@@ -12,7 +12,7 @@ import { WhatsAppSection } from "@/components/WhatsAppSection";
 import { WhatsAppQRIntegration } from "@/components/WhatsAppQRIntegration";
 import { StaffScheduleSection } from "@/components/StaffScheduleSection";
 import ManagerSection from "@/components/ManagerSection";
-import { NotificationPreferences } from "@/components/NotificationPreferences";
+import { CurrencySettings } from '@/components/CurrencySettings';
 import { BusinessAnalytics } from "@/components/BusinessAnalytics";
 import { DatabaseDebugPanel } from "@/components/DatabaseDebugPanel";
 import { AuditTrailHistory } from "@/components/AuditTrailHistory";
@@ -172,7 +172,8 @@ const Settings = () => {
             <ErrorBoundary>
               <EnhancedSalonProfile />
             </ErrorBoundary>
-          </TabsContent>
+              <CurrencySettings />
+            </TabsContent>
 
           <TabsContent value="whatsapp" className="space-y-6">
             <ErrorBoundary>
@@ -280,7 +281,17 @@ const Settings = () => {
 
           <TabsContent value="notifications" className="space-y-6">
             <ErrorBoundary>
-              <NotificationPreferences />
+              <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="h-5 w-5 text-violet-600" />
+                    Notification Preferences
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">Notification settings will be available in the next update.</p>
+                </CardContent>
+              </Card>
             </ErrorBoundary>
           </TabsContent>
 

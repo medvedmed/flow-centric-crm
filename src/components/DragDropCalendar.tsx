@@ -163,6 +163,12 @@ const DragDropCalendar = ({ onAppointmentClick, onTimeSlotClick }) => {
     }
   };
 
+  // Handle staff name click for reservations
+  const handleResourceClick = (staffId: string, staffName: string) => {
+    // This will be handled by parent component
+    console.log('Staff clicked:', staffId, staffName);
+  };
+
   // Real-time subscription for appointment updates
   useEffect(() => {
     fetchEvents();

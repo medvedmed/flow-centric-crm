@@ -126,7 +126,7 @@ const StaffAvailabilityManager: React.FC<StaffAvailabilityManagerProps> = ({
   };
 
   const getWeekAvailabilityForDate = (date: string) => {
-    return weekAvailability?.data?.filter(a => a.date === date) || [];
+    return weekAvailability?.filter(a => a.date === date) || [];
   };
 
   if (isLoading) {

@@ -30,11 +30,21 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   const [appointment, setAppointment] = useState<Appointment>(initialAppointment);
 
   // Fetch fresh appointment data
-  const { data: freshAppointment, refetch: refetchAppointment } = useQuery({
-    queryKey: ['appointment', appointment.id],
-    queryFn: () => appointmentApi.getAppointmentById(appointment.id),
-    initialData: initialAppointment,
+  const { data: allAppointments, refetch: refetchAppointment } = useQuery({
+    queryKey: ['appointments'],
+    queryFn: () => appointmentApi.getAppointments(),
   });
+  
+  const freshAppointment = React.useMemo(() => {
+    if (!allAppointments) return initialAppointment;
+    if (Array.isArray(allAppointments)) {
+      return allAppointments.find(apt => apt.id === appointment.id) || initialAppointment;
+    }
+    if (allAppointments && typeof allAppointments === 'object' && 'data' in allAppointments) {
+      return (allAppointments as any).data?.find((apt: Appointment) => apt.id === appointment.id) || initialAppointment;
+    }
+    return initialAppointment;
+  }, [allAppointments, appointment.id, initialAppointment]);
 
   // Update local state when fresh data arrives
   useEffect(() => {
@@ -78,7 +88,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
         status: appointment.status,
         paymentStatus: appointment.paymentStatus,
         paymentMethod: appointment.paymentMethod,
-        paidAmount: appointment.paidAmount,
+        
         notes: appointment.notes
       });
 
@@ -123,7 +133,7 @@ Duration: ${appointment.duration} minutes
 Price: $${appointment.price}
 Payment Status: ${appointment.paymentStatus}
 ${appointment.paymentMethod ? `Payment Method: ${appointment.paymentMethod}` : ''}
-${appointment.paidAmount ? `Amount Paid: $${appointment.paidAmount}` : ''}
+
 
 ${appointment.notes ? `Notes: ${appointment.notes}` : ''}
 
@@ -198,7 +208,8 @@ Generated on: ${new Date().toLocaleString()}
               <Select 
                 value={appointment.service} 
                 onValueChange={(value) => {
-                  const selectedService = services.find(s => s.name === value);
+                  const servicesArray = Array.isArray(services) ? services : services?.data || [];
+                  const selectedService = servicesArray.find(s => s.name === value);
                   handleInputChange('service', value);
                   if (selectedService) {
                     handleInputChange('price', selectedService.price);
@@ -210,7 +221,7 @@ Generated on: ${new Date().toLocaleString()}
                   <SelectValue placeholder="Select service" />
                 </SelectTrigger>
                 <SelectContent>
-                  {services.map((service) => (
+                  {(Array.isArray(services) ? services : services?.data || []).map((service) => (
                     <SelectItem key={service.id} value={service.name}>
                       {service.name} - ${service.price} ({service.duration}min)
                     </SelectItem>
@@ -343,13 +354,13 @@ Generated on: ${new Date().toLocaleString()}
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="paidAmount">Amount Paid</Label>
+                  <Label htmlFor="price">Total Amount ($)</Label>
                   <Input
-                    id="paidAmount"
+                    id="price"
                     type="number"
                     step="0.01"
-                    value={appointment.paidAmount || appointment.price}
-                    onChange={(e) => handleInputChange('paidAmount', parseFloat(e.target.value))}
+                    value={appointment.price}
+                    onChange={(e) => handleInputChange('price', parseFloat(e.target.value))}
                   />
                 </div>
               </>

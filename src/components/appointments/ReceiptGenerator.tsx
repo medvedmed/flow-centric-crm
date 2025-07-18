@@ -48,7 +48,6 @@ Financial Information:
 - Service Price: $${appointment.price?.toFixed(2)}
 - Status: ${appointment.paymentStatus || 'unpaid'}
 ${appointment.paymentMethod ? `- Payment Method: ${appointment.paymentMethod}` : ''}
-${appointment.paidAmount ? `- Amount Paid: $${appointment.paidAmount.toFixed(2)}` : ''}
 
 ${appointment.notes ? `Notes: ${appointment.notes}` : ''}
 
@@ -128,7 +127,6 @@ Appointment ID: ${appointment.id}
         <div class="row"><span>Service Price:</span><span>$${appointment.price?.toFixed(2)}</span></div>
         <div class="row"><span>Payment Status:</span><span>${appointment.paymentStatus || 'unpaid'}</span></div>
         ${appointment.paymentMethod ? `<div class="row"><span>Payment Method:</span><span>${appointment.paymentMethod}</span></div>` : ''}
-        ${appointment.paidAmount ? `<div class="row"><span>Amount Paid:</span><span>$${appointment.paidAmount.toFixed(2)}</span></div>` : ''}
     </div>
     
     ${appointment.notes ? `

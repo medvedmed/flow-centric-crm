@@ -1,11 +1,9 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { AppointmentForm } from './AppointmentForm';
 import { usePermissions } from '@/hooks/usePermissions';
-
 interface AddAppointmentDialogProps {
   selectedDate?: Date;
   selectedTime?: string;
@@ -14,7 +12,6 @@ interface AddAppointmentDialogProps {
   isOpen?: boolean;
   onClose?: () => void;
 }
-
 export const AddAppointmentDialog: React.FC<AddAppointmentDialogProps> = ({
   selectedDate,
   selectedTime,
@@ -26,28 +23,21 @@ export const AddAppointmentDialog: React.FC<AddAppointmentDialogProps> = ({
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
   const setIsOpen = externalOnClose ? (open: boolean) => !open && externalOnClose() : setInternalIsOpen;
-  const { hasPermissionSync, userRole } = usePermissions();
-
+  const {
+    hasPermissionSync,
+    userRole
+  } = usePermissions();
   const canCreateAppointments = hasPermissionSync('appointments', 'create');
   const isStaff = userRole === 'staff';
-
   if (!canCreateAppointments || isStaff) {
     return null;
   }
-
   const handleSuccess = () => {
     setIsOpen(false);
   };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+  return <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        {trigger || (
-          <Button className="gap-2 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700">
-            <Plus className="w-4 h-4" />
-            New Appointment
-          </Button>
-        )}
+        {trigger}
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -55,14 +45,7 @@ export const AddAppointmentDialog: React.FC<AddAppointmentDialogProps> = ({
             Book New Appointment
           </DialogTitle>
         </DialogHeader>
-        <AppointmentForm
-          selectedDate={selectedDate}
-          selectedTime={selectedTime}
-          selectedStaffId={selectedStaffId}
-          onSuccess={handleSuccess}
-          onCancel={() => setIsOpen(false)}
-        />
+        <AppointmentForm selectedDate={selectedDate} selectedTime={selectedTime} selectedStaffId={selectedStaffId} onSuccess={handleSuccess} onCancel={() => setIsOpen(false)} />
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>;
 };

@@ -15,9 +15,10 @@ import { AppointmentExtraServices } from './AppointmentExtraServices';
 import { AppointmentStatus } from './AppointmentStatus';
 import { AppointmentSummary } from './AppointmentSummary';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, User, Calendar, DollarSign, Phone } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface Service {
   id: string;
@@ -52,6 +53,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   const [appointmentColor, setAppointmentColor] = useState('#007bff');
   const [showProductSection, setShowProductSection] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
+  const [clientInfo, setClientInfo] = useState<any>(null);
 
   const { data: services = [] } = useQuery({
     queryKey: ['services-for-appointment'],
@@ -121,6 +123,53 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
       }));
     },
     enabled: !!appointment?.id,
+  });
+
+  // Fetch client information and appointment history
+  const { data: clientData } = useQuery({
+    queryKey: ['client-info', appointment?.client_name],
+    queryFn: async () => {
+      if (!appointment?.client_name || !user?.id) return null;
+
+      // Get client basic info
+      const { data: client } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('salon_id', user.id)
+        .eq('name', appointment.client_name)
+        .maybeSingle();
+
+      // Get client appointment history
+      const { data: appointmentHistory } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('salon_id', user.id)
+        .eq('client_name', appointment.client_name)
+        .order('date', { ascending: false })
+        .limit(5);
+
+      // Calculate client stats
+      const { data: allAppointments } = await supabase
+        .from('appointments')
+        .select('price, status, date')
+        .eq('salon_id', user.id)
+        .eq('client_name', appointment.client_name);
+
+      const totalSpent = allAppointments?.filter(a => a.status === 'Completed').reduce((sum, a) => sum + (a.price || 0), 0) || 0;
+      const totalVisits = allAppointments?.filter(a => a.status === 'Completed').length || 0;
+      const lastVisit = allAppointments?.filter(a => a.status === 'Completed').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.date;
+
+      return {
+        client,
+        appointmentHistory: appointmentHistory || [],
+        stats: {
+          totalSpent,
+          totalVisits,
+          lastVisit
+        }
+      };
+    },
+    enabled: !!appointment?.client_name && !!user?.id,
   });
 
   useEffect(() => {
@@ -323,6 +372,102 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
         services={services}
         staff={staff}
       />
+
+      {/* Client Information Section */}
+      {clientData && (
+        <Card className="bg-muted/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <User className="w-5 h-5" />
+              Client Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Client Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-center gap-2 p-3 bg-background rounded-lg border">
+                <Calendar className="w-4 h-4 text-primary" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Visits</p>
+                  <p className="font-semibold">{clientData.stats.totalVisits}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 p-3 bg-background rounded-lg border">
+                <DollarSign className="w-4 h-4 text-primary" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Spent</p>
+                  <p className="font-semibold">${clientData.stats.totalSpent.toFixed(2)}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 p-3 bg-background rounded-lg border">
+                <Calendar className="w-4 h-4 text-primary" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Last Visit</p>
+                  <p className="font-semibold">
+                    {clientData.stats.lastVisit 
+                      ? new Date(clientData.stats.lastVisit).toLocaleDateString()
+                      : 'First visit'
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Client Details */}
+            {clientData.client && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Email</Label>
+                  <p className="text-sm text-muted-foreground">{clientData.client.email || 'Not provided'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Status</Label>
+                  <Badge variant={clientData.client.status === 'New' ? 'secondary' : 'default'}>
+                    {clientData.client.status || 'Active'}
+                  </Badge>
+                </div>
+                {clientData.client.preferred_stylist && (
+                  <div>
+                    <Label className="text-sm font-medium">Preferred Stylist</Label>
+                    <p className="text-sm text-muted-foreground">{clientData.client.preferred_stylist}</p>
+                  </div>
+                )}
+                {clientData.client.notes && (
+                  <div className="md:col-span-2">
+                    <Label className="text-sm font-medium">Client Notes</Label>
+                    <p className="text-sm text-muted-foreground">{clientData.client.notes}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Recent Appointment History */}
+            {clientData.appointmentHistory.length > 0 && (
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Recent Appointments</Label>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {clientData.appointmentHistory.slice(0, 3).map((appt: any) => (
+                    <div key={appt.id} className="flex justify-between items-center p-2 bg-background rounded border text-sm">
+                      <div>
+                        <span className="font-medium">{appt.service}</span>
+                        <span className="text-muted-foreground ml-2">
+                          {new Date(appt.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={appt.status === 'Completed' ? 'default' : 'secondary'} className="text-xs">
+                          {appt.status}
+                        </Badge>
+                        {appt.price && <span className="text-muted-foreground">${appt.price}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <AppointmentDateTime
         date={appointment.date}

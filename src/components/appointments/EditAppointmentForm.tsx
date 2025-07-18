@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { appointmentApi } from '@/services/api/appointmentApi';
 import { serviceApi } from '@/services/api/serviceApi';
+import { clientApi } from '@/services/api/client';
 import { Appointment, Service } from '@/services/types';
 import { Calendar, Clock, User, DollarSign, CheckCircle } from 'lucide-react';
 import { ReceiptGenerator } from './ReceiptGenerator';
@@ -72,31 +72,52 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
     loadData();
   }, []);
 
-  // Update form data when appointment prop changes
+  // Fetch client phone number if missing and update form data
   useEffect(() => {
-    console.log('Appointment prop changed:', appointment);
-    setFormData({
-      id: appointment?.id || '',
-      clientId: appointment?.clientId || '',
-      clientName: appointment?.clientName || '',
-      clientPhone: appointment?.clientPhone || '',
-      staffId: appointment?.staffId || '',
-      service: appointment?.service || '',
-      date: appointment?.date || '',
-      startTime: appointment?.startTime || '',
-      endTime: appointment?.endTime || '',
-      duration: appointment?.duration || 60,
-      price: appointment?.price || 0,
-      status: appointment?.status || 'Scheduled',
-      notes: appointment?.notes || '',
-      salonId: appointment?.salonId || '',
-      createdAt: appointment?.createdAt || '',
-      updatedAt: appointment?.updatedAt || '',
-      paymentStatus: appointment?.paymentStatus || 'unpaid',
-      paymentMethod: appointment?.paymentMethod || '',
-      paymentDate: appointment?.paymentDate || '',
-      color: appointment?.color || ''
-    });
+    const fetchClientData = async () => {
+      console.log('Appointment prop changed:', appointment);
+      
+      let clientPhone = appointment?.clientPhone || '';
+      
+      // If phone number is missing from appointment, fetch from clients table
+      if (!clientPhone && appointment?.clientId) {
+        try {
+          console.log('Fetching client data for clientId:', appointment.clientId);
+          const clientData = await clientApi.getClient(appointment.clientId);
+          if (clientData?.phone) {
+            clientPhone = clientData.phone;
+            console.log('Found client phone:', clientPhone);
+          }
+        } catch (error) {
+          console.error('Error fetching client data:', error);
+        }
+      }
+
+      setFormData({
+        id: appointment?.id || '',
+        clientId: appointment?.clientId || '',
+        clientName: appointment?.clientName || '',
+        clientPhone: clientPhone,
+        staffId: appointment?.staffId || '',
+        service: appointment?.service || '',
+        date: appointment?.date || '',
+        startTime: appointment?.startTime || '',
+        endTime: appointment?.endTime || '',
+        duration: appointment?.duration || 60,
+        price: appointment?.price || 0,
+        status: appointment?.status || 'Scheduled',
+        notes: appointment?.notes || '',
+        salonId: appointment?.salonId || '',
+        createdAt: appointment?.createdAt || '',
+        updatedAt: appointment?.updatedAt || '',
+        paymentStatus: appointment?.paymentStatus || 'unpaid',
+        paymentMethod: appointment?.paymentMethod || '',
+        paymentDate: appointment?.paymentDate || '',
+        color: appointment?.color || ''
+      });
+    };
+
+    fetchClientData();
   }, [appointment]);
 
   const loadData = async () => {
@@ -298,7 +319,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
               <Label htmlFor="clientName">Client Name</Label>
               <Input
                 id="clientName"
-                value={formData.clientName || appointment?.clientName || ''}
+                value={formData.clientName}
                 onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
                 placeholder="Client name"
               />
@@ -307,7 +328,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
               <Label htmlFor="clientPhone">Phone Number</Label>
               <Input
                 id="clientPhone"
-                value={formData.clientPhone || appointment?.clientPhone || ''}
+                value={formData.clientPhone}
                 onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })}
                 placeholder="Client phone number"
               />
@@ -327,7 +348,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
                 <SelectContent>
                   {services.map((service) => (

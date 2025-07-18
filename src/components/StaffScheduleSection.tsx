@@ -53,7 +53,10 @@ export const StaffScheduleSection: React.FC = () => {
         .order('name');
 
       if (error) throw error;
-      return data as StaffMember[];
+      return data?.map(staff => ({
+        ...staff,
+        role: 'staff' as const
+      })) as StaffMember[];
     },
     enabled: !!user,
   });

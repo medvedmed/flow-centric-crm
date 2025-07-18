@@ -99,7 +99,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
       const refreshedAppointments = await appointmentApi.getAppointments();
       const updatedAppointment = Array.isArray(refreshedAppointments) 
         ? refreshedAppointments.find(apt => apt.id === appointment.id)
-        : refreshedAppointments?.data?.find(apt => apt.id === appointment.id);
+        : (refreshedAppointments as any)?.data?.find((apt: any) => apt.id === appointment.id);
       
       if (updatedAppointment) {
         setFormData(updatedAppointment);
@@ -302,7 +302,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
                 <Label htmlFor="status">Status</Label>
                 <Select
                   value={formData.status}
-                  onValueChange={(value) => setFormData({ ...formData, status: value })}
+                  onValueChange={(value: "Scheduled" | "Confirmed" | "In Progress" | "Completed" | "Cancelled" | "No Show") => setFormData({ ...formData, status: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -319,7 +319,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
                 <Label htmlFor="paymentStatus">Payment Status</Label>
                 <Select
                   value={formData.paymentStatus}
-                  onValueChange={(value) => setFormData({ ...formData, paymentStatus: value })}
+                  onValueChange={(value: "paid" | "partial" | "unpaid") => setFormData({ ...formData, paymentStatus: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />

@@ -40,9 +40,10 @@ export const WhatsAppQRIntegration: React.FC = () => {
         (payload) => {
           console.log('WhatsApp session update:', payload);
           if (payload.new) {
-            setSession(payload.new as WhatsAppSession);
-            if (payload.new.qr_code) {
-              setQrCode(payload.new.qr_code);
+            const newSession = payload.new as WhatsAppSession;
+            setSession(newSession);
+            if (newSession.qr_code) {
+              setQrCode(newSession.qr_code);
             }
           }
         }

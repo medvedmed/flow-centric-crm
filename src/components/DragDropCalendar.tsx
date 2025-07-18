@@ -226,13 +226,16 @@ const DragDropCalendar = ({ onAppointmentClick, onTimeSlotClick }) => {
           },
         })}
         components={{
-          event: ({ event }) => (
-            <div className="flex flex-col p-1">
-              <div className="font-medium truncate">{event.clientName}</div>
-              <div className="text-xs opacity-90 truncate">{event.service}</div>
-              {event.price && <div className="text-xs opacity-75">${event.price}</div>}
-            </div>
-          )
+          event: (props: any) => {
+            const event = props.event as CalendarEvent;
+            return (
+              <div className="flex flex-col p-1">
+                <div className="font-medium truncate">{event.clientName}</div>
+                <div className="text-xs opacity-90 truncate">{event.service}</div>
+                {event.price && <div className="text-xs opacity-75">${event.price}</div>}
+              </div>
+            );
+          }
         }}
         style={{ height: "100%" }}
         timeslots={4}

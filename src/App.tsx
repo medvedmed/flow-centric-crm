@@ -11,6 +11,8 @@ import AppWithRealTime from '@/components/AppWithRealTime';
 
 // Pages
 import Index from '@/pages/Index';
+import Landing from '@/pages/Landing';
+import Auth from '@/pages/Auth';
 import Dashboard from '@/pages/Dashboard';
 import Appointments from '@/pages/Appointments';
 import Clients from '@/pages/Clients';
@@ -49,6 +51,8 @@ function App() {
                 <AppWithRealTime>
                   <Routes>
                     <Route path="/" element={<Index />} />
+                    <Route path="/landing" element={<Landing />} />
+                    <Route path="/auth" element={<Auth />} />
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/appointments" element={<Appointments />} />
                     <Route path="/clients" element={<Clients />} />

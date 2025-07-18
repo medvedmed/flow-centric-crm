@@ -49,6 +49,65 @@ const Reports = () => {
 
   const handleExport = async (type: 'revenue' | 'services' | 'staff' | 'clients') => {
     try {
+      let data: any[] = [];
+      let filename = '';
+      
+      switch (type) {
+        case 'revenue':
+          data = revenueData || [];
+          filename = `revenue_report_${new Date().toISOString().split('T')[0]}.csv`;
+          break;
+        case 'services':
+          data = serviceData || [];
+          filename = `services_report_${new Date().toISOString().split('T')[0]}.csv`;
+          break;
+        case 'staff':
+          data = staffData || [];
+          filename = `staff_report_${new Date().toISOString().split('T')[0]}.csv`;
+          break;
+        case 'clients':
+          data = clientMetrics ? [clientMetrics] : [];
+          filename = `client_metrics_${new Date().toISOString().split('T')[0]}.csv`;
+          break;
+      }
+
+      if (data.length === 0) {
+        toast({
+          title: "No Data",
+          description: "No data available to export.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Convert to CSV
+      const headers = Object.keys(data[0]).join(',');
+      const rows = data.map(row => Object.values(row).join(',')).join('\\n');
+      const csv = headers + '\\n' + rows;
+
+      // Download CSV
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export Successful",
+        description: `${type} report exported successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export data. Please try again.",
+        variant: "destructive",
+      });
+    }
+    try {
       await reportsApi.exportReport(type);
       toast({
         title: "Export Successful",

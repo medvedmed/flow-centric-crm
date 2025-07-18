@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Package, AlertTriangle, Search, Filter } from 'lucide-react';
+import { Plus, Package, AlertTriangle, Search, Filter, Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { inventoryApi } from '@/services/api/inventoryApi';
@@ -21,8 +21,59 @@ const Inventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showLowStock, setShowLowStock] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newItem, setNewItem] = useState({
+    name: '',
+    category: '',
+    current_stock: 0,
+    minimum_stock: 10,
+    unit_price: 0,
+    cost_price: 0,
+    selling_price: 0,
+    description: '',
+    sku: '',
+    supplier_name: '',
+    supplier_contact: ''
+  });
 
-  console.log('Inventory component rendering');
+  const handleExport = async () => {
+    try {
+      if (items.length === 0) {
+        toast({
+          title: "No Data",
+          description: "No inventory items to export.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const headers = 'Name,Category,Current Stock,Minimum Stock,Unit Price,Cost Price,Selling Price,SKU,Supplier';
+      const rows = items.map(item => 
+        `"${item.name}","${item.category}",${item.current_stock},${item.minimum_stock},${item.unit_price || 0},${item.cost_price || 0},${item.selling_price || 0},"${item.sku || ''}","${item.supplier_name || ''}"`
+      ).join('\\n');
+      
+      const csv = headers + '\\n' + rows;
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `inventory_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export Successful", 
+        description: "Inventory exported successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export inventory. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
 
   const { data: items = [], isLoading, error } = useQuery({
@@ -151,15 +202,23 @@ const Inventory = () => {
           <h1 className="text-3xl font-bold">Inventory Management</h1>
           <p className="text-muted-foreground mt-1">Track and manage your salon inventory</p>
         </div>
-        
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Item
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            className="bg-white border-gray-200 hover:bg-gray-50"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export Inventory
+          </Button>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Item
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New Inventory Item</DialogTitle>
             </DialogHeader>
@@ -216,7 +275,8 @@ const Inventory = () => {
               </div>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {/* Alerts */}

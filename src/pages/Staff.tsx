@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { UserCog, Search, Plus, Filter, Users, TrendingUp, Star, Calendar, Loader2 } from 'lucide-react';
+import { UserCog, Search, Plus, Filter, Users, TrendingUp, Star, Calendar, Loader2, Download } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useStaff } from '@/hooks/staff/useStaffHooks';
 import { useToast } from '@/hooks/use-toast';
@@ -57,6 +57,46 @@ const Staff = () => {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      if (staff.length === 0) {
+        toast({
+          title: "No Data",
+          description: "No staff members to export.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const headers = 'Name,Email,Phone,Status,Rating,Commission Rate,Hourly Rate,Specialties';
+      const rows = staff.map(member => 
+        `"${member.name}","${member.email || ''}","${member.phone || ''}","${member.status || 'inactive'}",${member.rating || 0},${member.commissionRate || 0},${member.hourlyRate || 0},"${member.specialties?.join('; ') || ''}"`
+      ).join('\\n');
+      
+      const csv = headers + '\\n' + rows;
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `staff_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export Successful",
+        description: "Staff list exported successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export staff list. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getSpecialtyColor = (specialty: string) => {
     switch (specialty?.toLowerCase()) {
       case 'hair styling': return 'bg-purple-100 text-purple-800';
@@ -79,14 +119,21 @@ const Staff = () => {
               </h1>
               <p className="text-gray-600 mt-2">Manage your salon's team and performance</p>
             </div>
-            {canCreateStaff && (
-              <div className="flex items-center">
-                {/* AddStaffDialog contains its own trigger button */}
+            <div className="flex items-center gap-3">
+              {canCreateStaff && (
                 <div className="[&>*]:!bg-gradient-to-r [&>*]:!from-violet-500 [&>*]:!to-purple-600 [&>*]:!hover:from-violet-600 [&>*]:!hover:to-purple-700">
                   <AddStaffDialog />
                 </div>
-              </div>
-            )}
+              )}
+              <Button
+                variant="outline"
+                onClick={handleExport}
+                className="bg-white/70 border-violet-200 hover:bg-violet-50"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export Staff
+              </Button>
+            </div>
           </div>
         </div>
       </div>

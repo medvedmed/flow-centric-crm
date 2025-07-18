@@ -30,7 +30,7 @@ interface CalendarResource {
   resourceTitle: string;
 }
 
-const DragDropCalendar = ({ onAppointmentClick }) => {
+const DragDropCalendar = ({ onAppointmentClick, onTimeSlotClick }) => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [resources, setResources] = useState<CalendarResource[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,6 +118,16 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
     onAppointmentClick?.(event);
   };
 
+  const handleSelectSlot = (slotInfo: any) => {
+    if (onTimeSlotClick) {
+      onTimeSlotClick({
+        date: slotInfo.start,
+        time: moment(slotInfo.start).format('HH:mm'),
+        staffId: slotInfo.resourceId
+      });
+    }
+  };
+
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
@@ -140,6 +150,8 @@ const DragDropCalendar = ({ onAppointmentClick }) => {
         onEventDrop={updateAppointment}
         onEventResize={updateAppointment}
         onSelectEvent={handleSelectEvent}
+        onSelectSlot={handleSelectSlot}
+        selectable={true}
         eventPropGetter={(event: CalendarEvent) => ({
           style: {
             backgroundColor: event.color || "#007bff",

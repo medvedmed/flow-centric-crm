@@ -109,11 +109,11 @@ const Settings = () => {
       <div className="bg-white/70 backdrop-blur-sm border-b border-violet-200 px-6 py-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
                 Settings & Analytics
               </h1>
-              <p className="text-gray-600 mt-2">Complete salon management, automation, and business insights.</p>
+              <p className="text-gray-600 mt-2 text-sm sm:text-base">Complete salon management, automation, and business insights.</p>
             </div>
           </div>
         </div>
@@ -121,22 +121,22 @@ const Settings = () => {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         <Tabs defaultValue="salon" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-10 bg-white/70 backdrop-blur-sm border-violet-200">
-            <TabsTrigger value="salon" className="flex items-center gap-2">
-              <Building className="w-4 h-4" />
-              <span className="hidden sm:inline">Salon</span>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-10 bg-white/70 backdrop-blur-sm border-violet-200 overflow-x-auto">
+            <TabsTrigger value="salon" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+              <Building className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Salon</span>
             </TabsTrigger>
-            <TabsTrigger value="whatsapp" className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" />
-              <span className="hidden sm:inline">WhatsApp</span>
+            <TabsTrigger value="whatsapp" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+              <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">WhatsApp</span>
             </TabsTrigger>
-            <TabsTrigger value="manager" className="flex items-center gap-2">
-              <UserCog className="w-4 h-4" />
-              <span className="hidden sm:inline">Manager</span>
+            <TabsTrigger value="manager" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+              <UserCog className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Manager</span>
             </TabsTrigger>
-            <TabsTrigger value="roles" className="flex items-center gap-2">
-              <Shield className="w-4 h-4" />
-              <span className="hidden sm:inline">Roles</span>
+            <TabsTrigger value="roles" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+              <Shield className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Roles</span>
             </TabsTrigger>
             <TabsTrigger value="schedule" className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />

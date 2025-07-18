@@ -16,6 +16,8 @@ const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [timeSlotData, setTimeSlotData] = useState<any>(null);
   const { hasPermissionSync } = usePermissions();
 
   const canViewAppointments = hasPermissionSync('appointments', 'view');
@@ -28,6 +30,16 @@ const Appointments = () => {
   const handleCloseEditDialog = () => {
     setShowEditDialog(false);
     setSelectedAppointment(null);
+  };
+
+  const handleTimeSlotClick = (slotData: any) => {
+    setTimeSlotData(slotData);
+    setShowAddDialog(true);
+  };
+
+  const handleCloseAddDialog = () => {
+    setShowAddDialog(false);
+    setTimeSlotData(null);
   };
 
   const goToPreviousDay = () => {
@@ -132,7 +144,10 @@ const Appointments = () => {
         {/* Calendar */}
         <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
           <CardContent className="p-6">
-            <DragDropCalendar onAppointmentClick={handleAppointmentClick} />
+            <DragDropCalendar 
+              onAppointmentClick={handleAppointmentClick} 
+              onTimeSlotClick={handleTimeSlotClick}
+            />
           </CardContent>
         </Card>
 
@@ -145,6 +160,15 @@ const Appointments = () => {
         appointment={selectedAppointment}
         isOpen={showEditDialog}
         onClose={handleCloseEditDialog}
+      />
+
+      {/* Quick Add Appointment Dialog for Time Slot Clicks */}
+      <AddAppointmentDialog
+        isOpen={showAddDialog}
+        onClose={handleCloseAddDialog}
+        selectedDate={timeSlotData?.date}
+        selectedTime={timeSlotData?.time}
+        selectedStaffId={timeSlotData?.staffId}
       />
     </div>
   );

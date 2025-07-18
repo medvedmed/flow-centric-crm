@@ -332,13 +332,19 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
 
       return updatedAppointment;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
-      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['client-payments'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['appointment-services'] });
-      queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
+    onSuccess: async () => {
+      // Refresh all related queries
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['appointments'] }),
+        queryClient.invalidateQueries({ queryKey: ['financial-transactions'] }),
+        queryClient.invalidateQueries({ queryKey: ['client-payments'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] }),
+        queryClient.invalidateQueries({ queryKey: ['appointment-services'] }),
+        queryClient.invalidateQueries({ queryKey: ['payment-methods'] }),
+        queryClient.invalidateQueries({ queryKey: ['products'] }),
+        queryClient.invalidateQueries({ queryKey: ['client-info'] })
+      ]);
+      
       toast({ title: 'Success', description: 'Appointment updated successfully!' });
       onClose();
     },

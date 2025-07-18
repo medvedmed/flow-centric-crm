@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, DollarSign, TrendingUp, TrendingDown, Calendar, CreditCard, Banknote, Smartphone, Building } from 'lucide-react';
+import { Plus, DollarSign, TrendingUp, TrendingDown, Calendar, CreditCard, Banknote, Smartphone, Building, Download, FileText } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { financeApi } from '@/services/api/financeApi';
@@ -171,6 +171,41 @@ const AuraFinance = () => {
   const transactions = transactionsData?.data || [];
   const totalPages = transactionsData?.totalPages || 1;
 
+  // Export functions
+  const exportToCSV = () => {
+    if (!transactions.length) {
+      toast({ title: 'No Data', description: 'No transactions to export', variant: 'destructive' });
+      return;
+    }
+
+    const headers = ['Date', 'Type', 'Category', 'Amount', 'Payment Method', 'Description'];
+    const csvContent = [
+      headers.join(','),
+      ...transactions.map(t => [
+        t.transaction_date,
+        t.transaction_type,
+        t.category,
+        t.amount,
+        t.payment_method,
+        `"${t.description || ''}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `financial-report-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+    
+    toast({ title: 'Success', description: 'Financial report exported successfully!' });
+  };
+
+  const exportToPDF = () => {
+    toast({ title: 'Info', description: 'PDF export feature coming soon!' });
+  };
+
   if (transactionsLoading || summaryLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-violet-50 to-blue-50">
@@ -194,13 +229,31 @@ const AuraFinance = () => {
             <p className="text-gray-600 mt-1">Beautiful financial management for your salon</p>
           </div>
           
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 shadow-lg">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Transaction
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={exportToCSV}
+              className="bg-white/70 border-violet-200 hover:bg-violet-50"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={exportToPDF}
+              className="bg-white/70 border-violet-200 hover:bg-violet-50"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Export PDF
+            </Button>
+            
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 shadow-lg">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Transaction
+                </Button>
+              </DialogTrigger>
             <DialogContent className="bg-white border-0 shadow-2xl">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
@@ -285,7 +338,8 @@ const AuraFinance = () => {
                 </div>
               </form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">

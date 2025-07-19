@@ -6,12 +6,15 @@ import { Shield, Calendar, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { Appointment } from '@/services/types';
-import { ModernAppointmentScheduler } from '@/components/scheduler/ModernAppointmentScheduler';
+import { DragDropCalendar } from '@/components/scheduler/DragDropCalendar';
 import { EditAppointmentDialog } from '@/components/EditAppointmentDialog';
 import { AddAppointmentDialog } from '@/components/AddAppointmentDialog';
 import { QuickPaymentDialog } from '@/components/QuickPaymentDialog';
 import { DailyActivityLog } from '@/components/DailyActivityLog';
 import { WorkingHoursManager } from '@/components/WorkingHoursManager';
+
+import { useAppointmentData } from '@/hooks/useAppointmentData';
+import { useAppointmentOperations } from '@/hooks/useAppointmentOperations';
 
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -19,6 +22,10 @@ const Appointments = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [timeSlotData, setTimeSlotData] = useState<any>(null);
+  
+  const { staff, appointments } = useAppointmentData(format(selectedDate, 'yyyy-MM-dd'));
+  const { moveAppointment } = useAppointmentOperations();
+  
   const {
     hasPermissionSync
   } = usePermissions();
@@ -42,6 +49,15 @@ const Appointments = () => {
   const handleCloseAddDialog = () => {
     setShowAddDialog(false);
     setTimeSlotData(null);
+  };
+
+  const handleAppointmentMove = async (appointmentId: string, newStaffId: string, newTime: string) => {
+    await moveAppointment({ 
+      appointmentId, 
+      newStaffId, 
+      newTime,
+      duration: 60 
+    });
   };
 
   if (!canViewAppointments) {
@@ -98,13 +114,16 @@ const Appointments = () => {
         </div>
       </div>
 
-      {/* Modern Scheduler */}
+      {/* Drag Drop Calendar */}
       <div className="flex-1">
-        <ModernAppointmentScheduler
+        <DragDropCalendar
+          staff={staff}
+          appointments={appointments}
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
           onAppointmentClick={handleAppointmentClick}
           onTimeSlotClick={handleTimeSlotClick}
+          onAppointmentMove={handleAppointmentMove}
         />
       </div>
 

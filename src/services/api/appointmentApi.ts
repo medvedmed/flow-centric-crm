@@ -119,43 +119,80 @@ export const appointmentApi = {
 
   async updateAppointment(id: string, updates: Partial<Appointment>): Promise<Appointment> {
     return RetryService.withRetry(async () => {
+      console.log('Updating appointment with data:', updates);
+      
+      // Map camelCase fields to snake_case for database
+      const dbUpdates: any = {};
+      
+      if (updates.clientId !== undefined) dbUpdates.client_id = updates.clientId;
+      if (updates.clientName !== undefined) dbUpdates.client_name = updates.clientName;
+      if (updates.clientPhone !== undefined) dbUpdates.client_phone = updates.clientPhone;
+      if (updates.service !== undefined) dbUpdates.service = updates.service;
+      if (updates.startTime !== undefined) dbUpdates.start_time = updates.startTime;
+      if (updates.endTime !== undefined) dbUpdates.end_time = updates.endTime;
+      if (updates.date !== undefined) dbUpdates.date = updates.date;
+      if (updates.price !== undefined) dbUpdates.price = updates.price;
+      if (updates.duration !== undefined) dbUpdates.duration = updates.duration;
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.paymentStatus !== undefined) dbUpdates.payment_status = updates.paymentStatus;
+      if (updates.paymentMethod !== undefined) dbUpdates.payment_method = updates.paymentMethod;
+      if (updates.paymentDate !== undefined) dbUpdates.payment_date = updates.paymentDate;
+      if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+      if (updates.staffId !== undefined) dbUpdates.staff_id = updates.staffId;
+      if (updates.color !== undefined) dbUpdates.color = updates.color;
+      
+      // Always update the updated_at timestamp
+      dbUpdates.updated_at = new Date().toISOString();
+
+      console.log('Mapped database updates:', dbUpdates);
+
       const { data, error } = await supabase
         .from('appointments')
-        .update({
-          ...updates,
-        })
+        .update(dbUpdates)
         .eq('id', id)
         .select()
         .single();
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Database update error:', error);
+        throw error;
+      }
+
+      console.log('Update successful, raw data:', data);
+
+      // Convert snake_case response back to camelCase
+      const mappedResponse = {
+        id: data.id,
+        clientId: data.client_id,
+        staffId: data.staff_id,
+        clientName: data.client_name,
+        clientPhone: data.client_phone,
+        service: data.service,
+        startTime: data.start_time,
+        endTime: data.end_time,
+        date: data.date,
+        price: data.price,
+        duration: data.duration,
+        status: data.status as Appointment['status'],
+        paymentStatus: data.payment_status as Appointment['paymentStatus'],
+        paymentMethod: data.payment_method,
+        paymentDate: data.payment_date,
+        notes: data.notes,
+        salonId: data.salon_id,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+        color: data.color,
+      };
+
+      console.log('Mapped response:', mappedResponse);
+      return mappedResponse;
     }, {
       maxAttempts: 3,
       onRetry: (attempt, error) => {
         console.warn(`Appointment update attempt ${attempt} failed:`, error);
       }
-    }).then(data => ({
-      id: data.id,
-      clientId: data.client_id,
-      staffId: data.staff_id,
-      clientName: data.client_name,
-      clientPhone: data.client_phone,
-      service: data.service,
-      startTime: data.start_time,
-      endTime: data.end_time,
-      date: data.date,
-      price: data.price,
-      duration: data.duration,
-      status: data.status as Appointment['status'],
-      notes: data.notes,
-      salonId: data.salon_id,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      color: data.color,
-    }));
+    });
   },
-
 
   async deleteAppointment(id: string): Promise<void> {
     return RetryService.withRetry(async () => {

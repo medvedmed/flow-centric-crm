@@ -39,6 +39,15 @@ const AddStaffDialog = () => {
     setNewStaff({ ...newStaff, specialties });
   };
 
+  // Helper function to ensure time format includes seconds
+  const formatTimeWithSeconds = (timeString: string) => {
+    if (!timeString) return "00:00:00";
+    // If already has seconds format (HH:MM:SS), return as is
+    if (timeString.split(':').length === 3) return timeString;
+    // If only has HH:MM format, add :00 for seconds
+    return `${timeString}:00`;
+  };
+
   const handleAddStaff = () => {
     if (!user || !session) {
       toast({
@@ -58,17 +67,25 @@ const AddStaffDialog = () => {
       return;
     }
 
+    // Format time fields to include seconds before sending to API
     const staffToCreate = {
       ...newStaff,
-      salonId: user.id
+      salonId: user.id,
+      workingHoursStart: formatTimeWithSeconds(newStaff.workingHoursStart || "09:00"),
+      workingHoursEnd: formatTimeWithSeconds(newStaff.workingHoursEnd || "18:00"),
+      breakStart: formatTimeWithSeconds(newStaff.breakStart || "12:00"),
+      breakEnd: formatTimeWithSeconds(newStaff.breakEnd || "13:00"),
     } as StaffType;
 
+    console.log('Creating staff with formatted data:', staffToCreate);
+
     createStaffMutation.mutate(staffToCreate, {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        console.log('Staff created successfully:', data);
         setCreatedStaff(staffToCreate);
         toast({
           title: "Staff Added Successfully",
-          description: `${staffToCreate.name} has been added to your team!`,
+          description: `${staffToCreate.name} has been added to your team with login credentials!`,
         });
         setTimeout(() => {
           resetForm();
@@ -76,9 +93,24 @@ const AddStaffDialog = () => {
       },
       onError: (error) => {
         console.error('Failed to create staff:', error);
+        let errorMessage = "Failed to create staff member";
+        
+        // Try to extract more specific error information
+        if (error instanceof Error) {
+          errorMessage = error.message;
+          // Check for specific database constraint errors
+          if (error.message.includes('breakEnd') || error.message.includes('break_end')) {
+            errorMessage = "Invalid break end time format. Please check your break times.";
+          } else if (error.message.includes('breakStart') || error.message.includes('break_start')) {
+            errorMessage = "Invalid break start time format. Please check your break times.";
+          } else if (error.message.includes('workingHours') || error.message.includes('working_hours')) {
+            errorMessage = "Invalid working hours format. Please check your working times.";
+          }
+        }
+        
         toast({
           title: "Error",
-          description: error instanceof Error ? error.message : "Failed to create staff member",
+          description: errorMessage,
           variant: "destructive"
         });
       }
@@ -141,7 +173,7 @@ const AddStaffDialog = () => {
             <div className="text-center p-4 bg-green-50 border border-green-200 rounded-lg">
               <h3 className="font-semibold text-green-800 mb-2">{createdStaff.name} Added!</h3>
               <p className="text-sm text-green-700 mb-4">
-                Staff member has been successfully added to your salon team.
+                Staff member has been successfully added with login credentials generated automatically.
               </p>
               
               <div className="space-y-3">
@@ -161,7 +193,11 @@ const AddStaffDialog = () => {
                 )}
                 <div className="bg-white p-3 rounded border">
                   <Label className="text-xs text-gray-600">Working Hours</Label>
-                  <p className="text-sm">{createdStaff.workingHoursStart} - {createdStaff.workingHoursEnd}</p>
+                  <p className="text-sm">{createdStaff.workingHoursStart?.substring(0, 5)} - {createdStaff.workingHoursEnd?.substring(0, 5)}</p>
+                </div>
+                <div className="bg-white p-3 rounded border">
+                  <Label className="text-xs text-gray-600">Break Times</Label>
+                  <p className="text-sm">{createdStaff.breakStart?.substring(0, 5)} - {createdStaff.breakEnd?.substring(0, 5)}</p>
                 </div>
               </div>
             </div>
@@ -174,7 +210,7 @@ const AddStaffDialog = () => {
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-sm text-blue-800">
-                <strong>Quick Setup:</strong> Add your staff members to enable appointment booking.
+                <strong>Quick Setup:</strong> Login credentials will be generated automatically for staff portal access.
               </p>
             </div>
             
@@ -232,6 +268,26 @@ const AddStaffDialog = () => {
                   type="time"
                   value={newStaff.workingHoursEnd}
                   onChange={(e) => setNewStaff({...newStaff, workingHoursEnd: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label htmlFor="breakStart">Break Start</Label>
+                <Input
+                  id="breakStart"
+                  type="time"
+                  value={newStaff.breakStart}
+                  onChange={(e) => setNewStaff({...newStaff, breakStart: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label htmlFor="breakEnd">Break End</Label>
+                <Input
+                  id="breakEnd"
+                  type="time"
+                  value={newStaff.breakEnd}
+                  onChange={(e) => setNewStaff({...newStaff, breakEnd: e.target.value})}
                 />
               </div>
             </div>

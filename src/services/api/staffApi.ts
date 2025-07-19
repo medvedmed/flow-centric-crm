@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Staff } from '../types';
 
@@ -52,29 +51,38 @@ export const staffApi = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Ensure proper data mapping with default values for break times
+    // Helper function to format time properly
+    const formatTime = (timeString?: string) => {
+      if (!timeString) return null;
+      // If already in HH:MM:SS format, return as is
+      if (timeString.split(':').length === 3) return timeString;
+      // If in HH:MM format, add seconds
+      return `${timeString}:00`;
+    };
+
+    // Ensure proper data mapping with formatted times
     const staffData = {
       name: staff.name,
       email: staff.email,
-      phone: staff.phone,
-      specialties: staff.specialties,
-      working_hours_start: staff.workingHoursStart || '09:00:00',
-      working_hours_end: staff.workingHoursEnd || '17:00:00',
+      phone: staff.phone || null,
+      specialties: staff.specialties || [],
+      working_hours_start: formatTime(staff.workingHoursStart) || '09:00:00',
+      working_hours_end: formatTime(staff.workingHoursEnd) || '17:00:00',
       working_days: staff.workingDays || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-      break_start: staff.breakStart || '12:00:00',
-      break_end: staff.breakEnd || '13:00:00',
+      break_start: formatTime(staff.breakStart) || '12:00:00',
+      break_end: formatTime(staff.breakEnd) || '13:00:00',
       efficiency: staff.efficiency || 100,
       rating: staff.rating || 5.0,
-      image_url: staff.imageUrl,
+      image_url: staff.imageUrl || null,
       hourly_rate: staff.hourlyRate || 0,
       commission_rate: staff.commissionRate || 35,
       status: staff.status || 'active',
-      notes: staff.notes,
+      notes: staff.notes || null,
       hire_date: staff.hireDate || new Date().toISOString().split('T')[0],
       salon_id: user.id
     };
 
-    console.log('Creating staff with data:', staffData);
+    console.log('Creating staff with formatted data:', staffData);
 
     const { data, error } = await supabase
       .from('staff')
@@ -83,9 +91,30 @@ export const staffApi = {
       .single();
     
     if (error) {
-      console.error('Staff creation error:', error);
-      throw error;
+      console.error('Staff creation error details:', {
+        error,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
+      
+      // Provide more specific error messages
+      let errorMessage = error.message;
+      if (error.message.includes('break_end') || error.message.includes('breakEnd')) {
+        errorMessage = 'Invalid break end time. Please ensure the time is in correct format.';
+      } else if (error.message.includes('break_start') || error.message.includes('breakStart')) {
+        errorMessage = 'Invalid break start time. Please ensure the time is in correct format.';
+      } else if (error.message.includes('working_hours')) {
+        errorMessage = 'Invalid working hours. Please ensure times are in correct format.';
+      } else if (error.code === '23505') {
+        errorMessage = 'A staff member with this email already exists.';
+      }
+      
+      throw new Error(errorMessage);
     }
+    
+    console.log('Staff created successfully:', data);
     
     return {
       id: data.id,

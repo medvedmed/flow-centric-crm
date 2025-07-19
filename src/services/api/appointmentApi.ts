@@ -179,7 +179,7 @@ export const appointmentApi = {
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       color: data.color,
-      paymentStatus: data.payment_status,
+      paymentStatus: data.payment_status as Appointment['paymentStatus'],
       paymentMethod: data.payment_method,
     }));
   },

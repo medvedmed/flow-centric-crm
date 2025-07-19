@@ -11,7 +11,10 @@ import { Appointment, Staff } from '@/services/types';
 import { generateTimeSlots, normalizeTime, getInitials } from './utils';
 import { EmptyTimeSlot } from './EmptyTimeSlot';
 import { ScheduleSettingsDialog } from './ScheduleSettingsDialog';
+
 const APPOINTMENT_TYPE = 'appointment';
+const TIME_SLOT_HEIGHT = 60; // 60px per 30-minute slot
+
 interface DragDropCalendarProps {
   staff: Staff[];
   appointments: Appointment[];
@@ -26,11 +29,13 @@ interface DragDropCalendarProps {
   onAppointmentMove?: (appointmentId: string, newStaffId: string, newTime: string) => void;
   onAppointmentResize?: (appointmentId: string, newDuration: number) => void;
 }
+
 interface DraggableAppointmentProps {
   appointment: Appointment;
   onClick: (appointment: Appointment) => void;
   onResize?: (appointmentId: string, newDuration: number) => void;
 }
+
 interface DroppableTimeSlotProps {
   staffId: string;
   time: string;
@@ -42,6 +47,24 @@ interface DroppableTimeSlotProps {
   onAppointmentResize?: (appointmentId: string, newDuration: number) => void;
 }
 
+// Helper function to calculate appointment position and height
+const calculateAppointmentLayout = (appointment: Appointment, scheduleStart: number) => {
+  const startTime = appointment.startTime;
+  const duration = appointment.duration || 60;
+  
+  // Parse start time (HH:MM format)
+  const [startHour, startMinute] = startTime.split(':').map(Number);
+  
+  // Calculate position from schedule start
+  const minutesFromStart = (startHour - scheduleStart) * 60 + startMinute;
+  const top = (minutesFromStart / 30) * TIME_SLOT_HEIGHT; // 30 minutes per slot
+  
+  // Calculate height based on duration
+  const height = Math.max((duration / 30) * TIME_SLOT_HEIGHT, 40); // Minimum 40px height
+  
+  return { top, height };
+};
+
 // Enhanced Draggable Appointment Component
 const DraggableAppointment: React.FC<DraggableAppointmentProps> = ({
   appointment,
@@ -51,6 +74,7 @@ const DraggableAppointment: React.FC<DraggableAppointmentProps> = ({
   const [isResizing, setIsResizing] = useState(false);
   const [resizeStartY, setResizeStartY] = useState(0);
   const [initialDuration, setInitialDuration] = useState(appointment.duration || 60);
+  
   const [{
     isDragging
   }, drag] = useDrag(() => ({
@@ -64,14 +88,16 @@ const DraggableAppointment: React.FC<DraggableAppointmentProps> = ({
       isDragging: monitor.isDragging()
     })
   }), [isResizing]);
+
   const getStatusColor = (status: string, paymentStatus?: string) => {
     if (status === 'Completed') return 'bg-green-50 border-l-green-500';
     if (status === 'Cancelled') return 'bg-red-50 border-l-red-500';
     if (paymentStatus === 'paid') return 'bg-blue-50 border-l-blue-500';
     return 'bg-blue-50 border-l-blue-400';
   };
+
   const duration = appointment.duration || 60;
-  const height = Math.max(duration / 60 * 60, 80); // 60px per hour, minimum 80px
+  const { height } = calculateAppointmentLayout(appointment, 8); // Assuming 8 AM start
 
   const handleResizeStart = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -79,19 +105,22 @@ const DraggableAppointment: React.FC<DraggableAppointmentProps> = ({
     setResizeStartY(e.clientY);
     setInitialDuration(duration);
   };
+
   const handleResizeMove = (e: MouseEvent) => {
     if (!isResizing) return;
     const deltaY = e.clientY - resizeStartY;
-    const deltaMinutes = Math.round(deltaY / 60 * 60); // Convert pixels to minutes
+    const deltaMinutes = Math.round((deltaY / TIME_SLOT_HEIGHT) * 30); // Convert pixels to minutes
     const newDuration = Math.max(15, initialDuration + deltaMinutes); // Minimum 15 minutes
 
     if (onResize) {
       onResize(appointment.id, newDuration);
     }
   };
+
   const handleResizeEnd = () => {
     setIsResizing(false);
   };
+
   React.useEffect(() => {
     if (isResizing) {
       document.addEventListener('mousemove', handleResizeMove);
@@ -102,14 +131,21 @@ const DraggableAppointment: React.FC<DraggableAppointmentProps> = ({
       };
     }
   }, [isResizing, resizeStartY, initialDuration]);
-  return <div ref={drag} onClick={() => onClick(appointment)} className={`
+
+  return (
+    <div
+      ref={drag}
+      onClick={() => onClick(appointment)}
+      className={`
         absolute w-full cursor-pointer transition-all duration-200 z-10 group
         ${isDragging ? 'opacity-50 scale-95' : 'hover:scale-[1.02] hover:shadow-md'}
         ${isResizing ? 'cursor-ns-resize' : 'cursor-move'}
-      `} style={{
-    height: `${height}px`,
-    opacity: isDragging ? 0.5 : 1
-  }}>
+      `}
+      style={{
+        height: `${height}px`,
+        opacity: isDragging ? 0.5 : 1
+      }}
+    >
       <Card className={`h-full ${getStatusColor(appointment.status, appointment.paymentStatus)} border-l-4 shadow-sm hover:shadow-md transition-shadow`}>
         <CardContent className="p-2 h-full relative overflow-hidden">
           <div className="flex flex-col h-full justify-between text-xs">
@@ -130,29 +166,37 @@ const DraggableAppointment: React.FC<DraggableAppointmentProps> = ({
             </div>
             
             {/* Phone if space allows */}
-            {height > 100 && appointment.clientPhone && <div className="text-gray-500 flex items-center gap-1 truncate">
+            {height > 100 && appointment.clientPhone && (
+              <div className="text-gray-500 flex items-center gap-1 truncate">
                 <Phone className="w-3 h-3" />
                 <span>{appointment.clientPhone}</span>
-              </div>}
+              </div>
+            )}
             
             {/* Price and Status */}
             <div className="flex items-center justify-between mt-auto">
               <Badge variant="secondary" className="text-xs px-1 py-0">
                 ${appointment.price || 0}
               </Badge>
-              {appointment.paymentStatus === 'paid' && <Badge variant="default" className="text-xs px-1 py-0">
+              {appointment.paymentStatus === 'paid' && (
+                <Badge variant="default" className="text-xs px-1 py-0">
                   Paid
-                </Badge>}
+                </Badge>
+              )}
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Bottom Resize Handle */}
-      <div className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity" onMouseDown={handleResizeStart}>
+      <div 
+        className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity" 
+        onMouseDown={handleResizeStart}
+      >
         <div className="h-full bg-blue-500 rounded-b-lg opacity-50"></div>
       </div>
-    </div>;
+    </div>
+  );
 };
 
 // Enhanced Droppable Time Slot Component
@@ -180,21 +224,76 @@ const DroppableTimeSlot: React.FC<DroppableTimeSlotProps> = ({
       isOver: monitor.isOver()
     })
   }));
-  const slotAppointments = appointments.filter(apt => apt.staffId === staffId && normalizeTime(apt.startTime) === normalizeTime(time) && apt.date === format(selectedDate, 'yyyy-MM-dd'));
+
+  const slotAppointments = appointments.filter(apt => 
+    apt.staffId === staffId && 
+    apt.date === format(selectedDate, 'yyyy-MM-dd')
+  );
+
+  // Find appointments that overlap with this time slot
+  const overlappingAppointments = slotAppointments.filter(apt => {
+    const [slotHour, slotMinute] = time.split(':').map(Number);
+    const slotMinutes = slotHour * 60 + slotMinute;
+    
+    const [startHour, startMinute] = apt.startTime.split(':').map(Number);
+    const startMinutes = startHour * 60 + startMinute;
+    
+    const [endHour, endMinute] = apt.endTime.split(':').map(Number);
+    const endMinutes = endHour * 60 + endMinute;
+    
+    return slotMinutes >= startMinutes && slotMinutes < endMinutes;
+  });
+
   const handleTimeSlotClick = () => {
-    if (onTimeSlotClick && slotAppointments.length === 0) {
+    if (onTimeSlotClick && overlappingAppointments.length === 0) {
       onTimeSlotClick(staffId, time);
     }
   };
-  return <div ref={drop} className={`
-        relative min-h-[60px] border-b border-gray-100 transition-colors
+
+  return (
+    <div
+      ref={drop}
+      className={`
+        relative min-h-[${TIME_SLOT_HEIGHT}px] border-b border-gray-100 transition-colors
         ${isOver ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50/30'}
-      `} onClick={handleTimeSlotClick}>
-      {slotAppointments.length > 0 ? slotAppointments.map(appointment => <DraggableAppointment key={appointment.id} appointment={appointment} onClick={onAppointmentClick} onResize={onAppointmentResize} />) : <div className="h-full flex items-center justify-center mx-[8px] my-[8px]">
+      `}
+      style={{ height: `${TIME_SLOT_HEIGHT}px` }}
+      onClick={handleTimeSlotClick}
+    >
+      {overlappingAppointments.length > 0 ? (
+        overlappingAppointments.map(appointment => {
+          const { top } = calculateAppointmentLayout(appointment, 8);
+          const relativeTop = top % TIME_SLOT_HEIGHT; // Position within this slot
+          
+          return (
+            <div
+              key={appointment.id}
+              style={{ top: `${relativeTop}px` }}
+              className="absolute left-2 right-2"
+            >
+              <DraggableAppointment
+                appointment={appointment}
+                onClick={onAppointmentClick}
+                onResize={onAppointmentResize}
+              />
+            </div>
+          );
+        })
+      ) : (
+        <div className="h-full flex items-center justify-center mx-[8px] my-[8px]">
           {isOver && <div className="text-blue-500 text-sm font-medium">Drop here</div>}
-          {!isOver && <EmptyTimeSlot staffId={staffId} time={time} selectedDate={selectedDate} onTimeSlotClick={onTimeSlotClick} />}
-        </div>}
-    </div>;
+          {!isOver && (
+            <EmptyTimeSlot
+              staffId={staffId}
+              time={time}
+              selectedDate={selectedDate}
+              onTimeSlotClick={onTimeSlotClick}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
 };
 
 // Main Calendar Component
@@ -216,16 +315,19 @@ export const DragDropCalendar: React.FC<DragDropCalendarProps> = ({
   const todayAppointments = appointments.filter(apt => apt.date === format(selectedDate, 'yyyy-MM-dd'));
   const totalRevenue = todayAppointments.reduce((sum, apt) => sum + (Number(apt.price) || 0), 0);
   const completedAppointments = todayAppointments.filter(apt => apt.status === 'Completed').length;
+
   const handleDrop = useCallback((appointmentId: string, newStaffId: string, newTime: string) => {
     if (onAppointmentMove) {
       onAppointmentMove(appointmentId, newStaffId, newTime);
     }
   }, [onAppointmentMove]);
+
   const handleResize = useCallback((appointmentId: string, newDuration: number) => {
     if (onAppointmentResize) {
       onAppointmentResize(appointmentId, newDuration);
     }
   }, [onAppointmentResize]);
+
   const handleTimeSlotClick = useCallback((staffId: string, time: string) => {
     if (onTimeSlotClick) {
       onTimeSlotClick({
@@ -235,11 +337,14 @@ export const DragDropCalendar: React.FC<DragDropCalendarProps> = ({
       });
     }
   }, [onTimeSlotClick, selectedDate]);
+
   const handleTimeRangeChange = (startHour: number, endHour: number) => {
     setScheduleStart(startHour);
     setScheduleEnd(endHour);
   };
-  return <DndProvider backend={HTML5Backend}>
+
+  return (
+    <DndProvider backend={HTML5Backend}>
       <div className="flex flex-col h-full bg-white">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
@@ -278,16 +383,21 @@ export const DragDropCalendar: React.FC<DragDropCalendarProps> = ({
         {/* Calendar Grid */}
         <div className="flex-1 overflow-auto bg-white">
           <div className="grid" style={{
-          gridTemplateColumns: `120px repeat(${staff.length}, 1fr)`
-        }}>
+            gridTemplateColumns: `120px repeat(${staff.length}, 1fr)`
+          }}>
             {/* Time Column Header */}
             <div className="sticky top-0 bg-white border-b border-gray-200 p-3 z-20 flex items-center justify-between">
               <div className="text-sm font-medium text-gray-500">Time</div>
-              <ScheduleSettingsDialog startHour={scheduleStart} endHour={scheduleEnd} onTimeRangeChange={handleTimeRangeChange} />
+              <ScheduleSettingsDialog
+                startHour={scheduleStart}
+                endHour={scheduleEnd}
+                onTimeRangeChange={handleTimeRangeChange}
+              />
             </div>
 
             {/* Staff Headers */}
-            {staff.map(staffMember => <div key={staffMember.id} className="sticky top-0 bg-white border-b border-l border-gray-200 p-3 z-20">
+            {staff.map(staffMember => (
+              <div key={staffMember.id} className="sticky top-0 bg-white border-b border-l border-gray-200 p-3 z-20">
                 <div className="flex items-center gap-3">
                   <Avatar className="w-8 h-8">
                     <AvatarImage src={staffMember.imageUrl || ''} />
@@ -300,24 +410,39 @@ export const DragDropCalendar: React.FC<DragDropCalendarProps> = ({
                     <div className="text-xs text-gray-500">Staff Member</div>
                   </div>
                 </div>
-              </div>)}
+              </div>
+            ))}
 
             {/* Time Slots */}
-            {timeSlots.map(timeSlot => <React.Fragment key={timeSlot.time}>
+            {timeSlots.map(timeSlot => (
+              <React.Fragment key={timeSlot.time}>
                 {/* Time Label */}
-                <div className={`border-b border-gray-100 p-3 ${timeSlot.isFullHour ? 'bg-gray-50/70' : 'bg-white'}`}>
+                <div className={`border-b border-gray-100 p-3 ${timeSlot.isFullHour ? 'bg-gray-50/70' : 'bg-white'}`} style={{ height: `${TIME_SLOT_HEIGHT}px` }}>
                   <div className={`text-sm ${timeSlot.isFullHour ? 'font-semibold text-gray-700' : 'font-medium text-gray-500'}`}>
                     {timeSlot.display}
                   </div>
                 </div>
 
                 {/* Staff Time Slots */}
-                {staff.map(staffMember => <div key={`${staffMember.id}-${timeSlot.time}`} className="border-b border-l border-gray-100 min-h-[60px] bg-white">
-                    <DroppableTimeSlot staffId={staffMember.id || ''} time={timeSlot.time} selectedDate={selectedDate} appointments={appointments} onDrop={handleDrop} onTimeSlotClick={handleTimeSlotClick} onAppointmentClick={onAppointmentClick} onAppointmentResize={handleResize} />
-                  </div>)}
-              </React.Fragment>)}
+                {staff.map(staffMember => (
+                  <div key={`${staffMember.id}-${timeSlot.time}`} className="border-b border-l border-gray-100 bg-white">
+                    <DroppableTimeSlot
+                      staffId={staffMember.id || ''}
+                      time={timeSlot.time}
+                      selectedDate={selectedDate}
+                      appointments={appointments}
+                      onDrop={handleDrop}
+                      onTimeSlotClick={handleTimeSlotClick}
+                      onAppointmentClick={onAppointmentClick}
+                      onAppointmentResize={handleResize}
+                    />
+                  </div>
+                ))}
+              </React.Fragment>
+            ))}
           </div>
         </div>
       </div>
-    </DndProvider>;
+    </DndProvider>
+  );
 };

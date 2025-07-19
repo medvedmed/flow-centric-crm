@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -230,22 +231,13 @@ const DroppableTimeSlot: React.FC<DroppableTimeSlotProps> = ({
     apt.date === format(selectedDate, 'yyyy-MM-dd')
   );
 
-  // Find appointments that overlap with this time slot
-  const overlappingAppointments = slotAppointments.filter(apt => {
-    const [slotHour, slotMinute] = time.split(':').map(Number);
-    const slotMinutes = slotHour * 60 + slotMinute;
-    
-    const [startHour, startMinute] = apt.startTime.split(':').map(Number);
-    const startMinutes = startHour * 60 + startMinute;
-    
-    const [endHour, endMinute] = apt.endTime.split(':').map(Number);
-    const endMinutes = endHour * 60 + endMinute;
-    
-    return slotMinutes >= startMinutes && slotMinutes < endMinutes;
+  // FIXED: Only render appointments that START in this specific time slot
+  const appointmentsStartingHere = slotAppointments.filter(apt => {
+    return apt.startTime === time; // Only show appointments that start at this exact time
   });
 
   const handleTimeSlotClick = () => {
-    if (onTimeSlotClick && overlappingAppointments.length === 0) {
+    if (onTimeSlotClick && appointmentsStartingHere.length === 0) {
       onTimeSlotClick(staffId, time);
     }
   };
@@ -260,16 +252,22 @@ const DroppableTimeSlot: React.FC<DroppableTimeSlotProps> = ({
       style={{ height: `${TIME_SLOT_HEIGHT}px` }}
       onClick={handleTimeSlotClick}
     >
-      {overlappingAppointments.length > 0 ? (
-        overlappingAppointments.map(appointment => {
-          const { top } = calculateAppointmentLayout(appointment, 8);
-          const relativeTop = top % TIME_SLOT_HEIGHT; // Position within this slot
+      {appointmentsStartingHere.length > 0 ? (
+        appointmentsStartingHere.map(appointment => {
+          const duration = appointment.duration || 60;
+          const appointmentHeight = Math.max((duration / 30) * TIME_SLOT_HEIGHT, 40);
           
           return (
             <div
               key={appointment.id}
-              style={{ top: `${relativeTop}px` }}
-              className="absolute left-2 right-2"
+              style={{ 
+                position: 'absolute',
+                top: '2px',
+                left: '2px',
+                right: '2px',
+                height: `${appointmentHeight}px`,
+                zIndex: 10
+              }}
             >
               <DraggableAppointment
                 appointment={appointment}

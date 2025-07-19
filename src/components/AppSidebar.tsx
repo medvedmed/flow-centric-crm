@@ -14,7 +14,8 @@ import {
   Settings, 
   HelpCircle,
   Home,
-  UserCheck
+  UserCheck,
+  Activity
 } from 'lucide-react';
 import {
   Sidebar,
@@ -41,6 +42,7 @@ const menuItems = [
       { title: 'Clients', url: '/clients', icon: Users },
       { title: 'Client Retention', url: '/client-retention', icon: UserCheck },
       { title: 'Staff', url: '/staff', icon: UserCog },
+      { title: 'Activity Log', url: '/activity-log', icon: Activity },
     ]
   },
   {

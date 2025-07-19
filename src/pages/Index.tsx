@@ -1,56 +1,37 @@
 
-import { useAuth } from '@/hooks/useAuth';
 import { useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Loader2, ArrowRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useStaffAuth } from '@/hooks/useStaffAuth';
 
 const Index = () => {
-  const { user, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isStaff, isLoading: staffLoading } = useStaffAuth();
 
   useEffect(() => {
-    if (user) {
+    if (authLoading || staffLoading) return;
+
+    // Check if user is authenticated as regular user
+    if (isAuthenticated) {
       navigate('/dashboard');
+      return;
     }
-  }, [user, navigate]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-        <Loader2 className="w-8 h-8 animate-spin text-white" />
-      </div>
-    );
-  }
+    // Check if user is authenticated as staff
+    if (isStaff) {
+      navigate('/staff-portal');
+      return;
+    }
 
-  // Redirect to Landing page for unauthenticated users
-  if (!user && !isLoading) {
+    // If neither, redirect to landing page
     navigate('/landing');
-    return null;
-  }
+  }, [isAuthenticated, isStaff, authLoading, staffLoading, navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
-      <div className="text-center space-y-6 p-8">
-        <h1 className="text-4xl font-bold text-white mb-4">
-          Welcome to Aura Platform
-        </h1>
-        <p className="text-xl text-gray-300 mb-8">
-          Professional salon management made simple
-        </p>
-        <div className="space-y-4">
-          <Link to="/landing">
-            <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-8 py-3 text-lg">
-              Explore Features <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-          </Link>
-          <div className="text-center">
-            <Link to="/auth" className="text-cyan-400 hover:text-cyan-300 underline">
-              Already have an account? Sign in
-            </Link>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
     </div>
   );
 };

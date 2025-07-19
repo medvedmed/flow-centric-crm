@@ -31,6 +31,7 @@ import Finance from '@/pages/Finance';
 import EnhancedFinance from '@/pages/EnhancedFinance';
 import FinanceAnalytics from '@/pages/FinanceAnalytics';
 import ClientRetention from '@/pages/ClientRetention';
+import StaffPortal from '@/pages/StaffPortal';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -59,6 +60,7 @@ function App() {
                     <Route path="/clients" element={<Clients />} />
                     <Route path="/client-retention" element={<ClientRetention />} />
                     <Route path="/staff" element={<Staff />} />
+                    <Route path="/staff-portal/*" element={<StaffPortal />} />
                     <Route path="/services" element={<Services />} />
                     <Route path="/products" element={<Products />} />
                     <Route path="/inventory" element={<Inventory />} />

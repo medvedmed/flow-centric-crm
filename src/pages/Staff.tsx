@@ -1,16 +1,20 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { UserCog, Search, Plus, Filter, Users, TrendingUp, Star, Calendar, Loader2, Download } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { UserCog, Search, Plus, Filter, Users, TrendingUp, Star, Calendar, Loader2, Download, Key } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useStaff } from '@/hooks/staff/useStaffHooks';
 import { useToast } from '@/hooks/use-toast';
 import AddStaffDialog from '@/components/AddStaffDialog';
+import { StaffCredentialsCard } from '@/components/StaffCredentialsCard';
 
 const Staff = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('directory');
   const { hasPermissionSync } = usePermissions();
   const { toast } = useToast();
 
@@ -68,9 +72,9 @@ const Staff = () => {
         return;
       }
 
-      const headers = 'Name,Email,Phone,Status,Rating,Commission Rate,Hourly Rate,Specialties';
+      const headers = 'Name,Email,Phone,Status,Rating,Commission Rate,Hourly Rate,Specialties,Staff ID,Staff Password';
       const rows = staff.map(member => 
-        `"${member.name}","${member.email || ''}","${member.phone || ''}","${member.status || 'inactive'}",${member.rating || 0},${member.commissionRate || 0},${member.hourlyRate || 0},"${member.specialties?.join('; ') || ''}"`
+        `"${member.name}","${member.email || ''}","${member.phone || ''}","${member.status || 'inactive'}",${member.rating || 0},${member.commissionRate || 0},${member.hourlyRate || 0},"${member.specialties?.join('; ') || ''}","${member.staffLoginId || 'Not Generated'}","${member.staffLoginPassword || 'Not Generated'}"`
       ).join('\\n');
       
       const csv = headers + '\\n' + rows;
@@ -86,7 +90,7 @@ const Staff = () => {
 
       toast({
         title: "Export Successful",
-        description: "Staff list exported successfully.",
+        description: "Staff list with credentials exported successfully.",
       });
     } catch (error) {
       toast({
@@ -117,7 +121,7 @@ const Staff = () => {
               <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
                 Staff Management
               </h1>
-              <p className="text-gray-600 mt-2">Manage your salon's team and performance</p>
+              <p className="text-gray-600 mt-2">Manage your salon's team and their portal access</p>
             </div>
             <div className="flex items-center gap-3">
               {canCreateStaff && (
@@ -158,101 +162,155 @@ const Staff = () => {
           ))}
         </div>
 
-        {/* Search and Filters */}
-        <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="Search staff by name, role, or email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white/50"
-                />
-              </div>
-              <Button variant="outline" className="bg-white/50 border-violet-200">
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Staff List */}
+        {/* Main Content with Tabs */}
         <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserCog className="w-5 h-5 text-violet-600" />
-              Team Directory
-            </CardTitle>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="directory" className="flex items-center gap-2">
+                  <UserCog className="w-4 h-4" />
+                  Staff Directory
+                </TabsTrigger>
+                <TabsTrigger value="credentials" className="flex items-center gap-2">
+                  <Key className="w-4 h-4" />
+                  Login Credentials
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </CardHeader>
+          
           <CardContent className="p-0">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
-                <span className="ml-2 text-gray-600">Loading staff...</span>
-              </div>
-            ) : filteredStaff.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                <UserCog className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium mb-2">No staff members found</p>
-                <p className="text-sm">
-                  {staff.length === 0 
-                    ? "Add your first staff member to get started"
-                    : "Try adjusting your search criteria"
-                  }
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-0">
-                {filteredStaff.map((member) => (
-                  <div key={member.id} className="p-6 border-b border-violet-100 last:border-b-0 hover:bg-violet-50/50 transition-colors cursor-pointer">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                          {member.name.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{member.name}</h3>
-                          <div className="flex gap-1 mt-1">
-                            {member.specialties?.slice(0, 2).map((specialty, idx) => (
-                              <Badge key={idx} className={getSpecialtyColor(specialty)} variant="secondary">
-                                {specialty}
-                              </Badge>
-                            ))}
-                          </div>
-                          <p className="text-gray-600 text-sm mt-1">{member.email}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-6">
-                        <div className="text-center">
-                          <div className="flex items-center gap-1">
-                            <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                            <span className="font-bold text-gray-900">{member.rating || 'N/A'}</span>
-                          </div>
-                          <p className="text-xs text-gray-500">Rating</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-green-600">{member.commissionRate || 0}%</p>
-                          <p className="text-xs text-gray-500">Commission</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-blue-600">${member.hourlyRate || 0}/hr</p>
-                          <p className="text-xs text-gray-500">Hourly Rate</p>
-                        </div>
-                        <div>
-                          <Badge className={getStatusColor(member.status || 'inactive')}>
-                            {member.status || 'inactive'}
-                          </Badge>
-                        </div>
-                      </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsContent value="directory">
+                {/* Search and Filters */}
+                <div className="p-6 border-b">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                      <Input
+                        placeholder="Search staff by name, role, or email..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 bg-white/50"
+                      />
                     </div>
+                    <Button variant="outline" className="bg-white/50 border-violet-200">
+                      <Filter className="w-4 h-4 mr-2" />
+                      Filters
+                    </Button>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+
+                {/* Staff List */}
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
+                    <span className="ml-2 text-gray-600">Loading staff...</span>
+                  </div>
+                ) : filteredStaff.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <UserCog className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p className="text-lg font-medium mb-2">No staff members found</p>
+                    <p className="text-sm">
+                      {staff.length === 0 
+                        ? "Add your first staff member to get started"
+                        : "Try adjusting your search criteria"
+                      }
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-0">
+                    {filteredStaff.map((member) => (
+                      <div key={member.id} className="p-6 border-b border-violet-100 last:border-b-0 hover:bg-violet-50/50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                              {member.name.split(' ').map(n => n[0]).join('')}
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-gray-900">{member.name}</h3>
+                              <div className="flex gap-1 mt-1">
+                                {member.specialties?.slice(0, 2).map((specialty, idx) => (
+                                  <Badge key={idx} className={getSpecialtyColor(specialty)} variant="secondary">
+                                    {specialty}
+                                  </Badge>
+                                ))}
+                              </div>
+                              <p className="text-gray-600 text-sm mt-1">{member.email}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-6">
+                            <div className="text-center">
+                              <div className="flex items-center gap-1">
+                                <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                                <span className="font-bold text-gray-900">{member.rating || 'N/A'}</span>
+                              </div>
+                              <p className="text-xs text-gray-500">Rating</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-lg font-bold text-green-600">{member.commissionRate || 0}%</p>
+                              <p className="text-xs text-gray-500">Commission</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-lg font-bold text-blue-600">${member.hourlyRate || 0}/hr</p>
+                              <p className="text-xs text-gray-500">Hourly Rate</p>
+                            </div>
+                            <div>
+                              <Badge className={getStatusColor(member.status || 'inactive')}>
+                                {member.status || 'inactive'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="credentials">
+                <div className="p-6">
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Staff Login Credentials</h3>
+                    <p className="text-gray-600 text-sm">
+                      Each staff member has unique login credentials to access their staff portal. 
+                      Share these credentials securely with your team members.
+                    </p>
+                  </div>
+
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
+                      <span className="ml-2 text-gray-600">Loading credentials...</span>
+                    </div>
+                  ) : staff.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                      <Key className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p className="text-lg font-medium mb-2">No staff members found</p>
+                      <p className="text-sm">Add staff members to generate their login credentials</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {staff.map((member) => (
+                        <div key={member.id} className="space-y-4">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 bg-gradient-to-r from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                              {member.name.split(' ').map(n => n[0]).join('')}
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-gray-900">{member.name}</h4>
+                              <p className="text-sm text-gray-600">{member.email}</p>
+                            </div>
+                          </div>
+                          <StaffCredentialsCard staff={member} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>

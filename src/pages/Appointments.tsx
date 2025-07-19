@@ -60,6 +60,12 @@ const Appointments = () => {
     });
   };
 
+  const handleAppointmentResize = async (appointmentId: string, newDuration: number) => {
+    // For now, just log the resize - you can implement actual resize logic here
+    console.log('Appointment resize:', { appointmentId, newDuration });
+    // You could add a mutation to update the appointment duration in the database
+  };
+
   if (!canViewAppointments) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-violet-50 to-blue-50">
@@ -124,6 +130,7 @@ const Appointments = () => {
           onAppointmentClick={handleAppointmentClick}
           onTimeSlotClick={handleTimeSlotClick}
           onAppointmentMove={handleAppointmentMove}
+          onAppointmentResize={handleAppointmentResize}
         />
       </div>
 

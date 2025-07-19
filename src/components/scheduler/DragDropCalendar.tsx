@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -10,6 +11,7 @@ import { format, addDays, subDays } from 'date-fns';
 import { Appointment, Staff } from '@/services/types';
 import { generateTimeSlots, normalizeTime, getInitials } from './utils';
 import { EmptyTimeSlot } from './EmptyTimeSlot';
+import { ScheduleSettingsDialog } from './ScheduleSettingsDialog';
 
 const APPOINTMENT_TYPE = 'appointment';
 
@@ -41,7 +43,7 @@ interface DroppableTimeSlotProps {
   onAppointmentResize?: (appointmentId: string, newDuration: number) => void;
 }
 
-// Draggable Appointment Component with Resize Functionality
+// Enhanced Draggable Appointment Component
 const DraggableAppointment: React.FC<DraggableAppointmentProps> = ({ appointment, onClick, onResize }) => {
   const [isResizing, setIsResizing] = useState(false);
   const [resizeStartY, setResizeStartY] = useState(0);
@@ -56,16 +58,16 @@ const DraggableAppointment: React.FC<DraggableAppointmentProps> = ({ appointment
   }), [isResizing]);
 
   const getStatusColor = (status: string, paymentStatus?: string) => {
-    if (status === 'Completed') return 'bg-green-100 border-green-300';
-    if (status === 'Cancelled') return 'bg-red-100 border-red-300';
-    if (paymentStatus === 'paid') return 'bg-blue-100 border-blue-300';
-    return 'bg-yellow-100 border-yellow-300';
+    if (status === 'Completed') return 'bg-green-50 border-l-green-500';
+    if (status === 'Cancelled') return 'bg-red-50 border-l-red-500';
+    if (paymentStatus === 'paid') return 'bg-blue-50 border-l-blue-500';
+    return 'bg-blue-50 border-l-blue-400';
   };
 
   const duration = appointment.duration || 60;
-  const height = Math.max((duration / 60) * 80, 96); // Increased minimum height to 96px for better info display
+  const height = Math.max((duration / 60) * 60, 80); // 60px per hour, minimum 80px
 
-  const handleResizeStart = (e: React.MouseEvent, direction: 'top' | 'bottom') => {
+  const handleResizeStart = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsResizing(true);
     setResizeStartY(e.clientY);
@@ -76,7 +78,7 @@ const DraggableAppointment: React.FC<DraggableAppointmentProps> = ({ appointment
     if (!isResizing) return;
     
     const deltaY = e.clientY - resizeStartY;
-    const deltaMinutes = Math.round(deltaY / 80 * 60); // Convert pixels to minutes
+    const deltaMinutes = Math.round(deltaY / 60 * 60); // Convert pixels to minutes
     const newDuration = Math.max(15, initialDuration + deltaMinutes); // Minimum 15 minutes
     
     if (onResize) {
@@ -88,7 +90,6 @@ const DraggableAppointment: React.FC<DraggableAppointmentProps> = ({ appointment
     setIsResizing(false);
   };
 
-  // Add event listeners for resize
   React.useEffect(() => {
     if (isResizing) {
       document.addEventListener('mousemove', handleResizeMove);
@@ -107,7 +108,7 @@ const DraggableAppointment: React.FC<DraggableAppointmentProps> = ({ appointment
       onClick={() => onClick(appointment)}
       className={`
         absolute w-full cursor-pointer transition-all duration-200 z-10 group
-        ${isDragging ? 'opacity-50 scale-95' : 'hover:scale-[1.02] hover:shadow-lg'}
+        ${isDragging ? 'opacity-50 scale-95' : 'hover:scale-[1.02] hover:shadow-md'}
         ${isResizing ? 'cursor-ns-resize' : 'cursor-move'}
       `}
       style={{ 
@@ -115,73 +116,43 @@ const DraggableAppointment: React.FC<DraggableAppointmentProps> = ({ appointment
         opacity: isDragging ? 0.5 : 1,
       }}
     >
-      {/* Top Resize Handle */}
-      <div
-        className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity"
-        onMouseDown={(e) => handleResizeStart(e, 'top')}
-      >
-        <div className="h-full bg-blue-500 rounded-t-lg opacity-50"></div>
-      </div>
-
-      <Card className={`h-full ${getStatusColor(appointment.status, appointment.paymentStatus)} border-l-4 shadow-md`}>
-        <CardContent className="p-3 h-full relative">
-          <div className="flex flex-col h-full justify-between">
-            {/* Header Section */}
-            <div className="space-y-1">
-              <div className="font-semibold text-base text-gray-800">
-                {appointment.clientName}
-              </div>
-              <div className="text-sm text-gray-600 flex items-center gap-2">
-                <Phone className="w-4 h-4" />
+      <Card className={`h-full ${getStatusColor(appointment.status, appointment.paymentStatus)} border-l-4 shadow-sm hover:shadow-md transition-shadow`}>
+        <CardContent className="p-2 h-full relative overflow-hidden">
+          <div className="flex flex-col h-full justify-between text-xs">
+            {/* Header - Client Name */}
+            <div className="font-semibold text-gray-900 truncate text-sm">
+              {appointment.clientName}
+            </div>
+            
+            {/* Service */}
+            <div className="font-medium text-gray-700 truncate">
+              {appointment.service}
+            </div>
+            
+            {/* Time */}
+            <div className="text-gray-600 flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              <span>{appointment.startTime} - {appointment.endTime}</span>
+            </div>
+            
+            {/* Phone if space allows */}
+            {height > 100 && appointment.clientPhone && (
+              <div className="text-gray-500 flex items-center gap-1 truncate">
+                <Phone className="w-3 h-3" />
                 <span>{appointment.clientPhone}</span>
               </div>
-            </div>
+            )}
             
-            {/* Middle Section */}
-            <div className="flex-1 flex flex-col justify-center space-y-2">
-              <div className="text-sm font-medium text-gray-700 bg-white/50 rounded px-2 py-1">
-                {appointment.service}
-              </div>
-              
-              {appointment.notes && (
-                <div className="text-xs text-gray-600 bg-gray-50 rounded px-2 py-1 max-h-8 overflow-hidden">
-                  {appointment.notes}
-                </div>
+            {/* Price and Status */}
+            <div className="flex items-center justify-between mt-auto">
+              <Badge variant="secondary" className="text-xs px-1 py-0">
+                ${appointment.price || 0}
+              </Badge>
+              {appointment.paymentStatus === 'paid' && (
+                <Badge variant="default" className="text-xs px-1 py-0">
+                  Paid
+                </Badge>
               )}
-            </div>
-            
-            {/* Footer Section */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  {appointment.startTime} - {appointment.endTime}
-                </span>
-                <Badge variant="secondary" className="text-sm font-semibold">
-                  ${appointment.price || 0}
-                </Badge>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Badge 
-                  variant={appointment.status === 'Completed' ? 'default' : 'secondary'} 
-                  className="text-xs"
-                >
-                  {appointment.status}
-                </Badge>
-                {appointment.paymentStatus && (
-                  <Badge 
-                    variant={appointment.paymentStatus === 'paid' ? 'default' : 'outline'} 
-                    className="text-xs"
-                  >
-                    {appointment.paymentStatus}
-                  </Badge>
-                )}
-              </div>
-              
-              <div className="text-xs text-gray-500">
-                Duration: {duration} min
-              </div>
             </div>
           </div>
         </CardContent>
@@ -190,7 +161,7 @@ const DraggableAppointment: React.FC<DraggableAppointmentProps> = ({ appointment
       {/* Bottom Resize Handle */}
       <div
         className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity"
-        onMouseDown={(e) => handleResizeStart(e, 'bottom')}
+        onMouseDown={handleResizeStart}
       >
         <div className="h-full bg-blue-500 rounded-b-lg opacity-50"></div>
       </div>
@@ -198,7 +169,7 @@ const DraggableAppointment: React.FC<DraggableAppointmentProps> = ({ appointment
   );
 };
 
-// Droppable Time Slot Component
+// Enhanced Droppable Time Slot Component
 const DroppableTimeSlot: React.FC<DroppableTimeSlotProps> = ({ 
   staffId, 
   time, 
@@ -234,14 +205,14 @@ const DroppableTimeSlot: React.FC<DroppableTimeSlotProps> = ({
   return (
     <div
       ref={drop}
-    className={`
-        relative min-h-[80px] border-b border-gray-100 transition-colors
-        ${isOver ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50/50'}
+      className={`
+        relative min-h-[60px] border-b border-gray-100 transition-colors
+        ${isOver ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50/30'}
       `}
       onClick={handleTimeSlotClick}
     >
       {slotAppointments.length > 0 ? (
-        slotAppointments.map((appointment, index) => (
+        slotAppointments.map((appointment) => (
           <DraggableAppointment
             key={appointment.id}
             appointment={appointment}
@@ -279,7 +250,10 @@ export const DragDropCalendar: React.FC<DragDropCalendarProps> = ({
   onAppointmentMove,
   onAppointmentResize
 }) => {
-  const timeSlots = generateTimeSlots();
+  const [scheduleStart, setScheduleStart] = useState(8);
+  const [scheduleEnd, setScheduleEnd] = useState(20);
+  
+  const timeSlots = generateTimeSlots(scheduleStart, scheduleEnd);
 
   // Calculate daily stats
   const todayAppointments = appointments.filter(apt => apt.date === format(selectedDate, 'yyyy-MM-dd'));
@@ -303,6 +277,11 @@ export const DragDropCalendar: React.FC<DragDropCalendarProps> = ({
       onTimeSlotClick({ staffId, time, date: selectedDate });
     }
   }, [onTimeSlotClick, selectedDate]);
+
+  const handleTimeRangeChange = (startHour: number, endHour: number) => {
+    setScheduleStart(startHour);
+    setScheduleEnd(endHour);
+  };
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -350,16 +329,21 @@ export const DragDropCalendar: React.FC<DragDropCalendarProps> = ({
         </div>
 
         {/* Calendar Grid */}
-        <div className="flex-1 overflow-auto">
-          <div className="grid" style={{ gridTemplateColumns: `80px repeat(${staff.length}, 1fr)` }}>
+        <div className="flex-1 overflow-auto bg-white">
+          <div className="grid" style={{ gridTemplateColumns: `120px repeat(${staff.length}, 1fr)` }}>
             {/* Time Column Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 z-20">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-3 z-20 flex items-center justify-between">
               <div className="text-sm font-medium text-gray-500">Time</div>
+              <ScheduleSettingsDialog
+                startHour={scheduleStart}
+                endHour={scheduleEnd}
+                onTimeRangeChange={handleTimeRangeChange}
+              />
             </div>
 
             {/* Staff Headers */}
             {staff.map((staffMember) => (
-              <div key={staffMember.id} className="sticky top-0 bg-white border-b border-l border-gray-200 p-4 z-20">
+              <div key={staffMember.id} className="sticky top-0 bg-white border-b border-l border-gray-200 p-3 z-20">
                 <div className="flex items-center gap-3">
                   <Avatar className="w-8 h-8">
                     <AvatarImage src={staffMember.imageUrl || ''} />
@@ -376,16 +360,18 @@ export const DragDropCalendar: React.FC<DragDropCalendarProps> = ({
             ))}
 
             {/* Time Slots */}
-            {timeSlots.map((timeSlot, timeIndex) => (
+            {timeSlots.map((timeSlot) => (
               <React.Fragment key={timeSlot.time}>
                 {/* Time Label */}
-                <div className="border-b border-gray-100 p-3 bg-gray-50/50">
-                  <div className="text-sm font-medium text-gray-600">{timeSlot.display}</div>
+                <div className={`border-b border-gray-100 p-3 ${timeSlot.isFullHour ? 'bg-gray-50/70' : 'bg-white'}`}>
+                  <div className={`text-sm ${timeSlot.isFullHour ? 'font-semibold text-gray-700' : 'font-medium text-gray-500'}`}>
+                    {timeSlot.display}
+                  </div>
                 </div>
 
                 {/* Staff Time Slots */}
                 {staff.map((staffMember) => (
-                  <div key={`${staffMember.id}-${timeSlot.time}`} className="border-b border-l border-gray-100 min-h-[80px]">
+                  <div key={`${staffMember.id}-${timeSlot.time}`} className="border-b border-l border-gray-100 min-h-[60px] bg-white">
                     <DroppableTimeSlot
                       staffId={staffMember.id || ''}
                       time={timeSlot.time}

@@ -139,7 +139,7 @@ const Dashboard = () => {
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         {/* Real-time Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, index) => <Card key={index} className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg hover:shadow-xl transition-all duration-300 mx-px px-px py-[2px] my-[2px]">
+          {stats.map((stat, index) => <Card key={index} className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg hover:shadow-xl transition-all duration-300">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -159,9 +159,12 @@ const Dashboard = () => {
         </div>
 
         {/* Real-time Activity and Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mx-px my-px">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Today's Upcoming Appointments */}
-          
+          <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">
+            
+            
+          </Card>
 
           {/* Quick Actions */}
           <Card className="bg-white/70 backdrop-blur-sm border-violet-200 shadow-lg">

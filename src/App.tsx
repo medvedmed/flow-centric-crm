@@ -27,6 +27,7 @@ import Settings from "./pages/Settings";
 import Help from "./pages/Help";
 import ClientRetention from "./pages/ClientRetention";
 import ActivityLog from "./pages/ActivityLog";
+import Landing from "./pages/Landing";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ function App() {
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
+                <Route path="/landing" element={<Landing />} />
                 <Route path="/auth" element={<AuthForm onAuthSuccess={() => {}} />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

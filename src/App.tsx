@@ -7,10 +7,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { AuthForm } from "@/components/AuthForm";
+import AuthForm from "@/components/AuthForm";
 import { useAuth } from "@/hooks/useAuth";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { AppHeader } from "@/components/AppHeader";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import AppHeader from "@/components/AppHeader";
 
 // Pages
 import Index from "./pages/Index";
@@ -52,7 +52,7 @@ function App() {
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<AuthForm />} />
+                <Route path="/auth" element={<AuthForm onAuthSuccess={() => {}} />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </BrowserRouter>

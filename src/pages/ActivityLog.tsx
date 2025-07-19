@@ -75,7 +75,7 @@ const ActivityLog = () => {
           <CardTitle className="text-lg font-semibold text-gray-800">Recent Activities</CardTitle>
         </CardHeader>
         <CardContent>
-          <DailyActivityLog />
+          <DailyActivityLog selectedDate={new Date()} />
         </CardContent>
       </Card>
     </div>

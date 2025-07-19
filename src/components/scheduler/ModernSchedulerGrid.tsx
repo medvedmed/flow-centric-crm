@@ -239,14 +239,7 @@ export const ModernSchedulerGrid: React.FC<ModernSchedulerGridProps> = ({
                                 staffId={staffMember.id || ''}
                                 time={timeSlot.time}
                                 selectedDate={selectedDate}
-                                trigger={
-                                  <button
-                                    onClick={() => handleTimeSlotClick(staffMember.id || '', timeSlot.time)}
-                                    className="w-full h-full flex items-center justify-center hover:bg-blue-50 rounded-lg transition-colors group"
-                                  >
-                                    <Plus className="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100 group-hover:text-blue-500 transition-all" />
-                                  </button>
-                                }
+                                onTimeSlotClick={handleTimeSlotClick}
                               />
                             )}
                           </SortableContext>

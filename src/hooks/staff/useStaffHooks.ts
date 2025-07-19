@@ -2,13 +2,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Staff } from '../../services/types';
 import { CreateStaffPayload } from '../../types/api';
-import { supabaseApi } from '../../services/supabaseApi';
+import { staffApi } from '../../services/api/staffApi';
 import { useToast } from '../use-toast';
 
 export const useStaff = (status?: string) => {
   return useQuery({
     queryKey: ['staff', status],
-    queryFn: () => supabaseApi.getStaff(status),
+    queryFn: () => staffApi.getStaff(status),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
@@ -18,19 +18,24 @@ export const useCreateStaff = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (staff: CreateStaffPayload) => supabaseApi.createStaff(staff as Staff),
-    onSuccess: () => {
+    mutationFn: (staff: CreateStaffPayload) => {
+      console.log('Creating staff with payload:', staff);
+      return staffApi.createStaff(staff as Staff);
+    },
+    onSuccess: (data) => {
+      console.log('Staff created successfully:', data);
       queryClient.invalidateQueries({ queryKey: ['staff'] });
       toast({
         title: "Success",
-        description: "Staff member created successfully!",
+        description: "Staff member created successfully with login credentials!",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error creating staff:', error);
+      const errorMessage = error?.message || 'Failed to create staff member';
       toast({
         title: "Error",
-        description: "Failed to create staff member. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -43,7 +48,7 @@ export const useUpdateStaff = () => {
 
   return useMutation({
     mutationFn: ({ id, staff }: { id: string; staff: Partial<Staff> }) => 
-      supabaseApi.updateStaff(id, staff),
+      staffApi.updateStaff(id, staff),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff'] });
       toast({
@@ -67,7 +72,7 @@ export const useDeleteStaff = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (id: string) => supabaseApi.deleteStaff(id),
+    mutationFn: (id: string) => staffApi.deleteStaff(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff'] });
       toast({

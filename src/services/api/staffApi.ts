@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Staff } from '../types';
 
@@ -51,32 +52,40 @@ export const staffApi = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    // Ensure proper data mapping with default values for break times
+    const staffData = {
+      name: staff.name,
+      email: staff.email,
+      phone: staff.phone,
+      specialties: staff.specialties,
+      working_hours_start: staff.workingHoursStart || '09:00:00',
+      working_hours_end: staff.workingHoursEnd || '17:00:00',
+      working_days: staff.workingDays || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      break_start: staff.breakStart || '12:00:00',
+      break_end: staff.breakEnd || '13:00:00',
+      efficiency: staff.efficiency || 100,
+      rating: staff.rating || 5.0,
+      image_url: staff.imageUrl,
+      hourly_rate: staff.hourlyRate || 0,
+      commission_rate: staff.commissionRate || 35,
+      status: staff.status || 'active',
+      notes: staff.notes,
+      hire_date: staff.hireDate || new Date().toISOString().split('T')[0],
+      salon_id: user.id
+    };
+
+    console.log('Creating staff with data:', staffData);
+
     const { data, error } = await supabase
       .from('staff')
-      .insert({
-        name: staff.name,
-        email: staff.email,
-        phone: staff.phone,
-        specialties: staff.specialties,
-        working_hours_start: staff.workingHoursStart,
-        working_hours_end: staff.workingHoursEnd,
-        working_days: staff.workingDays,
-        break_start: staff.breakStart,
-        break_end: staff.breakEnd,
-        efficiency: staff.efficiency || 100,
-        rating: staff.rating || 5.0,
-        image_url: staff.imageUrl,
-        hourly_rate: staff.hourlyRate || 0,
-        commission_rate: staff.commissionRate || 35,
-        status: staff.status || 'active',
-        notes: staff.notes,
-        hire_date: staff.hireDate,
-        salon_id: user.id
-      })
+      .insert(staffData)
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Staff creation error:', error);
+      throw error;
+    }
     
     return {
       id: data.id,
@@ -107,28 +116,32 @@ export const staffApi = {
   },
 
   async updateStaff(id: string, staff: Partial<Staff>): Promise<Staff> {
+    const updateData: any = {};
+    
+    // Map camelCase to snake_case for database
+    if (staff.name !== undefined) updateData.name = staff.name;
+    if (staff.email !== undefined) updateData.email = staff.email;
+    if (staff.phone !== undefined) updateData.phone = staff.phone;
+    if (staff.specialties !== undefined) updateData.specialties = staff.specialties;
+    if (staff.workingHoursStart !== undefined) updateData.working_hours_start = staff.workingHoursStart;
+    if (staff.workingHoursEnd !== undefined) updateData.working_hours_end = staff.workingHoursEnd;
+    if (staff.workingDays !== undefined) updateData.working_days = staff.workingDays;
+    if (staff.breakStart !== undefined) updateData.break_start = staff.breakStart;
+    if (staff.breakEnd !== undefined) updateData.break_end = staff.breakEnd;
+    if (staff.efficiency !== undefined) updateData.efficiency = staff.efficiency;
+    if (staff.rating !== undefined) updateData.rating = staff.rating;
+    if (staff.imageUrl !== undefined) updateData.image_url = staff.imageUrl;
+    if (staff.hourlyRate !== undefined) updateData.hourly_rate = staff.hourlyRate;
+    if (staff.commissionRate !== undefined) updateData.commission_rate = staff.commissionRate;
+    if (staff.status !== undefined) updateData.status = staff.status;
+    if (staff.notes !== undefined) updateData.notes = staff.notes;
+    if (staff.hireDate !== undefined) updateData.hire_date = staff.hireDate;
+    
+    updateData.updated_at = new Date().toISOString();
+
     const { data, error } = await supabase
       .from('staff')
-      .update({
-        name: staff.name,
-        email: staff.email,
-        phone: staff.phone,
-        specialties: staff.specialties,
-        working_hours_start: staff.workingHoursStart,
-        working_hours_end: staff.workingHoursEnd,
-        working_days: staff.workingDays,
-        break_start: staff.breakStart,
-        break_end: staff.breakEnd,
-        efficiency: staff.efficiency,
-        rating: staff.rating,
-        image_url: staff.imageUrl,
-        hourly_rate: staff.hourlyRate,
-        commission_rate: staff.commissionRate,
-        status: staff.status,
-        notes: staff.notes,
-        hire_date: staff.hireDate,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -170,6 +183,30 @@ export const staffApi = {
       .eq('id', id);
     
     if (error) throw error;
+  },
+
+  async generateMissingCredentials(): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Get staff without credentials
+    const { data: staffWithoutCredentials, error } = await supabase
+      .from('staff')
+      .select('id')
+      .eq('salon_id', user.id)
+      .or('staff_login_id.is.null,staff_login_password.is.null');
+
+    if (error) throw error;
+
+    if (staffWithoutCredentials && staffWithoutCredentials.length > 0) {
+      // Update each staff member to trigger credential generation
+      for (const staff of staffWithoutCredentials) {
+        await supabase
+          .from('staff')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('id', staff.id);
+      }
+    }
   },
 
   async createStaffWithRole(staff: Staff, role: 'staff' | 'receptionist' = 'staff'): Promise<Staff> {

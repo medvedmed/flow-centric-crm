@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserCog, Search, Plus, Filter, Users, TrendingUp, Star, Calendar, Loader2, Download, Key } from 'lucide-react';
+import { UserCog, Search, Plus, Filter, Users, TrendingUp, Star, Calendar, Loader2, Download, Key, RefreshCw } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useStaff } from '@/hooks/staff/useStaffHooks';
+import { useStaffCredentials } from '@/hooks/staff/useStaffCredentials';
 import { useToast } from '@/hooks/use-toast';
 import AddStaffDialog from '@/components/AddStaffDialog';
 import { StaffCredentialsCard } from '@/components/StaffCredentialsCard';
@@ -17,11 +18,12 @@ const Staff = () => {
   const [activeTab, setActiveTab] = useState('directory');
   const { hasPermissionSync } = usePermissions();
   const { toast } = useToast();
+  const { generateMissingCredentials } = useStaffCredentials();
 
   const canCreateStaff = hasPermissionSync('staff_management', 'create');
 
   // Get real staff data from database
-  const { data: staff = [], isLoading, error } = useStaff();
+  const { data: staff = [], isLoading, error, refetch } = useStaff();
 
   // Calculate real stats from data
   const totalStaff = staff.length;
@@ -29,6 +31,7 @@ const Staff = () => {
   const avgRating = staff.length > 0 ? 
     (staff.reduce((sum, s) => sum + (s.rating || 0), 0) / staff.length).toFixed(1) : '0.0';
   const topPerformers = staff.filter(s => (s.rating || 0) >= 4.5).length;
+  const staffWithoutCredentials = staff.filter(s => !s.staffLoginId || !s.staffLoginPassword).length;
 
   const stats = [
     { title: 'Total Staff', value: totalStaff.toString(), icon: Users, color: 'bg-gradient-to-r from-blue-500 to-indigo-600' },
@@ -61,6 +64,15 @@ const Staff = () => {
     }
   };
 
+  const handleGenerateCredentials = async () => {
+    try {
+      await generateMissingCredentials.mutateAsync();
+      await refetch(); // Refresh the staff data
+    } catch (error) {
+      console.error('Failed to generate credentials:', error);
+    }
+  };
+
   const handleExport = async () => {
     try {
       if (staff.length === 0) {
@@ -75,9 +87,9 @@ const Staff = () => {
       const headers = 'Name,Email,Phone,Status,Rating,Commission Rate,Hourly Rate,Specialties,Staff ID,Staff Password';
       const rows = staff.map(member => 
         `"${member.name}","${member.email || ''}","${member.phone || ''}","${member.status || 'inactive'}",${member.rating || 0},${member.commissionRate || 0},${member.hourlyRate || 0},"${member.specialties?.join('; ') || ''}","${member.staffLoginId || 'Not Generated'}","${member.staffLoginPassword || 'Not Generated'}"`
-      ).join('\\n');
+      ).join('\n');
       
-      const csv = headers + '\\n' + rows;
+      const csv = headers + '\n' + rows;
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -122,6 +134,13 @@ const Staff = () => {
                 Staff Management
               </h1>
               <p className="text-gray-600 mt-2">Manage your salon's team and their portal access</p>
+              {staffWithoutCredentials > 0 && (
+                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-amber-800 text-sm">
+                    ⚠️ {staffWithoutCredentials} staff member(s) need login credentials
+                  </p>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-3">
               {canCreateStaff && (
@@ -174,6 +193,11 @@ const Staff = () => {
                 <TabsTrigger value="credentials" className="flex items-center gap-2">
                   <Key className="w-4 h-4" />
                   Login Credentials
+                  {staffWithoutCredentials > 0 && (
+                    <Badge variant="destructive" className="ml-1 text-xs">
+                      {staffWithoutCredentials}
+                    </Badge>
+                  )}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -228,7 +252,14 @@ const Staff = () => {
                               {member.name.split(' ').map(n => n[0]).join('')}
                             </div>
                             <div>
-                              <h3 className="font-semibold text-gray-900">{member.name}</h3>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold text-gray-900">{member.name}</h3>
+                                {!member.staffLoginId && (
+                                  <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
+                                    No Login
+                                  </Badge>
+                                )}
+                              </div>
                               <div className="flex gap-1 mt-1">
                                 {member.specialties?.slice(0, 2).map((specialty, idx) => (
                                   <Badge key={idx} className={getSpecialtyColor(specialty)} variant="secondary">
@@ -271,12 +302,28 @@ const Staff = () => {
 
               <TabsContent value="credentials">
                 <div className="p-6">
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Staff Login Credentials</h3>
-                    <p className="text-gray-600 text-sm">
-                      Each staff member has unique login credentials to access their staff portal. 
-                      Share these credentials securely with your team members.
-                    </p>
+                  <div className="mb-6 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Staff Login Credentials</h3>
+                      <p className="text-gray-600 text-sm">
+                        Each staff member has unique login credentials to access their staff portal. 
+                        Share these credentials securely with your team members.
+                      </p>
+                    </div>
+                    {staffWithoutCredentials > 0 && (
+                      <Button
+                        onClick={handleGenerateCredentials}
+                        disabled={generateMissingCredentials.isPending}
+                        className="bg-gradient-to-r from-violet-500 to-purple-600"
+                      >
+                        {generateMissingCredentials.isPending ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                        )}
+                        Generate Missing Credentials
+                      </Button>
+                    )}
                   </div>
 
                   {isLoading ? (

@@ -4,15 +4,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
-import { UserCircle, Lock, LogIn } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Loader2, User, Lock, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface StaffLoginDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (staffData: any) => void;
+  onSuccess: () => void;
 }
 
 export const StaffLoginDialog: React.FC<StaffLoginDialogProps> = ({
@@ -20,153 +19,165 @@ export const StaffLoginDialog: React.FC<StaffLoginDialogProps> = ({
   onClose,
   onSuccess
 }) => {
-  const [loginId, setLoginId] = useState('');
+  const [staffId, setStaffId] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!loginId.trim() || !password.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter both login ID and password",
-        variant: "destructive",
-      });
-      return;
-    }
+    setIsLoading(true);
+    setError('');
 
     try {
-      setLoading(true);
+      if (!staffId || !password) {
+        setError('Please enter both Staff ID and Password');
+        return;
+      }
+
+      console.log('Attempting staff login with ID:', staffId);
 
       // Call the authenticate_staff function
-      const { data, error } = await supabase
+      const { data, error: authError } = await supabase
         .rpc('authenticate_staff', {
-          login_id: loginId.trim(),
+          login_id: staffId.trim(),
           login_password: password.trim()
         });
 
-      if (error) throw error;
+      console.log('Authentication response:', data);
 
-      if (data && data.length > 0) {
-        const staffData = data[0];
-        
-        if (staffData.is_valid) {
-          // Store staff session in localStorage
-          const sessionData = {
-            id: staffData.staff_id,
-            name: staffData.staff_name,
-            email: staffData.staff_email,
-            salon_id: staffData.salon_id,
-            loginId: loginId.trim(),
-            loginTime: new Date().toISOString()
-          };
-          
-          localStorage.setItem('staff_session', JSON.stringify(sessionData));
-          
-          toast({
-            title: "Success",
-            description: `Welcome, ${staffData.staff_name}!`,
-          });
-
-          onSuccess(sessionData);
-          onClose();
-          
-          // Reset form
-          setLoginId('');
-          setPassword('');
-        } else {
-          toast({
-            title: "Invalid Credentials",
-            description: "Login ID or password is incorrect",
-            variant: "destructive",
-          });
-        }
-      } else {
-        toast({
-          title: "Invalid Credentials",
-          description: "Login ID or password is incorrect",
-          variant: "destructive",
-        });
+      if (authError) {
+        console.error('Authentication error:', authError);
+        setError('Login failed. Please check your credentials.');
+        return;
       }
-    } catch (error) {
-      console.error('Staff login error:', error);
+
+      if (!data || data.length === 0) {
+        setError('Invalid Staff ID or Password. Please try again.');
+        return;
+      }
+
+      const staffData = data[0];
+      
+      if (!staffData.is_valid) {
+        setError('Invalid credentials or account is inactive. Please contact your manager.');
+        return;
+      }
+
+      // Store staff session data
+      const sessionData = {
+        id: staffData.staff_id,
+        name: staffData.staff_name,
+        email: staffData.staff_email,
+        salon_id: staffData.salon_id,
+        login_id: staffId,
+        authenticated_at: new Date().toISOString()
+      };
+
+      localStorage.setItem('staff_session', JSON.stringify(sessionData));
+
       toast({
-        title: "Error",
-        description: "Failed to authenticate. Please try again.",
-        variant: "destructive",
+        title: "Login Successful",
+        description: `Welcome back, ${staffData.staff_name}!`,
       });
+
+      // Reset form
+      setStaffId('');
+      setPassword('');
+      onSuccess();
+
+    } catch (error: any) {
+      console.error('Login error:', error);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <UserCircle className="w-5 h-5 text-violet-600" />
-            Staff Login
+            <User className="w-5 h-5 text-green-600" />
+            Staff Portal Login
           </DialogTitle>
         </DialogHeader>
         
-        <Card>
-          <CardContent className="pt-6">
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="loginId" className="flex items-center gap-2">
-                  <UserCircle className="w-4 h-4" />
-                  Staff Login ID
-                </Label>
-                <Input
-                  id="loginId"
-                  type="text"
-                  value={loginId}
-                  onChange={(e) => setLoginId(e.target.value)}
-                  placeholder="Enter your staff login ID"
-                  disabled={loading}
-                  className="uppercase"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password" className="flex items-center gap-2">
-                  <Lock className="w-4 h-4" />
-                  Password
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  disabled={loading}
-                />
-              </div>
-              
-              <div className="flex items-center gap-3 pt-4">
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700"
-                >
-                  <LogIn className="w-4 h-4 mr-2" />
-                  {loading ? 'Signing In...' : 'Sign In'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onClose}
-                  disabled={loading}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+        <form onSubmit={handleLogin} className="space-y-4">
+          {error && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <AlertCircle className="w-4 h-4 text-red-600" />
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+          
+          <div className="space-y-2">
+            <Label htmlFor="staffId" className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Staff ID
+            </Label>
+            <Input
+              id="staffId"
+              type="text"
+              placeholder="Enter your Staff ID"
+              value={staffId}
+              onChange={(e) => setStaffId(e.target.value)}
+              className="font-mono"
+              autoComplete="username"
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password" className="flex items-center gap-2">
+              <Lock className="w-4 h-4" />
+              Password
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="font-mono"
+              autoComplete="current-password"
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="flex-1"
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Signing In...
+                </>
+              ) : (
+                'Sign In'
+              )}
+            </Button>
+          </div>
+
+          <div className="text-xs text-gray-600 mt-4 p-3 bg-gray-50 rounded-lg">
+            <p className="font-medium mb-1">Need your login credentials?</p>
+            <p>Contact your salon manager to get your Staff ID and Password.</p>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

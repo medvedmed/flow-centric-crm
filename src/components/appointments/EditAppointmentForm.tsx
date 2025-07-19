@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { useQueryClient } from '@tanstack/react-query';
 import { appointmentApi } from '@/services/api/appointmentApi';
 import { serviceApi } from '@/services/api/serviceApi';
 import { clientApi } from '@/services/api/clientApi';
@@ -25,7 +25,6 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   onClose
 }) => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [formData, setFormData] = useState<Appointment>(appointment);
   const [services, setServices] = useState<Service[]>([]);
   const [client, setClient] = useState<Client | null>(null);
@@ -100,27 +99,22 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
         staffId: formData.staffId
       };
 
-      console.log('Sending update data:', updateData);
-
       await appointmentApi.updateAppointment(appointment.id, updateData);
-      
-      // Invalidate React Query cache to refresh the data
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
       
       toast({
         title: "Success",
         description: "Appointment updated successfully"
       });
 
-      // Close the dialog after successful update
       setTimeout(() => {
         onClose();
+        window.location.reload();
       }, 1000);
     } catch (error) {
       console.error('Error updating appointment:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update appointment",
+        description: "Failed to update appointment",
         variant: "destructive"
       });
     } finally {

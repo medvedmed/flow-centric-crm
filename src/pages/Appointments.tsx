@@ -6,15 +6,12 @@ import { Shield, Calendar, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { Appointment } from '@/services/types';
-import { DragDropCalendar } from '@/components/scheduler/DragDropCalendar';
+import { ModernAppointmentScheduler } from '@/components/scheduler/ModernAppointmentScheduler';
 import { EditAppointmentDialog } from '@/components/EditAppointmentDialog';
 import { AddAppointmentDialog } from '@/components/AddAppointmentDialog';
 import { QuickPaymentDialog } from '@/components/QuickPaymentDialog';
 import { DailyActivityLog } from '@/components/DailyActivityLog';
 import { WorkingHoursManager } from '@/components/WorkingHoursManager';
-
-import { useAppointmentData } from '@/hooks/useAppointmentData';
-import { useAppointmentOperations } from '@/hooks/useAppointmentOperations';
 
 const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -22,10 +19,6 @@ const Appointments = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [timeSlotData, setTimeSlotData] = useState<any>(null);
-  
-  const { staff, appointments } = useAppointmentData(format(selectedDate, 'yyyy-MM-dd'));
-  const { moveAppointment } = useAppointmentOperations();
-  
   const {
     hasPermissionSync
   } = usePermissions();
@@ -49,21 +42,6 @@ const Appointments = () => {
   const handleCloseAddDialog = () => {
     setShowAddDialog(false);
     setTimeSlotData(null);
-  };
-
-  const handleAppointmentMove = async (appointmentId: string, newStaffId: string, newTime: string) => {
-    await moveAppointment({ 
-      appointmentId, 
-      newStaffId, 
-      newTime,
-      duration: 60 
-    });
-  };
-
-  const handleAppointmentResize = async (appointmentId: string, newDuration: number) => {
-    // For now, just log the resize - you can implement actual resize logic here
-    console.log('Appointment resize:', { appointmentId, newDuration });
-    // You could add a mutation to update the appointment duration in the database
   };
 
   if (!canViewAppointments) {
@@ -120,17 +98,13 @@ const Appointments = () => {
         </div>
       </div>
 
-      {/* Drag Drop Calendar */}
+      {/* Modern Scheduler */}
       <div className="flex-1">
-        <DragDropCalendar
-          staff={staff}
-          appointments={appointments}
+        <ModernAppointmentScheduler
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
           onAppointmentClick={handleAppointmentClick}
           onTimeSlotClick={handleTimeSlotClick}
-          onAppointmentMove={handleAppointmentMove}
-          onAppointmentResize={handleAppointmentResize}
         />
       </div>
 

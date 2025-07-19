@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/services/types';
 import { RetryService } from '@/services/errorHandling/retryService';
@@ -118,43 +119,16 @@ export const appointmentApi = {
 
   async updateAppointment(id: string, updates: Partial<Appointment>): Promise<Appointment> {
     return RetryService.withRetry(async () => {
-      // Convert camelCase field names to snake_case for database
-      const dbUpdates: any = {};
-      
-      if (updates.clientId !== undefined) dbUpdates.client_id = updates.clientId;
-      if (updates.staffId !== undefined) dbUpdates.staff_id = updates.staffId;
-      if (updates.clientName !== undefined) dbUpdates.client_name = updates.clientName;
-      if (updates.clientPhone !== undefined) dbUpdates.client_phone = updates.clientPhone;
-      if (updates.service !== undefined) dbUpdates.service = updates.service;
-      if (updates.startTime !== undefined) dbUpdates.start_time = updates.startTime;
-      if (updates.endTime !== undefined) dbUpdates.end_time = updates.endTime;
-      if (updates.date !== undefined) dbUpdates.date = updates.date;
-      if (updates.price !== undefined) dbUpdates.price = updates.price;
-      if (updates.duration !== undefined) dbUpdates.duration = updates.duration;
-      if (updates.status !== undefined) dbUpdates.status = updates.status;
-      if (updates.paymentStatus !== undefined) dbUpdates.payment_status = updates.paymentStatus;
-      if (updates.paymentMethod !== undefined) dbUpdates.payment_method = updates.paymentMethod;
-      if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
-      if (updates.color !== undefined) dbUpdates.color = updates.color;
-
-      // Always update the updated_at timestamp
-      dbUpdates.updated_at = new Date().toISOString();
-
-      console.log('Updating appointment with data:', dbUpdates);
-
       const { data, error } = await supabase
         .from('appointments')
-        .update(dbUpdates)
+        .update({
+          ...updates,
+        })
         .eq('id', id)
         .select()
         .single();
 
-      if (error) {
-        console.error('Database update error:', error);
-        throw error;
-      }
-
-      console.log('Update successful:', data);
+      if (error) throw error;
       return data;
     }, {
       maxAttempts: 3,
@@ -179,10 +153,9 @@ export const appointmentApi = {
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       color: data.color,
-      paymentStatus: data.payment_status as Appointment['paymentStatus'],
-      paymentMethod: data.payment_method,
     }));
   },
+
 
   async deleteAppointment(id: string): Promise<void> {
     return RetryService.withRetry(async () => {

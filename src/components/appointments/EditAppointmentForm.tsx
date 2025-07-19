@@ -14,7 +14,6 @@ import { clientApi } from '@/services/api/clientApi';
 import { Appointment, Service, Client } from '@/services/types';
 import { Calendar, Clock, User, DollarSign, Plus, Trash2 } from 'lucide-react';
 import { ReceiptGenerator } from './ReceiptGenerator';
-import { useQueryClient } from '@tanstack/react-query';
 
 interface EditAppointmentFormProps {
   appointment: Appointment;
@@ -26,7 +25,6 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
   onClose
 }) => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [formData, setFormData] = useState<Appointment>(appointment);
   const [services, setServices] = useState<Service[]>([]);
   const [client, setClient] = useState<Client | null>(null);
@@ -84,7 +82,7 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
     try {
       setIsUpdating(true);
       
-      const updateData: Partial<Appointment> = {
+      const updateData = {
         clientId: formData.clientId,
         clientName: formData.clientName,
         clientPhone: formData.clientPhone,
@@ -101,37 +99,22 @@ export const EditAppointmentForm: React.FC<EditAppointmentFormProps> = ({
         staffId: formData.staffId
       };
 
-      console.log('Sending update data:', updateData);
-
-      const updatedAppointment = await appointmentApi.updateAppointment(appointment.id, updateData);
-      
-      console.log('Update response:', updatedAppointment);
-      
-      // Invalidate queries to refresh the data
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
-      queryClient.invalidateQueries({ queryKey: ['enhanced-schedule-appointments'] });
+      await appointmentApi.updateAppointment(appointment.id, updateData);
       
       toast({
         title: "Success",
         description: "Appointment updated successfully"
       });
 
-      // Close the dialog after a short delay to show the success message
       setTimeout(() => {
         onClose();
+        window.location.reload();
       }, 1000);
-      
     } catch (error) {
       console.error('Error updating appointment:', error);
-      
-      let errorMessage = "Failed to update appointment";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      
       toast({
-        title: "Update Failed",
-        description: errorMessage,
+        title: "Error",
+        description: "Failed to update appointment",
         variant: "destructive"
       });
     } finally {

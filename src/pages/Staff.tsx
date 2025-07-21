@@ -12,6 +12,7 @@ import { useStaffCredentials } from '@/hooks/staff/useStaffCredentials';
 import { useToast } from '@/hooks/use-toast';
 import AddStaffDialog from '@/components/AddStaffDialog';
 import { StaffCredentialsCard } from '@/components/StaffCredentialsCard';
+import { AuthSessionMonitor } from '@/components/AuthSessionMonitor';
 
 const Staff = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -125,6 +126,8 @@ const Staff = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-indigo-50">
+      <AuthSessionMonitor />
+      
       {/* Header */}
       <div className="bg-white/70 backdrop-blur-sm border-b border-violet-200 px-6 py-8">
         <div className="max-w-7xl mx-auto">

@@ -4,15 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus } from "lucide-react";
+import { Plus, AlertCircle } from "lucide-react";
 import { useCreateStaff } from "@/hooks/useCrmData";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Staff as StaffType } from "@/services/supabaseApi";
 
 const AddStaffDialog = () => {
   const createStaffMutation = useCreateStaff();
-  const { user, session } = useAuth();
+  const { user, session, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [newStaff, setNewStaff] = useState<Partial<StaffType>>({
@@ -49,10 +50,11 @@ const AddStaffDialog = () => {
   };
 
   const handleAddStaff = () => {
-    if (!user || !session) {
+    // Check authentication first
+    if (!isAuthenticated || !user || !session) {
       toast({
-        title: "Authentication Error",
-        description: "Please log in to add staff members",
+        title: "Authentication Required",
+        description: "Please log in to add staff members. Your session may have expired.",
         variant: "destructive"
       });
       return;
@@ -66,6 +68,12 @@ const AddStaffDialog = () => {
       });
       return;
     }
+
+    console.log('Auth state check:', {
+      isAuthenticated,
+      userId: user?.id,
+      sessionValid: !!session
+    });
 
     // Format time fields to include seconds before sending to API
     const staffToCreate = {
@@ -95,16 +103,14 @@ const AddStaffDialog = () => {
         console.error('Failed to create staff:', error);
         let errorMessage = "Failed to create staff member";
         
-        // Try to extract more specific error information
+        // Check for authentication-related errors
         if (error instanceof Error) {
-          errorMessage = error.message;
-          // Check for specific database constraint errors
-          if (error.message.includes('breakEnd') || error.message.includes('break_end')) {
-            errorMessage = "Invalid break end time format. Please check your break times.";
-          } else if (error.message.includes('breakStart') || error.message.includes('break_start')) {
-            errorMessage = "Invalid break start time format. Please check your break times.";
-          } else if (error.message.includes('workingHours') || error.message.includes('working_hours')) {
-            errorMessage = "Invalid working hours format. Please check your working times.";
+          if (error.message.includes('auth') || error.message.includes('unauthorized') || error.message.includes('session')) {
+            errorMessage = "Authentication error. Please refresh the page and try logging in again.";
+          } else if (error.message.includes('salon_id') || error.message.includes('null')) {
+            errorMessage = "User session invalid. Please log out and log back in.";
+          } else {
+            errorMessage = error.message;
           }
         }
         
@@ -139,11 +145,16 @@ const AddStaffDialog = () => {
     setIsOpen(false);
   };
 
-  if (!user || !session) {
+  // Show authentication warning if not properly authenticated
+  if (!isAuthenticated || !user || !session) {
     return (
-      <div className="text-sm text-red-600 p-2 border border-red-200 rounded">
-        Please log in to add staff members.
-      </div>
+      <Alert className="mb-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Authentication Required:</strong> Please log in to add staff members. 
+          If you're already logged in, your session may have expired - try refreshing the page.
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -163,9 +174,12 @@ const AddStaffDialog = () => {
         </DialogHeader>
         
         {createStaffMutation.error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
-            <strong>Error:</strong> {createStaffMutation.error instanceof Error ? createStaffMutation.error.message : 'Failed to create staff member'}
-          </div>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Error:</strong> {createStaffMutation.error instanceof Error ? createStaffMutation.error.message : 'Failed to create staff member'}
+            </AlertDescription>
+          </Alert>
         )}
 
         {createdStaff ? (
@@ -317,7 +331,7 @@ const AddStaffDialog = () => {
               <Button 
                 onClick={handleAddStaff} 
                 className="flex-1"
-                disabled={createStaffMutation.isPending || !newStaff.name || !newStaff.email}
+                disabled={createStaffMutation.isPending || !newStaff.name || !newStaff.email || !isAuthenticated}
               >
                 {createStaffMutation.isPending ? "Adding..." : "Add Staff Member"}
               </Button>

@@ -3,8 +3,14 @@ import { Staff } from '../types';
 
 export const staffApi = {
   async getStaff(status?: string): Promise<Staff[]> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.error('Authentication error in getStaff:', userError);
+      throw new Error('Authentication required. Please log in again.');
+    }
+
+    console.log('Getting staff for salon:', user.id);
 
     let query = supabase
       .from('staff')
@@ -17,7 +23,13 @@ export const staffApi = {
 
     const { data, error } = await query.order('name');
     
-    if (error) throw error;
+    if (error) {
+      console.error('Database error in getStaff:', error);
+      if (error.message.includes('RLS') || error.message.includes('policy')) {
+        throw new Error('Access denied. Please check your authentication.');
+      }
+      throw error;
+    }
     
     return data?.map(staff => ({
       id: staff.id,
@@ -48,8 +60,20 @@ export const staffApi = {
   },
 
   async createStaff(staff: Staff): Promise<Staff> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.error('Authentication error in createStaff:', userError);
+      throw new Error('Authentication required. Please log in again.');
+    }
+
+    // Validate that we have a valid salon_id
+    if (!staff.salonId || staff.salonId !== user.id) {
+      console.error('Invalid salon_id:', { staffSalonId: staff.salonId, userId: user.id });
+      throw new Error('Invalid salon association. Please refresh and try again.');
+    }
+
+    console.log('Creating staff for authenticated user:', user.id);
 
     // Helper function to format time properly
     const formatTime = (timeString?: string) => {
@@ -79,10 +103,13 @@ export const staffApi = {
       status: staff.status || 'active',
       notes: staff.notes || null,
       hire_date: staff.hireDate || new Date().toISOString().split('T')[0],
-      salon_id: user.id
+      salon_id: user.id // Ensure we use the authenticated user's ID
     };
 
-    console.log('Creating staff with formatted data:', staffData);
+    console.log('Creating staff with data:', {
+      ...staffData,
+      salon_id: 'verified_user_id'
+    });
 
     const { data, error } = await supabase
       .from('staff')
@@ -101,7 +128,9 @@ export const staffApi = {
       
       // Provide more specific error messages
       let errorMessage = error.message;
-      if (error.message.includes('break_end') || error.message.includes('breakEnd')) {
+      if (error.message.includes('RLS') || error.message.includes('policy')) {
+        errorMessage = 'Access denied. Your session may have expired. Please refresh and try again.';
+      } else if (error.message.includes('break_end') || error.message.includes('breakEnd')) {
         errorMessage = 'Invalid break end time. Please ensure the time is in correct format.';
       } else if (error.message.includes('break_start') || error.message.includes('breakStart')) {
         errorMessage = 'Invalid break start time. Please ensure the time is in correct format.';
@@ -109,6 +138,8 @@ export const staffApi = {
         errorMessage = 'Invalid working hours. Please ensure times are in correct format.';
       } else if (error.code === '23505') {
         errorMessage = 'A staff member with this email already exists.';
+      } else if (error.message.includes('salon_id')) {
+        errorMessage = 'Authentication error. Please log out and log back in.';
       }
       
       throw new Error(errorMessage);

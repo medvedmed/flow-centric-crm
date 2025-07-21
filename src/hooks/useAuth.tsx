@@ -9,6 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,6 +18,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const refreshSession = async () => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Error refreshing session:', error);
+        setSession(null);
+        setUser(null);
+        return;
+      }
+      
+      setSession(session);
+      setUser(session?.user ?? null);
+      console.log('Session refreshed:', { 
+        hasSession: !!session, 
+        userId: session?.user?.id,
+        sessionValid: !!session?.access_token 
+      });
+    } catch (error) {
+      console.error('Error in refreshSession:', error);
+      setSession(null);
+      setUser(null);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -34,6 +59,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setSession(session);
           setUser(session?.user ?? null);
           setIsLoading(false);
+          
+          // Log auth state for debugging
+          console.log('Initial auth state:', {
+            hasSession: !!session,
+            userId: session?.user?.id,
+            sessionValid: !!session?.access_token
+          });
         }
       } catch (error) {
         console.error('Error in getInitialSession:', error);
@@ -46,7 +78,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
+        console.log('Auth state changed:', event, {
+          hasSession: !!session,
+          userId: session?.user?.id,
+          email: session?.user?.email
+        });
         
         if (mounted) {
           // Clear any staff session when regular user logs in
@@ -57,6 +93,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setSession(session);
           setUser(session?.user ?? null);
           setIsLoading(false);
+
+          // Additional validation for expired sessions
+          if (event === 'TOKEN_REFRESHED' && !session) {
+            console.warn('Token refresh failed, user may need to log in again');
+          }
         }
       }
     );
@@ -74,6 +115,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await supabase.auth.signOut();
       // Also clear any staff session
       localStorage.removeItem('staff_session');
+      setSession(null);
+      setUser(null);
       // Redirect to landing page after logout
       window.location.href = '/landing';
     } catch (error) {
@@ -81,7 +124,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const isAuthenticated = !!session && !!user;
+  const isAuthenticated = !!session && !!user && !!session.access_token;
 
   return (
     <AuthContext.Provider value={{ 
@@ -89,7 +132,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       session, 
       isLoading, 
       signOut, 
-      isAuthenticated 
+      isAuthenticated,
+      refreshSession
     }}>
       {children}
     </AuthContext.Provider>

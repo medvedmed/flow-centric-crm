@@ -62,41 +62,41 @@ const DragDropCalendar = ({ onAppointmentClick, onTimeSlotClick }) => {
         .eq("salon_id", user.id);
       if (staffError) throw staffError;
 
-      // Fetch appointments
+      // Fetch appointments with related data
       const { data: appointments, error: aptError } = await supabase
         .from("appointments")
-        .select("*")
-        .eq("salon_id", user.id);
+        .select(`
+          *,
+          clients:client_id(full_name, phone),
+          services:service_id(name, price)
+        `)
+        .eq("organization_id", user.id);
       if (aptError) throw aptError;
 
       // Format appointments with payment status styling
-      const formattedEvents: CalendarEvent[] = appointments.map((apt) => {
-        let color = "#007bff"; // Default blue
+      const formattedEvents: CalendarEvent[] = (appointments || []).map((apt: any) => {
+        let color = apt.color || "#007bff"; // Use stored color or default blue
         
-        // Color coding based on payment status
-        if (apt.payment_status === 'paid') {
-          color = "#28a745"; // Green for paid
-        } else if (apt.payment_status === 'partial') {
-          color = "#ffc107"; // Yellow for partial
-        } else if (apt.payment_status === 'unpaid') {
-          color = "#dc3545"; // Red for unpaid
-        }
-
-        // Add status indicator to title
-        const statusIndicator = apt.payment_status === 'paid' ? '💰' : 
-                              apt.payment_status === 'partial' ? '⚠️' : '❌';
+        // Extract related data
+        const clientName = apt.clients?.full_name || 'Unknown Client';
+        const serviceName = apt.services?.name || 'Service';
+        const servicePrice = apt.services?.price || 0;
+        
+        // Extract date and time from start_time timestamp
+        const startDate = new Date(apt.start_time);
+        const endDate = new Date(apt.end_time);
 
         return {
           id: apt.id,
-          title: `${statusIndicator} ${apt.client_name} - ${apt.service}`,
-          start: moment(`${apt.date} ${apt.start_time}`).toDate(),
-          end: moment(`${apt.date} ${apt.end_time}`).toDate(),
+          title: `${clientName} - ${serviceName}`,
+          start: startDate,
+          end: endDate,
           resourceId: apt.staff_id || "unassigned",
           color: color,
-          paymentStatus: apt.payment_status,
-          clientName: apt.client_name,
-          service: apt.service,
-          price: apt.price
+          paymentStatus: apt.status === 'Completed' ? 'paid' : 'unpaid',
+          clientName: clientName,
+          service: serviceName,
+          price: servicePrice
         };
       });
 

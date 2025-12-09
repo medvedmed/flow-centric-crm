@@ -81,7 +81,20 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
         console.error('Error fetching client details:', error);
         return null;
       }
-      return data as ClientDetails;
+      
+      // Map database fields to expected interface
+      return {
+        id: data.id,
+        name: data.full_name,
+        email: data.email || '',
+        phone: data.phone || undefined,
+        total_spent: data.total_spent || 0,
+        visits: data.total_visits || 0,
+        last_visit: data.last_visit_date || undefined,
+        status: data.status || 'active',
+        notes: data.notes || undefined,
+        preferred_stylist: undefined
+      } as ClientDetails;
     },
     enabled: !!appointment?.clientId && isOpen,
   });
@@ -94,12 +107,13 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
       const { data, error } = await supabase
         .from('appointments')
         .select(`
-          id, date, service, price, status, staff_id
+          id, start_time, status, staff_id,
+          services:service_id(name, price)
         `)
         .eq('client_id', appointment.clientId)
-        .eq('salon_id', user?.id)
+        .eq('organization_id', user?.id)
         .neq('id', appointment.id)
-        .order('date', { ascending: false })
+        .order('start_time', { ascending: false })
         .limit(5);
 
       if (error) {
@@ -109,22 +123,25 @@ export const DetailedAppointmentDialog: React.FC<DetailedAppointmentDialogProps>
       
       // Get staff names separately to avoid the relationship conflict
       const appointmentsWithStaff = await Promise.all(
-        data.map(async (apt) => {
+        (data || []).map(async (apt: any) => {
+          let staffName = 'Unassigned';
           if (apt.staff_id) {
             const { data: staffData } = await supabase
               .from('staff')
               .select('name')
               .eq('id', apt.staff_id)
               .single();
-            
-            return {
-              ...apt,
-              staff_name: staffData?.name || 'Unknown'
-            };
+            staffName = staffData?.name || 'Unknown';
           }
+          
           return {
-            ...apt,
-            staff_name: 'Unassigned'
+            id: apt.id,
+            date: apt.start_time ? new Date(apt.start_time).toISOString().split('T')[0] : '',
+            service: apt.services?.name || 'Service',
+            price: apt.services?.price || 0,
+            status: apt.status || 'Scheduled',
+            staff_id: apt.staff_id,
+            staff_name: staffName
           };
         })
       );

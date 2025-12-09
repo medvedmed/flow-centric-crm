@@ -38,20 +38,28 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
   });
 
   const { data: clients = [], isLoading } = useQuery({
-    queryKey: ['clients', searchTerm],
+    queryKey: ['clients', searchTerm, user?.id],
     queryFn: async () => {
       let query = supabase
         .from('clients')
         .select('*')
-        .eq('salon_id', user?.id);
+        .eq('organization_id', user?.id);
 
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+        query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
       }
 
-      const { data, error } = await query.order('name').limit(10);
+      const { data, error } = await query.order('full_name').limit(10);
       if (error) throw error;
-      return data as Client[];
+      
+      // Map database fields to expected interface
+      return (data || []).map(client => ({
+        id: client.id,
+        name: client.full_name,
+        email: client.email || '',
+        phone: client.phone || undefined,
+        status: client.status || 'active'
+      })) as Client[];
     },
     enabled: !!user?.id,
   });

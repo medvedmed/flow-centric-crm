@@ -2,11 +2,11 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Activity, Calendar, User, DollarSign, Clock, Edit, Trash2 } from 'lucide-react';
+import { Activity, Calendar, DollarSign, Clock, Edit } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 interface DailyActivityLogProps {
   selectedDate: Date;
@@ -22,16 +22,25 @@ export const DailyActivityLog: React.FC<DailyActivityLogProps> = ({ selectedDate
       if (!user?.id) return [];
 
       const dateStr = selectedDate.toISOString().split('T')[0];
+      const startOfDay = `${dateStr}T00:00:00`;
+      const endOfDay = `${dateStr}T23:59:59`;
       
-      // Get appointments for the day
+      // Get appointments for the day - using start_time which contains the full timestamp
       const { data: appointments, error: appointmentsError } = await supabase
         .from('appointments')
-        .select('*')
-        .eq('salon_id', user.id)
-        .eq('date', dateStr)
+        .select(`
+          *,
+          clients:client_id(full_name, phone),
+          services:service_id(name, price)
+        `)
+        .eq('organization_id', user.id)
+        .gte('start_time', startOfDay)
+        .lte('start_time', endOfDay)
         .order('updated_at', { ascending: false });
 
-      if (appointmentsError) throw appointmentsError;
+      if (appointmentsError) {
+        console.error('Appointments fetch error:', appointmentsError);
+      }
 
       // Get financial transactions for the day
       const { data: transactions, error: transactionsError } = await supabase
@@ -41,33 +50,41 @@ export const DailyActivityLog: React.FC<DailyActivityLogProps> = ({ selectedDate
         .eq('transaction_date', dateStr)
         .order('created_at', { ascending: false });
 
-      if (transactionsError) throw transactionsError;
+      if (transactionsError) {
+        console.error('Transactions fetch error:', transactionsError);
+      }
 
       // Get audit logs for the day
       const { data: auditLogs, error: auditError } = await supabase
         .from('audit_logs')
         .select('*')
         .eq('salon_id', user.id)
-        .gte('created_at', `${dateStr}T00:00:00`)
-        .lt('created_at', `${dateStr}T23:59:59`)
+        .gte('created_at', startOfDay)
+        .lt('created_at', endOfDay)
         .order('created_at', { ascending: false });
 
-      if (auditError) throw auditError;
+      if (auditError) {
+        console.error('Audit logs fetch error:', auditError);
+      }
 
       // Combine and format all activities
-      const allActivities = [];
+      const allActivities: any[] = [];
 
       // Add appointment activities
-      appointments?.forEach(appointment => {
+      (appointments || []).forEach(appointment => {
+        const clientName = appointment.clients?.full_name || 'Unknown Client';
+        const serviceName = appointment.services?.name || 'Service';
+        const servicePrice = appointment.services?.price || 0;
+
         allActivities.push({
           id: `apt-${appointment.id}`,
           type: 'appointment',
           action: 'created',
           title: `Appointment booked`,
-          description: `${appointment.client_name} - ${appointment.service}`,
+          description: `${clientName} - ${serviceName}`,
           time: appointment.created_at,
           status: appointment.status,
-          amount: appointment.price,
+          amount: servicePrice,
           icon: Calendar,
           color: 'blue'
         });
@@ -78,10 +95,10 @@ export const DailyActivityLog: React.FC<DailyActivityLogProps> = ({ selectedDate
             type: 'appointment',
             action: 'updated',
             title: `Appointment updated`,
-            description: `${appointment.client_name} - ${appointment.service}`,
+            description: `${clientName} - ${serviceName}`,
             time: appointment.updated_at,
             status: appointment.status,
-            amount: appointment.price,
+            amount: servicePrice,
             icon: Edit,
             color: 'orange'
           });
@@ -89,7 +106,7 @@ export const DailyActivityLog: React.FC<DailyActivityLogProps> = ({ selectedDate
       });
 
       // Add transaction activities
-      transactions?.forEach(transaction => {
+      (transactions || []).forEach(transaction => {
         allActivities.push({
           id: `txn-${transaction.id}`,
           type: 'transaction',
@@ -105,7 +122,7 @@ export const DailyActivityLog: React.FC<DailyActivityLogProps> = ({ selectedDate
       });
 
       // Add audit log activities
-      auditLogs?.forEach(log => {
+      (auditLogs || []).forEach(log => {
         allActivities.push({
           id: `audit-${log.id}`,
           type: 'audit',
@@ -131,20 +148,20 @@ export const DailyActivityLog: React.FC<DailyActivityLogProps> = ({ selectedDate
   };
 
   const getActivityColor = (color: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       blue: 'bg-blue-100 text-blue-800',
       green: 'bg-green-100 text-green-800',
       red: 'bg-red-100 text-red-800',
       orange: 'bg-orange-100 text-orange-800',
       purple: 'bg-purple-100 text-purple-800',
     };
-    return colors[color as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[color] || 'bg-gray-100 text-gray-800';
   };
 
   const getStatusColor = (status?: string) => {
     if (!status) return 'bg-gray-100 text-gray-800';
     
-    const statusColors = {
+    const statusColors: Record<string, string> = {
       'Scheduled': 'bg-blue-100 text-blue-800',
       'Confirmed': 'bg-green-100 text-green-800',
       'In Progress': 'bg-purple-100 text-purple-800',
@@ -153,7 +170,7 @@ export const DailyActivityLog: React.FC<DailyActivityLogProps> = ({ selectedDate
       'No Show': 'bg-orange-100 text-orange-800'
     };
     
-    return statusColors[status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800';
+    return statusColors[status] || 'bg-gray-100 text-gray-800';
   };
 
   if (isLoading) {
@@ -186,7 +203,7 @@ export const DailyActivityLog: React.FC<DailyActivityLogProps> = ({ selectedDate
       <CardContent>
         {activities.length > 0 ? (
           <div className="space-y-4 max-h-96 overflow-y-auto">
-            {activities.map((activity, index) => (
+            {activities.map((activity) => (
               <div key={activity.id} className="flex items-start gap-3 p-3 bg-white/50 rounded-lg border border-violet-100">
                 <div className={`p-2 rounded-full ${getActivityColor(activity.color)}`}>
                   {getActivityIcon(activity)}

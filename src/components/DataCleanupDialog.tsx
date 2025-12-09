@@ -20,25 +20,28 @@ export const DataCleanupDialog: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Delete test appointments with generic names
-      const testNames = ['mohf', 'hhhh', 'test', 'Test', 'TEST', 'aaa', 'bbb', 'ccc', 'ddd', 'eee'];
-      
+      // Delete test appointments - using organization_id and client_id references
       const { error: appointmentsError } = await supabase
         .from('appointments')
         .delete()
-        .eq('salon_id', user.id)
-        .in('client_name', testNames);
+        .eq('organization_id', user.id)
+        .is('client_id', null);
 
-      if (appointmentsError) throw appointmentsError;
+      if (appointmentsError) {
+        console.error('Appointments cleanup error:', appointmentsError);
+      }
 
-      // Delete test clients with generic names
+      // Delete test clients with generic names using full_name column
+      const testNames = ['mohf', 'hhhh', 'test', 'Test', 'TEST', 'aaa', 'bbb', 'ccc', 'ddd', 'eee'];
       const { error: clientsError } = await supabase
         .from('clients')
         .delete()
-        .eq('salon_id', user.id)
-        .in('name', testNames);
+        .eq('organization_id', user.id)
+        .in('full_name', testNames);
 
-      if (clientsError) throw clientsError;
+      if (clientsError) {
+        console.error('Clients cleanup error:', clientsError);
+      }
 
       // Refresh all related queries
       queryClient.invalidateQueries({ queryKey: ['appointments'] });

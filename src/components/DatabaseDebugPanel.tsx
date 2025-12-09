@@ -17,23 +17,23 @@ export const DatabaseDebugPanel: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Check appointments
+      // Check appointments (uses organization_id)
       const { data: appointments, error: appointmentsError } = await supabase
         .from('appointments')
         .select('*')
-        .eq('salon_id', user.id);
+        .eq('organization_id', user.id);
 
-      // Check staff
+      // Check staff (uses salon_id)
       const { data: staff, error: staffError } = await supabase
         .from('staff')
         .select('*')
         .eq('salon_id', user.id);
 
-      // Check clients
+      // Check clients (uses organization_id)
       const { data: clients, error: clientsError } = await supabase
         .from('clients')
         .select('*')
-        .eq('salon_id', user.id);
+        .eq('organization_id', user.id);
 
       // Check profile
       const { data: profile, error: profileError } = await supabase

@@ -28,44 +28,62 @@ const Dashboard = () => {
     queryKey: ['dashboard-stats', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const today = new Date().toISOString().split('T')[0];
-      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+      const today = new Date();
+      const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+      const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
 
       // Get today's appointments
-      const {
-        data: todayAppointments
-      } = await supabase.from('appointments').select('*').eq('salon_id', user.id).eq('date', today);
+      const { data: todayAppointments } = await supabase
+        .from('appointments')
+        .select('*, services!appointments_service_id_fkey(name, price)')
+        .eq('organization_id', user.id)
+        .gte('start_time', startOfToday)
+        .lte('start_time', endOfToday);
 
       // Get total clients
-      const {
-        data: clients
-      } = await supabase.from('clients').select('id').eq('salon_id', user.id);
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('organization_id', user.id);
 
       // Get monthly revenue
-      const {
-        data: monthlyTransactions
-      } = await supabase.from('financial_transactions').select('amount').eq('salon_id', user.id).eq('transaction_type', 'income').gte('transaction_date', monthStart);
+      const { data: monthlyTransactions } = await supabase
+        .from('financial_transactions')
+        .select('amount')
+        .eq('salon_id', user.id)
+        .eq('transaction_type', 'income')
+        .gte('transaction_date', monthStart.split('T')[0]);
 
-      // Get upcoming appointments for today - fix the foreign key relationship
-      const {
-        data: upcomingAppointments
-      } = await supabase.from('appointments').select(`
-          id, client_name, service, start_time, staff_id,
-          staff!staff_id(name)
-        `).eq('salon_id', user.id).eq('date', today).eq('status', 'Scheduled').order('start_time');
+      // Get upcoming appointments for today
+      const { data: upcomingAppointments } = await supabase
+        .from('appointments')
+        .select(`
+          id, start_time,
+          clients!appointments_client_id_fkey(full_name),
+          services!appointments_service_id_fkey(name),
+          profiles!appointments_staff_id_fkey(full_name)
+        `)
+        .eq('organization_id', user.id)
+        .gte('start_time', startOfToday)
+        .lte('start_time', endOfToday)
+        .eq('status', 'pending')
+        .order('start_time');
+
       const monthlyRevenue = monthlyTransactions?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
       const completedToday = todayAppointments?.filter(a => a.status === 'Completed').length || 0;
+      
       return {
         todayAppointments: todayAppointments?.length || 0,
         totalClients: clients?.length || 0,
         monthlyRevenue,
         checkIns: completedToday,
-        upcomingAppointments: upcomingAppointments?.map(apt => ({
-          client: apt.client_name,
-          service: apt.service,
-          time: apt.start_time,
-          staff: apt.staff?.name || 'Unassigned'
-        })) || []
+        upcomingAppointments: (upcomingAppointments || []).map(apt => ({
+          client: apt.clients?.full_name || 'Unknown',
+          service: apt.services?.name || 'Service',
+          time: apt.start_time?.split('T')[1]?.slice(0, 5) || '',
+          staff: apt.profiles?.full_name || 'Unassigned'
+        }))
       };
     },
     enabled: !!user?.id,

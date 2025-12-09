@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { availabilityApi } from '@/services/api/availabilityApi';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { format } from 'date-fns';
 
 interface StaffMember {
   id: string;
@@ -29,6 +30,8 @@ interface CalendarEvent {
   service?: string;
   isAvailable?: boolean;
   reason?: string;
+  status?: string;
+  price?: number;
 }
 
 interface StaffCalendarViewProps {
@@ -55,27 +58,35 @@ const StaffCalendarView: React.FC<StaffCalendarViewProps> = ({ staff, events, on
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      const startOfDay = `${selectedDate}T00:00:00`;
+      const endOfDay = `${selectedDate}T23:59:59`;
+
       const { data, error } = await supabase
         .from('appointments')
-        .select('*')
-        .eq('salon_id', user.id)
-        .eq('date', selectedDate)
+        .select(`
+          *,
+          clients!appointments_client_id_fkey(full_name),
+          services!appointments_service_id_fkey(name, price)
+        `)
+        .eq('organization_id', user.id)
+        .gte('start_time', startOfDay)
+        .lte('start_time', endOfDay)
         .order('start_time');
       
       if (error) throw error;
       
-      return data?.map(apt => ({
+      return (data || []).map(apt => ({
         id: apt.id,
         staffId: apt.staff_id,
-        title: `${apt.service} - ${apt.client_name}`,
-        start: `${apt.date}T${apt.start_time}`,
-        end: `${apt.date}T${apt.end_time}`,
+        title: `${apt.services?.name || 'Service'} - ${apt.clients?.full_name || 'Client'}`,
+        start: apt.start_time,
+        end: apt.end_time,
         type: 'appointment' as const,
-        clientName: apt.client_name,
-        service: apt.service,
+        clientName: apt.clients?.full_name || 'Unknown Client',
+        service: apt.services?.name || 'Service',
         status: apt.status,
-        price: apt.price
-      })) || [];
+        price: apt.services?.price
+      }));
     },
     enabled: !!selectedDate,
     staleTime: 1 * 60 * 1000,
@@ -99,10 +110,10 @@ const StaffCalendarView: React.FC<StaffCalendarViewProps> = ({ staff, events, on
   };
 
   const getStaffAppointments = (staffId: string, time: string) => {
-    return appointments.filter(apt => 
-      apt.staffId === staffId && 
-      apt.start.includes(time)
-    );
+    return appointments.filter(apt => {
+      const aptTime = apt.start.includes('T') ? apt.start.split('T')[1].slice(0, 5) : apt.start;
+      return apt.staffId === staffId && aptTime === time;
+    });
   };
 
   const getInitials = (name: string) => {
@@ -115,9 +126,9 @@ const StaffCalendarView: React.FC<StaffCalendarViewProps> = ({ staff, events, on
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <Calendar className="w-16 h-16 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-600 mb-2">No Staff Members</h3>
-          <p className="text-gray-500 text-center">
+          <Calendar className="w-16 h-16 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium text-muted-foreground mb-2">No Staff Members</h3>
+          <p className="text-muted-foreground text-center">
             Add staff members to view their calendar and availability.
           </p>
         </CardContent>
@@ -143,7 +154,7 @@ const StaffCalendarView: React.FC<StaffCalendarViewProps> = ({ staff, events, on
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -151,7 +162,7 @@ const StaffCalendarView: React.FC<StaffCalendarViewProps> = ({ staff, events, on
               <select
                 value={selectedStaff}
                 onChange={(e) => setSelectedStaff(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="all">All Staff</option>
                 {staff.map(member => (
@@ -170,7 +181,7 @@ const StaffCalendarView: React.FC<StaffCalendarViewProps> = ({ staff, events, on
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Error loading availability data: {availabilityError.message}
+            Error loading availability data: {(availabilityError as Error).message}
           </AlertDescription>
         </Alert>
       )}
@@ -180,7 +191,7 @@ const StaffCalendarView: React.FC<StaffCalendarViewProps> = ({ staff, events, on
         <Card>
           <CardContent className="py-12">
             <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               <span className="ml-2">Loading calendar data...</span>
             </div>
           </CardContent>
@@ -202,9 +213,9 @@ const StaffCalendarView: React.FC<StaffCalendarViewProps> = ({ staff, events, on
                   </Avatar>
                   <div>
                     <h3 className="font-semibold">{staffMember.name}</h3>
-                    <p className="text-sm text-gray-600">{staffMember.email}</p>
+                    <p className="text-sm text-muted-foreground">{staffMember.email}</p>
                     {staffMember.specialties?.length > 0 && (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {staffMember.specialties.slice(0, 2).join(', ')}
                       </p>
                     )}
@@ -219,10 +230,10 @@ const StaffCalendarView: React.FC<StaffCalendarViewProps> = ({ staff, events, on
                   const isAvailable = availability?.isAvailable !== false;
 
                   return (
-                    <div key={`${staffMember.id}-${time}`} className="border-b border-gray-100 pb-2 last:border-b-0">
+                    <div key={`${staffMember.id}-${time}`} className="border-b border-border pb-2 last:border-b-0">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
-                          <Clock className="w-3 h-3 text-gray-500" />
+                          <Clock className="w-3 h-3 text-muted-foreground" />
                           <span className="text-sm font-medium">{time}</span>
                           {availability && (
                             <Badge 
@@ -251,7 +262,7 @@ const StaffCalendarView: React.FC<StaffCalendarViewProps> = ({ staff, events, on
 
                       {/* Show availability reason if not available */}
                       {availability && !isAvailable && availability.reason && (
-                        <div className="text-xs text-gray-600 mb-1">
+                        <div className="text-xs text-muted-foreground mb-1">
                           Reason: {availability.reason}
                         </div>
                       )}
@@ -268,7 +279,7 @@ const StaffCalendarView: React.FC<StaffCalendarViewProps> = ({ staff, events, on
                               {appointment.status}
                             </Badge>
                           </div>
-                          <div className="text-xs text-gray-600">{appointment.service}</div>
+                          <div className="text-xs text-muted-foreground">{appointment.service}</div>
                           {appointment.price && (
                             <div className="text-xs text-green-600 font-medium">
                               ${appointment.price}
@@ -279,7 +290,7 @@ const StaffCalendarView: React.FC<StaffCalendarViewProps> = ({ staff, events, on
 
                       {/* Show if no data available */}
                       {!availability && !hasAppointments && (
-                        <div className="text-xs text-gray-400 italic">
+                        <div className="text-xs text-muted-foreground italic">
                           No availability set
                         </div>
                       )}

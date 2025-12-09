@@ -32,11 +32,11 @@ const Clients = () => {
       let query = supabase
         .from('clients')
         .select('*')
-        .eq('salon_id', user.id);
+        .eq('organization_id', user.id);
 
       if (searchTerm) {
         query = query.or(
-          `name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`
+          `full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`
         );
       }
 
@@ -65,7 +65,7 @@ const Clients = () => {
       const { data: allClients, error } = await supabase
         .from('clients')
         .select('id, created_at, status, total_spent')
-        .eq('salon_id', user.id);
+        .eq('organization_id', user.id);
       if (error) throw error;
 
       const totalClients = allClients?.length || 0;
@@ -103,12 +103,12 @@ const Clients = () => {
   const handleImportCSV = async (data: any[]) => {
     const importPromises = data.map(async (row) => {
       const { error } = await supabase.from('clients').insert({
-        salon_id: user?.id,
-        name: row.name || 'Unknown',
+        organization_id: user?.id,
+        full_name: row.name || 'Unknown',
         email: row.email || '',
         phone: row.phone || '',
         notes: row.notes || '',
-        status: row.status || 'New',
+        status: row.status || 'active',
       });
       if (error) throw error;
     });
@@ -163,12 +163,12 @@ const Clients = () => {
                 const csvContent = [
                   ['Name', 'Email', 'Phone', 'Status', 'Total Spent', 'Visits', 'Notes'],
                   ...clients.map(client => [
-                    client.name,
+                    client.full_name,
                     client.email,
                     client.phone || '',
                     client.status,
                     client.total_spent || 0,
-                    client.visits || 0,
+                    client.total_visits || 0,
                     client.notes || ''
                   ])
                 ].map(row => row.join(',')).join('\n');
@@ -249,13 +249,13 @@ const Clients = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                        {client.name
+                        {client.full_name
                           ?.split(' ')
-                          .map(n => n[0])
+                          .map((n: string) => n[0])
                           .join('') || '??'}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900">{client.name}</h3>
+                        <h3 className="font-semibold text-gray-900">{client.full_name}</h3>
                         <p className="text-gray-600 text-sm">{client.email}</p>
                         {client.phone && (
                           <p className="text-gray-500 text-sm">{client.phone}</p>
@@ -265,7 +265,7 @@ const Clients = () => {
 
                     <div className="flex items-center gap-6">
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-gray-900">{client.visits || 0}</p>
+                        <p className="text-2xl font-bold text-gray-900">{client.total_visits || 0}</p>
                         <p className="text-xs text-gray-500">Visits</p>
                       </div>
                       <div className="text-center">
@@ -276,11 +276,11 @@ const Clients = () => {
                       </div>
                       <div className="text-center">
                         <Badge className={getStatusColor(client.status)}>
-                          {client.status || 'New'}
+                          {client.status || 'active'}
                         </Badge>
-                        {client.last_visit && (
+                        {client.last_visit_date && (
                           <p className="text-xs text-gray-500 mt-1">
-                            Last: {format(new Date(client.last_visit), 'MMM d')}
+                            Last: {format(new Date(client.last_visit_date), 'MMM d')}
                           </p>
                         )}
                       </div>

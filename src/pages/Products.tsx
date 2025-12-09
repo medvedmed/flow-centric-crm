@@ -45,12 +45,18 @@ const Products = () => {
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('salon_id', user?.id)
+        .eq('organization_id', user?.id)
         .eq('is_active', true)
         .order('name');
       
       if (error) throw error;
-      return data as Product[];
+      return (data || []).map(p => ({
+        ...p,
+        cost_price: p.cost || 0,
+        selling_price: p.price || 0,
+        current_stock: p.stock_quantity || 0,
+        minimum_stock: p.low_stock_threshold || 0,
+      })) as Product[];
     },
     enabled: !!user,
   });
@@ -59,7 +65,18 @@ const Products = () => {
     mutationFn: async (productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
       const { data, error } = await supabase
         .from('products')
-        .insert({ ...productData, salon_id: user?.id })
+        .insert({ 
+          name: productData.name,
+          description: productData.description,
+          category: productData.category,
+          sku: productData.sku,
+          cost: productData.cost_price,
+          price: productData.selling_price,
+          stock_quantity: productData.current_stock,
+          low_stock_threshold: productData.minimum_stock,
+          organization_id: user?.id,
+          is_active: true
+        })
         .select()
         .single();
       

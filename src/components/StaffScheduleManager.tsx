@@ -30,7 +30,7 @@ const StaffScheduleManager = () => {
       
       if (error) throw error;
       
-      return data?.map(member => ({
+      return (data || []).map(member => ({
         id: member.id,
         name: member.name,
         email: member.email,
@@ -55,7 +55,7 @@ const StaffScheduleManager = () => {
         staffLoginPassword: member.staff_login_password,
         createdAt: member.created_at,
         updatedAt: member.updated_at
-      })) || [];
+      }));
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -67,34 +67,36 @@ const StaffScheduleManager = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString();
       const { data, error } = await supabase
         .from('appointments')
-        .select('*')
-        .eq('salon_id', user.id)
-        .gte('date', today)
-        .order('date')
+        .select(`
+          *,
+          clients!appointments_client_id_fkey(full_name),
+          services!appointments_service_id_fkey(name)
+        `)
+        .eq('organization_id', user.id)
+        .gte('start_time', today)
         .order('start_time');
       
       if (error) throw error;
       
-      return data?.map(apt => ({
+      return (data || []).map(apt => ({
         id: apt.id,
         staffId: apt.staff_id,
-        title: `${apt.service} - ${apt.client_name}`,
-        start: `${apt.date}T${apt.start_time}`,
-        end: `${apt.date}T${apt.end_time}`,
+        title: `${apt.services?.name || 'Service'} - ${apt.clients?.full_name || 'Client'}`,
+        start: apt.start_time,
+        end: apt.end_time,
         type: 'appointment' as const,
-        clientName: apt.client_name,
-        service: apt.service
-      })) || [];
+        clientName: apt.clients?.full_name || 'Unknown',
+        service: apt.services?.name || 'Service'
+      }));
     },
     staleTime: 2 * 60 * 1000,
   });
 
   const handleAddEvent = (newEvent: any) => {
     console.log('Adding new event:', newEvent);
-    // This woul integrate with appointment creation
   };
 
   const handleRefresh = () => {
@@ -113,8 +115,8 @@ const StaffScheduleManager = () => {
           </div>
         </div>
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-96 bg-gray-200 rounded"></div>
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          <div className="h-96 bg-muted rounded"></div>
         </div>
       </div>
     );
@@ -138,7 +140,7 @@ const StaffScheduleManager = () => {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Unable to load staff schedule data: {error.message}
+            Unable to load staff schedule data: {(error as Error).message}
           </AlertDescription>
         </Alert>
       </div>
@@ -182,7 +184,7 @@ const StaffScheduleManager = () => {
               staff={staff.map(s => ({
                 id: s.id,
                 name: s.name,
-                email: s.email,
+                email: s.email || '',
                 imageUrl: s.imageUrl,
                 specialties: s.specialties || []
               }))}
@@ -192,9 +194,9 @@ const StaffScheduleManager = () => {
           ) : (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <Users className="w-16 h-16 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-600 mb-2">No Staff Members</h3>
-                <p className="text-gray-500 text-center">
+                <Users className="w-16 h-16 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium text-muted-foreground mb-2">No Staff Members</h3>
+                <p className="text-muted-foreground text-center">
                   Add staff members to manage their schedules and availability.
                 </p>
               </CardContent>
@@ -217,7 +219,7 @@ const StaffScheduleManager = () => {
                   <select
                     value={selectedStaffId}
                     onChange={(e) => setSelectedStaffId(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    className="px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">Choose a staff member</option>
                     {staff.map(member => (

@@ -36,14 +36,13 @@ export const useAppointmentOperations = () => {
       console.log('Calculated times:', { startTime: newTime, endTime: endTimeString });
 
       // Check for conflicts first
-      const appointmentDate = new Date().toISOString().split('T')[0]; // Today's date for now
+      const appointmentDate = new Date().toISOString().split('T')[0];
       
       const { data: conflicts, error: conflictError } = await supabase
         .from('appointments')
-        .select('id, client_name')
-        .eq('salon_id', user.id)
+        .select('id, client_id')
+        .eq('organization_id', user.id)
         .eq('staff_id', newStaffId)
-        .eq('date', appointmentDate)
         .eq('start_time', newTime)
         .neq('id', appointmentId);
 
@@ -53,7 +52,7 @@ export const useAppointmentOperations = () => {
       }
 
       if (conflicts && conflicts.length > 0) {
-        throw new Error(`Time slot already occupied by ${conflicts[0].client_name}`);
+        throw new Error('Time slot already occupied');
       }
 
       // Update appointment in database
@@ -80,13 +79,9 @@ export const useAppointmentOperations = () => {
     onMutate: async ({ appointmentId, newStaffId, newTime, duration = 60 }) => {
       console.log('Optimistic update starting...');
       
-      // Cancel any outgoing refetches for appointments
       await queryClient.cancelQueries({ queryKey: ['appointments'] });
-
-      // Snapshot the previous value
       const previousData = queryClient.getQueryData(['appointments']);
 
-      // Optimistically update all appointment queries
       queryClient.setQueriesData(
         { queryKey: ['appointments'] },
         (oldData: any) => {
@@ -113,7 +108,6 @@ export const useAppointmentOperations = () => {
     onError: (err, variables, context) => {
       console.error('Move appointment error:', err);
       
-      // Rollback on error
       if (context?.previousData) {
         queryClient.setQueriesData({ queryKey: ['appointments'] }, context.previousData);
       }
@@ -133,7 +127,6 @@ export const useAppointmentOperations = () => {
       });
     },
     onSettled: () => {
-      // Always refetch after error or success
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       queryClient.invalidateQueries({ queryKey: ['staff-performance'] });
@@ -148,30 +141,18 @@ export const useAppointmentOperations = () => {
         throw new Error('Authentication required');
       }
 
-      // Calculate total price including extra services
-      const basePrice = appointmentData.price || 0;
-      const extraServicesPrice = appointmentData.extraServices?.reduce((sum, service) => sum + service.price, 0) || 0;
-      const totalPrice = basePrice + extraServicesPrice;
-
-      // Calculate total duration including extra services
       const baseDuration = appointmentData.duration || 60;
       const extraServicesDuration = appointmentData.extraServices?.reduce((sum, service) => sum + service.duration, 0) || 0;
       const totalDuration = baseDuration + extraServicesDuration;
 
-      // Map camelCase properties to snake_case for database
-      const dbAppointmentData = {
+      const dbAppointmentData: any = {
         client_id: appointmentData.clientId,
-        client_name: appointmentData.clientName || '',
-        client_phone: appointmentData.clientPhone,
-        service: appointmentData.service || '',
         start_time: appointmentData.startTime || '',
         end_time: appointmentData.endTime || '',
-        date: appointmentData.date || '',
-        price: totalPrice,
         duration: totalDuration,
         staff_id: appointmentData.staffId,
         notes: appointmentData.notes,
-        salon_id: user.id,
+        organization_id: user.id,
         status: appointmentData.status || 'Scheduled'
       };
 
@@ -183,7 +164,6 @@ export const useAppointmentOperations = () => {
 
       if (error) throw error;
 
-      // Add extra services if any
       if (appointmentData.extraServices && appointmentData.extraServices.length > 0) {
         const serviceInserts = appointmentData.extraServices.map(service => ({
           appointment_id: data.id,
@@ -199,7 +179,6 @@ export const useAppointmentOperations = () => {
         
         if (servicesError) {
           console.error('Error adding extra services:', servicesError);
-          // Don't throw error here, appointment was created successfully
         }
       }
 
@@ -240,23 +219,26 @@ export const useAppointmentOperations = () => {
         throw new Error('Authentication required');
       }
 
-      // Update appointment payment status
       const { data: appointment, error: appointmentError } = await supabase
         .from('appointments')
         .update({
-          payment_status: paymentStatus,
-          payment_method: paymentMethod,
-          payment_date: paymentStatus === 'paid' ? new Date().toISOString() : null,
+          status: paymentStatus === 'paid' ? 'Completed' : 'Scheduled',
           updated_at: new Date().toISOString()
         })
         .eq('id', appointmentId)
-        .select()
+        .select(`
+          *,
+          clients(full_name),
+          services(name)
+        `)
         .single();
 
       if (appointmentError) throw appointmentError;
 
-      // If marking as paid, create financial transaction
       if (paymentStatus === 'paid' && amount) {
+        const serviceName = appointment.services?.name || 'Service';
+        const clientName = appointment.clients?.full_name || 'Client';
+        
         const { error: transactionError } = await supabase
           .from('financial_transactions')
           .insert({
@@ -264,7 +246,7 @@ export const useAppointmentOperations = () => {
             transaction_type: 'income',
             category: 'Service Revenue',
             amount: amount,
-            description: `Payment for ${appointment.service} - ${appointment.client_name}`,
+            description: `Payment for ${serviceName} - ${clientName}`,
             payment_method: paymentMethod || 'cash',
             reference_id: appointmentId,
             reference_type: 'appointment',
@@ -274,7 +256,6 @@ export const useAppointmentOperations = () => {
 
         if (transactionError) {
           console.error('Error creating financial transaction:', transactionError);
-          // Don't throw error here, appointment update was successful
         }
       }
 

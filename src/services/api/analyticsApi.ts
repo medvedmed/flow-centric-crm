@@ -9,17 +9,17 @@ export const analyticsApi = {
     const { data, error } = await supabase
       .from('clients')
       .select('status')
-      .eq('salon_id', user.id);
+      .eq('organization_id', user.id);
     
     if (error) throw error;
     
     const stats = {
       total: data?.length || 0,
-      new: data?.filter(c => c.status === 'New').length || 0,
-      regular: data?.filter(c => c.status === 'Regular').length || 0,
-      vip: data?.filter(c => c.status === 'VIP').length || 0,
-      active: data?.filter(c => c.status === 'Active').length || 0,
-      inactive: data?.filter(c => c.status === 'Inactive').length || 0
+      new: data?.filter(c => c.status === 'New' || c.status === 'new').length || 0,
+      regular: data?.filter(c => c.status === 'Regular' || c.status === 'regular').length || 0,
+      vip: data?.filter(c => c.status === 'VIP' || c.status === 'vip').length || 0,
+      active: data?.filter(c => c.status === 'Active' || c.status === 'active').length || 0,
+      inactive: data?.filter(c => c.status === 'Inactive' || c.status === 'inactive').length || 0
     };
 
     return stats;

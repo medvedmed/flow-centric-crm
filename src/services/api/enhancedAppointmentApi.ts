@@ -21,21 +21,24 @@ export interface CreateAppointmentService {
 export interface EnhancedAppointment {
   id: string;
   client_id?: string;
-  client_name: string;
+  client_name?: string;
   client_phone?: string;
-  date: string;
+  date?: string;
   start_time: string;
   end_time: string;
-  service: string;
+  service?: string;
+  service_id?: string;
   staff_id?: string;
   status: string;
   price?: number;
   duration?: number;
   notes?: string;
-  salon_id?: string;
+  organization_id?: string;
   created_at?: string;
   updated_at?: string;
   services?: AppointmentService[];
+  clients?: { full_name: string; phone: string };
+  servicesData?: { name: string; price: number };
 }
 
 export const enhancedAppointmentApi = {
@@ -62,16 +65,13 @@ export const enhancedAppointmentApi = {
 
     if (error) throw error;
 
-    // Update appointment total price and duration
     const services = await this.getAppointmentServices(appointmentId);
     const totalPrice = services.reduce((sum, s) => sum + Number(s.service_price), 0);
     const totalDuration = services.reduce((sum, s) => sum + s.service_duration, 0);
 
-    // Update the main appointment record
     const { error: updateError } = await supabase
       .from('appointments')
       .update({
-        price: totalPrice,
         duration: totalDuration
       })
       .eq('id', appointmentId);
@@ -97,15 +97,12 @@ export const enhancedAppointmentApi = {
 
     if (error) throw error;
 
-    // Recalculate appointment totals
     const services = await this.getAppointmentServices(service.appointment_id);
-    const totalPrice = services.reduce((sum, s) => sum + Number(s.service_price), 0);
     const totalDuration = services.reduce((sum, s) => sum + s.service_duration, 0);
 
     await supabase
       .from('appointments')
       .update({
-        price: totalPrice,
         duration: totalDuration
       })
       .eq('id', service.appointment_id);
@@ -114,18 +111,38 @@ export const enhancedAppointmentApi = {
   async getAppointmentWithServices(appointmentId: string): Promise<EnhancedAppointment | null> {
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
-      .select('*')
+      .select(`
+        *,
+        clients(full_name, phone),
+        services:service_id(name, price)
+      `)
       .eq('id', appointmentId)
       .single();
 
     if (appointmentError) throw appointmentError;
     if (!appointment) return null;
 
-    const services = await this.getAppointmentServices(appointmentId);
+    const appointmentServices = await this.getAppointmentServices(appointmentId);
 
     return {
-      ...appointment,
-      services
+      id: appointment.id,
+      client_id: appointment.client_id,
+      client_name: appointment.clients?.full_name || '',
+      client_phone: appointment.clients?.phone || '',
+      date: appointment.start_time?.split('T')[0] || '',
+      start_time: appointment.start_time,
+      end_time: appointment.end_time,
+      service: (appointment.services as any)?.name || '',
+      service_id: appointment.service_id,
+      staff_id: appointment.staff_id,
+      status: appointment.status,
+      price: (appointment.services as any)?.price || 0,
+      duration: appointment.duration,
+      notes: appointment.notes,
+      organization_id: appointment.organization_id,
+      created_at: appointment.created_at,
+      updated_at: appointment.updated_at,
+      services: appointmentServices
     };
   },
 
@@ -133,16 +150,12 @@ export const enhancedAppointmentApi = {
     appointmentData: any,
     services: CreateAppointmentService[]
   ) {
-    // Calculate total price and duration
-    const totalPrice = services.reduce((sum, service) => sum + service.service_price, 0);
     const totalDuration = services.reduce((sum, service) => sum + service.service_duration, 0);
 
-    // Create the main appointment
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
       .insert([{
         ...appointmentData,
-        price: totalPrice,
         duration: totalDuration
       }])
       .select()
@@ -150,7 +163,6 @@ export const enhancedAppointmentApi = {
 
     if (appointmentError) throw appointmentError;
 
-    // Add all services
     const servicePromises = services.map(service =>
       this.addServiceToAppointment(appointment.id, service)
     );

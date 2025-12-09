@@ -74,34 +74,42 @@ export const realTimeScheduleApi = {
     // Check existing appointments
     const { data: appointments, error: appointmentsError } = await supabase
       .from('appointments')
-      .select('*')
+      .select(`
+        *,
+        clients(full_name, phone),
+        services:service_id(name, price)
+      `)
       .eq('staff_id', staffId)
-      .eq('date', date)
+      .gte('start_time', `${date}T00:00:00`)
+      .lte('start_time', `${date}T23:59:59`)
       .neq('status', 'Cancelled');
 
     if (!appointmentsError && appointments) {
       for (const appointment of appointments) {
-        if ((startTime >= appointment.start_time && startTime < appointment.end_time) ||
-            (endTime > appointment.start_time && endTime <= appointment.end_time) ||
-            (startTime < appointment.start_time && endTime > appointment.end_time)) {
+        const aptStartTime = appointment.start_time?.split('T')[1]?.slice(0, 5) || appointment.start_time;
+        const aptEndTime = appointment.end_time?.split('T')[1]?.slice(0, 5) || appointment.end_time;
+        
+        if ((startTime >= aptStartTime && startTime < aptEndTime) ||
+            (endTime > aptStartTime && endTime <= aptEndTime) ||
+            (startTime < aptStartTime && endTime > aptEndTime)) {
           conflicts.push({
             type: 'overlap',
-            message: `Conflicts with existing appointment: ${appointment.client_name} (${appointment.start_time} - ${appointment.end_time})`,
+            message: `Conflicts with existing appointment: ${appointment.clients?.full_name || 'Client'} (${aptStartTime} - ${aptEndTime})`,
             conflictingAppointment: {
               id: appointment.id,
               clientId: appointment.client_id,
               staffId: appointment.staff_id,
-              clientName: appointment.client_name,
-              clientPhone: appointment.client_phone,
-              service: appointment.service,
+              clientName: appointment.clients?.full_name || '',
+              clientPhone: appointment.clients?.phone || '',
+              service: (appointment.services as any)?.name || '',
               startTime: appointment.start_time,
               endTime: appointment.end_time,
-              date: appointment.date,
-              price: appointment.price,
+              date: appointment.start_time?.split('T')[0] || '',
+              price: (appointment.services as any)?.price || 0,
               duration: appointment.duration,
               status: appointment.status as Appointment['status'],
               notes: appointment.notes,
-              salonId: appointment.salon_id,
+              salonId: appointment.organization_id,
               createdAt: appointment.created_at,
               updatedAt: appointment.updated_at
             }

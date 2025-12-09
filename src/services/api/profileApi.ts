@@ -14,43 +14,46 @@ export const profileApi = {
 
     console.log('Authenticated user ID:', user.id);
 
-    const { data, error } = await supabase
+    // First get the profile
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single();
     
-    if (error) {
-      console.error('Profile fetch error:', error);
-      if (error.code === 'PGRST116') return null; // No rows returned
-      throw error;
+    if (profileError) {
+      console.error('Profile fetch error:', profileError);
+      if (profileError.code === 'PGRST116') return null;
+      throw profileError;
     }
     
-    console.log('Profile data retrieved:', data);
+    // Try to get organization data if available
+    let orgData = null;
+    if (profile.organization_id) {
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', profile.organization_id)
+        .single();
+      orgData = org;
+    }
+    
+    console.log('Profile data retrieved:', profile);
     
     return {
-      id: data.id,
-      email: data.email,
-      full_name: data.full_name,
-      salon_name: data.salon_name,
-      phone: data.phone,
-      role: data.role as 'salon_owner' | 'staff' | 'admin',
-      subscription_status: data.subscription_status as 'trial' | 'active' | 'cancelled' | 'expired',
-      subscription_end_date: data.subscription_end_date,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
-      address: data.address,
-      description: data.description,
-      opening_hours: data.opening_hours,
-      closing_hours: data.closing_hours,
-      working_days: data.working_days,
-      website: data.website,
-      social_media: data.social_media
-    } as any;
+      id: profile.id,
+      email: profile.email,
+      full_name: profile.full_name,
+      salon_name: orgData?.name || profile.full_name,
+      phone: profile.phone,
+      role: profile.role,
+      created_at: profile.created_at,
+      updated_at: profile.updated_at,
+    };
   },
 
-  async updateProfile(profile: Partial<Profile & any>): Promise<Profile> {
-    console.log('Updating profile with data:', profile);
+  async updateProfile(profileUpdate: Partial<Profile & any>): Promise<Profile> {
+    console.log('Updating profile with data:', profileUpdate);
     
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -58,19 +61,12 @@ export const profileApi = {
       throw new Error('Not authenticated');
     }
 
-    const updateData = {
-      ...(profile.full_name !== undefined && { full_name: profile.full_name }),
-      ...(profile.salon_name !== undefined && { salon_name: profile.salon_name }),
-      ...(profile.phone !== undefined && { phone: profile.phone }),
-      ...(profile.address !== undefined && { address: profile.address }),
-      ...(profile.description !== undefined && { description: profile.description }),
-      ...(profile.opening_hours !== undefined && { opening_hours: profile.opening_hours }),
-      ...(profile.closing_hours !== undefined && { closing_hours: profile.closing_hours }),
-      ...(profile.working_days !== undefined && { working_days: profile.working_days }),
-      ...(profile.website !== undefined && { website: profile.website }),
-      ...(profile.social_media !== undefined && { social_media: profile.social_media }),
+    const updateData: any = {
       updated_at: new Date().toISOString()
     };
+
+    if (profileUpdate.full_name !== undefined) updateData.full_name = profileUpdate.full_name;
+    if (profileUpdate.phone !== undefined) updateData.phone = profileUpdate.phone;
 
     console.log('Sending update data:', updateData);
 
@@ -92,20 +88,10 @@ export const profileApi = {
       id: data.id,
       email: data.email,
       full_name: data.full_name,
-      salon_name: data.salon_name,
       phone: data.phone,
-      role: data.role as 'salon_owner' | 'staff' | 'admin',
-      subscription_status: data.subscription_status as 'trial' | 'active' | 'cancelled' | 'expired',
-      subscription_end_date: data.subscription_end_date,
+      role: data.role,
       created_at: data.created_at,
       updated_at: data.updated_at,
-      address: data.address,
-      description: data.description,
-      opening_hours: data.opening_hours,
-      closing_hours: data.closing_hours,
-      working_days: data.working_days,
-      website: data.website,
-      social_media: data.social_media
-    } as any;
+    };
   }
 };

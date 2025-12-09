@@ -1,51 +1,51 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Client } from '@/services/types';
-import { transformDatabaseClient, prepareClientUpdate, DatabaseClient } from './types';
 
 export const createClient = async (client: Client): Promise<Client> => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  // Generate client credentials using database functions
-  const { data: clientIdData, error: clientIdError } = await supabase
-    .rpc('generate_client_id');
-  
-  if (clientIdError) throw clientIdError;
-
-  const { data: passwordData, error: passwordError } = await supabase
-    .rpc('generate_client_password');
-  
-  if (passwordError) throw passwordError;
-
   const { data, error } = await supabase
     .from('clients')
     .insert({
-      name: client.name,
+      full_name: client.name,
       email: client.email,
-      phone: client.phone,
-      status: client.status || 'New',
-      assigned_staff: client.assignedStaff,
+      phone: client.phone || '',
+      status: client.status || 'active',
       notes: client.notes,
-      tags: client.tags,
-      total_spent: client.totalSpent || 0,
-      visits: client.visits || 0,
-      preferred_stylist: client.preferredStylist,
-      salon_id: user.id,
-      client_id: clientIdData,
-      client_password: passwordData,
-      is_portal_enabled: false
+      organization_id: user.id,
     })
     .select()
     .single();
   
   if (error) throw error;
   
-  return transformDatabaseClient(data as DatabaseClient);
+  return {
+    id: data.id,
+    name: data.full_name,
+    email: data.email || '',
+    phone: data.phone,
+    status: data.status as Client['status'],
+    notes: data.notes,
+    totalSpent: data.total_spent || 0,
+    visits: data.total_visits || 0,
+    lastVisit: data.last_visit_date,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
 };
 
 export const updateClient = async (id: string, client: Partial<Client>): Promise<Client> => {
-  const updateData = prepareClientUpdate(client);
+  const updateData: any = {
+    updated_at: new Date().toISOString()
+  };
+
+  if (client.name !== undefined) updateData.full_name = client.name;
+  if (client.email !== undefined) updateData.email = client.email;
+  if (client.phone !== undefined) updateData.phone = client.phone;
+  if (client.status !== undefined) updateData.status = client.status;
+  if (client.notes !== undefined) updateData.notes = client.notes;
 
   const { data, error } = await supabase
     .from('clients')
@@ -56,7 +56,19 @@ export const updateClient = async (id: string, client: Partial<Client>): Promise
   
   if (error) throw error;
   
-  return transformDatabaseClient(data as DatabaseClient);
+  return {
+    id: data.id,
+    name: data.full_name,
+    email: data.email || '',
+    phone: data.phone,
+    status: data.status as Client['status'],
+    notes: data.notes,
+    totalSpent: data.total_spent || 0,
+    visits: data.total_visits || 0,
+    lastVisit: data.last_visit_date,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
 };
 
 export const deleteClient = async (id: string): Promise<void> => {

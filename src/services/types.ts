@@ -16,7 +16,7 @@ export interface Client {
   name: string;
   email: string;
   phone?: string | null;
-  status: 'New' | 'Regular' | 'VIP' | 'Inactive';
+  status: 'New' | 'Regular' | 'VIP' | 'Inactive' | 'active' | 'inactive';
   assignedStaff?: string | null;
   notes?: string | null;
   tags?: string | null;

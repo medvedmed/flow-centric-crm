@@ -20,7 +20,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 }) => {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const dateString = format(selectedDate, 'yyyy-MM-dd');
-  const { staff, appointments, isLoading, error, staffError, appointmentsError } = useAppointmentData(dateString);
+  const { staff, appointments, isLoading, error } = useAppointmentData(dateString);
   const queryClient = useQueryClient();
 
   const handleRefresh = () => {
@@ -68,9 +68,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {staffError ? 'Error loading staff data. ' : ''}
-            {appointmentsError ? 'Error loading appointment data. ' : ''}
-            Please try refreshing the page or contact support if the issue persists.
+            Error loading data. Please try refreshing the page or contact support if the issue persists.
           </AlertDescription>
         </Alert>
       </div>

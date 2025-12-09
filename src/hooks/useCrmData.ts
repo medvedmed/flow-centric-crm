@@ -95,3 +95,28 @@ export const useCreateStaff = () => {
     },
   });
 };
+
+export const useUpdateStaff = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, staff }: { id: string; staff: any }) => {
+      const { error } = await supabase
+        .from('staff')
+        .update({
+          name: staff.name,
+          email: staff.email,
+          phone: staff.phone,
+          status: staff.status,
+          commission_rate: staff.commissionRate,
+          hourly_rate: staff.hourlyRate,
+          notes: staff.notes,
+        })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+    },
+  });
+};

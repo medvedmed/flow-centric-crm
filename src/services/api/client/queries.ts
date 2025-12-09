@@ -17,11 +17,11 @@ export const getClients = async (
   let query = supabase
     .from('clients')
     .select('*', { count: 'exact' })
-    .eq('salon_id', user.id)
+    .eq('organization_id', user.id)
     .order('created_at', { ascending: false });
 
   if (searchTerm) {
-    query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+    query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
   }
 
   if (status && status !== 'all') {
@@ -34,7 +34,7 @@ export const getClients = async (
   if (error) throw error;
   
   return {
-    data: data?.map((client: DatabaseClient) => transformDatabaseClient(client)) || [],
+    data: data?.map((client: any) => transformDatabaseClient(client as DatabaseClient)) || [],
     count: count || 0,
     hasMore: (count || 0) > offset + pageSize,
     page,
@@ -54,5 +54,5 @@ export const getClient = async (id: string): Promise<Client | null> => {
     throw error;
   }
   
-  return transformDatabaseClient(data as DatabaseClient);
+  return transformDatabaseClient(data as unknown as DatabaseClient);
 };

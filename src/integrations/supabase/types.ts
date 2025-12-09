@@ -2187,8 +2187,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      hash_password: { Args: { password: string }; Returns: string }
       process_whatsapp_reminders: { Args: never; Returns: undefined }
       reset_daily_message_counts: { Args: never; Returns: undefined }
+      set_staff_password: {
+        Args: { new_password: string; target_staff_id: string }
+        Returns: boolean
+      }
       update_reminder_after_sending: {
         Args: { error_msg?: string; new_status: string; reminder_id: string }
         Returns: undefined
@@ -2212,6 +2217,10 @@ export type Database = {
       update_reminder_status: {
         Args: { new_status: string; reminder_id: string }
         Returns: undefined
+      }
+      verify_password: {
+        Args: { hashed_password: string; password: string }
+        Returns: boolean
       }
     }
     Enums: {

@@ -53,7 +53,9 @@ export const staffApi = {
       salonId: staff.salon_id,
       staffCode: staff.staff_code,
       staffLoginId: staff.staff_login_id,
-      staffLoginPassword: staff.staff_login_password,
+      // Don't return hashed passwords - they're securely stored in database
+      staffLoginPassword: staff.staff_login_password ? '[SECURED]' : undefined,
+      hasCredentials: !!(staff.staff_login_id && staff.staff_login_password),
       createdAt: staff.created_at,
       updatedAt: staff.updated_at
     })) || [];
@@ -169,7 +171,9 @@ export const staffApi = {
       salonId: data.salon_id,
       staffCode: data.staff_code,
       staffLoginId: data.staff_login_id,
-      staffLoginPassword: data.staff_login_password,
+      // Don't return hashed passwords
+      staffLoginPassword: data.staff_login_password ? '[SECURED]' : undefined,
+      hasCredentials: !!(data.staff_login_id && data.staff_login_password),
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -230,7 +234,9 @@ export const staffApi = {
       salonId: data.salon_id,
       staffCode: data.staff_code,
       staffLoginId: data.staff_login_id,
-      staffLoginPassword: data.staff_login_password,
+      // Don't return hashed passwords
+      staffLoginPassword: data.staff_login_password ? '[SECURED]' : undefined,
+      hasCredentials: !!(data.staff_login_id && data.staff_login_password),
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };

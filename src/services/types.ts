@@ -55,6 +55,7 @@ export interface Staff {
   staffCode?: string;
   staffLoginId?: string;
   staffLoginPassword?: string;
+  hasCredentials?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

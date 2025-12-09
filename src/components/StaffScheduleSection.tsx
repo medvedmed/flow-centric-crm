@@ -1,12 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Clock, Users, Save, Edit, Trash2 } from 'lucide-react';
+import { Calendar, Clock, Users, Save, Edit } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -53,26 +53,10 @@ export const StaffScheduleSection: React.FC = () => {
         .order('name');
 
       if (error) throw error;
-      return data?.map(staff => ({
+      return (data || []).map(staff => ({
         ...staff,
         role: 'staff' as const
       })) as StaffMember[];
-    },
-    enabled: !!user,
-  });
-
-  // Get salon profile for default working hours
-  const { data: salonProfile } = useQuery({
-    queryKey: ['salon-profile', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user?.id)
-        .single();
-
-      if (error) throw error;
-      return data;
     },
     enabled: !!user,
   });
@@ -137,7 +121,6 @@ export const StaffScheduleSection: React.FC = () => {
     }
 
     try {
-      // Update each selected staff member
       for (const staffId of bulkEdit.selectedStaff) {
         await updateStaffMutation.mutateAsync({
           staffId,
@@ -169,7 +152,7 @@ export const StaffScheduleSection: React.FC = () => {
     const updates: any = {};
     
     if (field === 'working_hours_start' || field === 'working_hours_end') {
-      updates[field] = value + ':00'; // Add seconds for time format
+      updates[field] = value + ':00';
     } else if (field === 'working_days') {
       updates[field] = value;
     } else {
@@ -180,20 +163,20 @@ export const StaffScheduleSection: React.FC = () => {
   };
 
   const getWorkingDaysForStaff = (staff: StaffMember): string[] => {
-    return staff.working_days || salonProfile?.working_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    return staff.working_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
   };
 
   const getWorkingHoursForStaff = (staff: StaffMember) => {
     return {
-      start: staff.working_hours_start?.slice(0, 5) || salonProfile?.opening_hours?.slice(0, 5) || '09:00',
-      end: staff.working_hours_end?.slice(0, 5) || salonProfile?.closing_hours?.slice(0, 5) || '17:00'
+      start: staff.working_hours_start?.slice(0, 5) || '09:00',
+      end: staff.working_hours_end?.slice(0, 5) || '17:00'
     };
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -320,7 +303,7 @@ export const StaffScheduleSection: React.FC = () => {
                   <div key={staff.id} className="grid grid-cols-8 gap-2 mb-3 items-center">
                     <div className="pr-2">
                       <p className="font-medium text-sm">{staff.name}</p>
-                      <p className="text-xs text-gray-500">{staff.role || 'Staff Member'}</p>
+                      <p className="text-xs text-muted-foreground">{staff.role || 'Staff Member'}</p>
                     </div>
                     {days.map(day => {
                       const isWorkingDay = workingDays.includes(day);
@@ -357,8 +340,8 @@ export const StaffScheduleSection: React.FC = () => {
                               </div>
                             </div>
                           ) : (
-                            <div className="bg-gray-50 border border-gray-200 rounded p-1">
-                              <p className="text-xs text-gray-500">Off</p>
+                            <div className="bg-muted border border-border rounded p-1">
+                              <p className="text-xs text-muted-foreground">Off</p>
                             </div>
                           )}
                         </div>

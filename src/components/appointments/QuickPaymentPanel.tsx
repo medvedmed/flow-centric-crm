@@ -10,7 +10,7 @@ import { CreditCard, DollarSign } from 'lucide-react';
 import { Appointment } from '@/services/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 
 interface AppointmentService {
@@ -47,13 +47,11 @@ export const QuickPaymentPanel: React.FC<QuickPaymentPanelProps> = ({
     mutationFn: async () => {
       if (!user?.id) throw new Error('No user');
 
-      // Update appointment payment status
+      // Update appointment status to completed
       const { error: appointmentError } = await supabase
         .from('appointments')
         .update({
-          payment_status: 'paid',
-          payment_method: paymentMethod,
-          payment_date: new Date().toISOString()
+          status: 'Completed'
         })
         .eq('id', appointment.id);
 
@@ -78,16 +76,16 @@ export const QuickPaymentPanel: React.FC<QuickPaymentPanelProps> = ({
       toast({ title: 'Success', description: 'Payment processed successfully!' });
       onPaymentComplete();
     },
-    onError: (error) => {
+    onError: () => {
       toast({ title: 'Error', description: 'Failed to process payment', variant: 'destructive' });
     },
   });
 
   return (
-    <Card className="bg-white/70 backdrop-blur-sm border-violet-200">
+    <Card className="bg-card/70 backdrop-blur-sm border-primary/20">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <CreditCard className="w-5 h-5 text-violet-600" />
+          <CreditCard className="w-5 h-5 text-primary" />
           Quick Payment
         </CardTitle>
       </CardHeader>
@@ -139,7 +137,7 @@ export const QuickPaymentPanel: React.FC<QuickPaymentPanelProps> = ({
           </div>
 
           <Button
-            className="w-full bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700"
+            className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
             onClick={() => processPaymentMutation.mutate()}
             disabled={!paymentMethod || processPaymentMutation.isPending}
           >

@@ -1,9 +1,8 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Staff, Client, Service, Appointment } from '@/services/types';
 
-// Staff hooks
 export const useStaff = () => {
   const { user } = useAuth();
   
@@ -30,11 +29,7 @@ export const useDeleteStaff = () => {
   
   return useMutation({
     mutationFn: async (staffId: string) => {
-      const { error } = await supabase
-        .from('staff')
-        .delete()
-        .eq('id', staffId);
-      
+      const { error } = await supabase.from('staff').delete().eq('id', staffId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -43,25 +38,6 @@ export const useDeleteStaff = () => {
   });
 };
 
-export const useUpdateStaff = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ id, staff }: { id: string; staff: Partial<Staff> }) => {
-      const { error } = await supabase
-        .from('staff')
-        .update(staff)
-        .eq('id', id);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['staff'] });
-    },
-  });
-};
-
-// Client hooks
 export const useClients = () => {
   const { user } = useAuth();
   
@@ -73,7 +49,7 @@ export const useClients = () => {
       const { data, error } = await supabase
         .from('clients')
         .select('*')
-        .eq('salon_id', user.id)
+        .eq('organization_id', user.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -89,17 +65,14 @@ export const useCreateClient = () => {
   
   return useMutation({
     mutationFn: async (clientData: any) => {
-      const { error } = await supabase
-        .from('clients')
-        .insert({
-          name: clientData.name,
-          email: clientData.email,
-          phone: clientData.phone || null,
-          notes: clientData.notes || null,
-          status: clientData.status || 'New',
-          salon_id: user?.id,
-        });
-      
+      const { error } = await supabase.from('clients').insert({
+        full_name: clientData.name || clientData.full_name,
+        email: clientData.email,
+        phone: clientData.phone || '',
+        notes: clientData.notes || null,
+        status: clientData.status || 'active',
+        organization_id: user?.id,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -114,13 +87,7 @@ export const useCreateStaff = () => {
   
   return useMutation({
     mutationFn: async (staffData: any) => {
-      const { error } = await supabase
-        .from('staff')
-        .insert({
-          ...staffData,
-          salon_id: user?.id,
-        });
-      
+      const { error } = await supabase.from('staff').insert({ ...staffData, salon_id: user?.id });
       if (error) throw error;
     },
     onSuccess: () => {

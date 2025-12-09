@@ -18,18 +18,18 @@ export const useClientCategorizationData = () => {
         .select(`
           staff_id,
           client_id,
-          client_name,
-          date
+          start_time,
+          clients!appointments_client_id_fkey(full_name)
         `)
-        .eq('salon_id', user?.id)
+        .eq('organization_id', user?.id)
         .eq('status', 'Completed')
-        .gte('date', thirtyDaysAgo.toISOString().split('T')[0])
-        .order('date', { ascending: false });
+        .gte('start_time', thirtyDaysAgo.toISOString())
+        .order('start_time', { ascending: false });
 
       if (error) throw error;
 
       // Get staff names
-      const staffIds = [...new Set(data.map(item => item.staff_id))];
+      const staffIds = [...new Set((data || []).map(item => item.staff_id).filter(Boolean))];
       const { data: staffData } = await supabase
         .from('staff')
         .select('id, name')
@@ -38,10 +38,12 @@ export const useClientCategorizationData = () => {
       // Categorize clients by staff
       const staffClientMap = new Map();
       
-      data.forEach(appointment => {
+      (data || []).forEach(appointment => {
         const staffId = appointment.staff_id;
         const clientId = appointment.client_id;
+        const clientName = appointment.clients?.full_name || 'Unknown';
         const staffName = staffData?.find(s => s.id === staffId)?.name || 'Unknown';
+        const appointmentDate = appointment.start_time?.split('T')[0];
         
         if (!staffClientMap.has(staffId)) {
           staffClientMap.set(staffId, {
@@ -57,9 +59,9 @@ export const useClientCategorizationData = () => {
         
         if (!staffData_item.clients.has(clientId)) {
           staffData_item.clients.set(clientId, {
-            name: appointment.client_name,
+            name: clientName,
             visits: 0,
-            first_visit: appointment.date
+            first_visit: appointmentDate
           });
         }
         
@@ -72,7 +74,7 @@ export const useClientCategorizationData = () => {
         let newClients = 0;
         let regularClients = 0;
         
-        for (const [clientId, clientData] of staffData_item.clients) {
+        for (const [, clientData] of staffData_item.clients) {
           if (clientData.visits === 1) {
             newClients++;
           } else {

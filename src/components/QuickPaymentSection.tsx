@@ -2,22 +2,20 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, Plus, DollarSign } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface Client {
   id: string;
   name: string;
-  email: string;
-  phone?: string;
+  email: string | null;
+  phone?: string | null;
   total_spent: number;
 }
 
@@ -47,19 +45,24 @@ export const QuickPaymentSection = () => {
     price: number;
     quantity?: number;
   }>>([]);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients-quick-payment'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('clients')
-        .select('id, name, email, phone, total_spent')
-        .eq('salon_id', user?.id)
-        .order('name');
+        .select('id, full_name, email, phone, total_spent')
+        .eq('organization_id', user?.id)
+        .order('full_name');
       
       if (error) throw error;
-      return data as Client[];
+      return (data || []).map(c => ({
+        id: c.id,
+        name: c.full_name,
+        email: c.email,
+        phone: c.phone,
+        total_spent: c.total_spent || 0
+      })) as Client[];
     },
     enabled: !!user,
   });
@@ -70,7 +73,7 @@ export const QuickPaymentSection = () => {
       const { data, error } = await supabase
         .from('services')
         .select('id, name, price, duration')
-        .eq('salon_id', user?.id)
+        .eq('organization_id', user?.id)
         .eq('is_active', true)
         .order('name');
       
@@ -85,14 +88,19 @@ export const QuickPaymentSection = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, selling_price, current_stock')
-        .eq('salon_id', user?.id)
+        .select('id, name, price, stock_quantity')
+        .eq('organization_id', user?.id)
         .eq('is_active', true)
-        .gt('current_stock', 0)
+        .gt('stock_quantity', 0)
         .order('name');
       
       if (error) throw error;
-      return data as Product[];
+      return (data || []).map(p => ({
+        id: p.id,
+        name: p.name,
+        selling_price: p.price,
+        current_stock: p.stock_quantity || 0
+      })) as Product[];
     },
     enabled: !!user,
   });
@@ -152,9 +160,8 @@ export const QuickPaymentSection = () => {
       toast({ title: "Success", description: "Payment processed successfully!" });
       setPaymentItems([]);
       setSelectedClient(null);
-      setIsPaymentDialogOpen(false);
     },
-    onError: (error) => {
+    onError: () => {
       toast({ title: "Error", description: "Failed to process payment", variant: "destructive" });
     },
   });
@@ -266,7 +273,7 @@ export const QuickPaymentSection = () => {
               <div className="space-y-2">
                 <Label>Items to charge:</Label>
                 {paymentItems.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <div key={index} className="flex justify-between items-center p-2 bg-muted rounded">
                     <span>
                       {item.name} {item.quantity && item.quantity > 1 && `x${item.quantity}`}
                     </span>

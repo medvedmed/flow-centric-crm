@@ -37,21 +37,31 @@ export const useDashboardStats = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const today = new Date().toISOString().split('T')[0];
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const currentMonth = new Date().toISOString().slice(0, 7);
-      const lastMonth = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 7);
+      const today = new Date();
+      const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+      const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
+      
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const startOfYesterday = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate()).toISOString();
+      const endOfYesterday = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59).toISOString();
+      
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
+      const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString();
+      const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0, 23, 59, 59).toISOString();
 
       try {
-        // Get today's appointments with staff names - use explicit foreign key syntax to avoid ambiguity
+        // Get today's appointments with related data
         const { data: todayAppts, count: todayCount, error: todayError } = await supabase
           .from('appointments')
           .select(`
             *,
-            staff!appointments_staff_id_fkey(name)
+            clients!appointments_client_id_fkey(full_name, phone),
+            services!appointments_service_id_fkey(name, price),
+            profiles!appointments_staff_id_fkey(full_name)
           `, { count: 'exact' })
-          .eq('salon_id', user.id)
-          .eq('date', today)
+          .eq('organization_id', user.id)
+          .gte('start_time', startOfToday)
+          .lte('start_time', endOfToday)
           .order('start_time');
 
         if (todayError) {
@@ -60,25 +70,26 @@ export const useDashboardStats = () => {
         }
 
         // Get upcoming appointments for next 4 slots
-        const currentTime = new Date().toTimeString().slice(0, 5);
+        const currentTime = new Date().toISOString();
         const upcomingAppointments = (todayAppts || [])
           .filter(apt => apt.start_time >= currentTime)
           .slice(0, 4)
           .map(apt => ({
             id: apt.id,
-            time: apt.start_time,
-            client: apt.client_name,
-            staff: apt.staff?.name || 'Unknown',
-            service: apt.service,
-            phone: apt.client_phone
+            time: apt.start_time?.split('T')[1]?.slice(0, 5) || '',
+            client: apt.clients?.full_name || 'Unknown',
+            staff: apt.profiles?.full_name || 'Unknown',
+            service: apt.services?.name || 'Service',
+            phone: apt.clients?.phone
           }));
 
         // Get yesterday's appointments for growth calculation
         const { count: yesterdayCount, error: yesterdayError } = await supabase
           .from('appointments')
           .select('*', { count: 'exact' })
-          .eq('salon_id', user.id)
-          .eq('date', yesterday);
+          .eq('organization_id', user.id)
+          .gte('start_time', startOfYesterday)
+          .lte('start_time', endOfYesterday);
 
         if (yesterdayError) {
           console.error('Error fetching yesterday appointments:', yesterdayError);
@@ -88,7 +99,7 @@ export const useDashboardStats = () => {
         const { count: totalClientsCount, error: clientsError } = await supabase
           .from('clients')
           .select('*', { count: 'exact' })
-          .eq('salon_id', user.id);
+          .eq('organization_id', user.id);
 
         if (clientsError) {
           console.error('Error fetching clients:', clientsError);
@@ -98,8 +109,8 @@ export const useDashboardStats = () => {
         const { count: lastMonthClientsCount, error: lastMonthClientsError } = await supabase
           .from('clients')
           .select('*', { count: 'exact' })
-          .eq('salon_id', user.id)
-          .lt('created_at', new Date().toISOString().slice(0, 8) + '01');
+          .eq('organization_id', user.id)
+          .lt('created_at', startOfMonth);
 
         if (lastMonthClientsError) {
           console.error('Error fetching last month clients:', lastMonthClientsError);
@@ -108,9 +119,11 @@ export const useDashboardStats = () => {
         // Get current month revenue from completed appointments
         const { data: currentMonthAppts, error: currentMonthError } = await supabase
           .from('appointments')
-          .select('price')
-          .eq('salon_id', user.id)
-          .gte('date', currentMonth + '-01')
+          .select(`
+            services!appointments_service_id_fkey(price)
+          `)
+          .eq('organization_id', user.id)
+          .gte('start_time', startOfMonth)
           .eq('status', 'Completed');
 
         if (currentMonthError) {
@@ -120,10 +133,12 @@ export const useDashboardStats = () => {
         // Get last month revenue for growth calculation
         const { data: lastMonthAppts, error: lastMonthError } = await supabase
           .from('appointments')
-          .select('price')
-          .eq('salon_id', user.id)
-          .gte('date', lastMonth + '-01')
-          .lt('date', currentMonth + '-01')
+          .select(`
+            services!appointments_service_id_fkey(price)
+          `)
+          .eq('organization_id', user.id)
+          .gte('start_time', startOfLastMonth)
+          .lt('start_time', startOfMonth)
           .eq('status', 'Completed');
 
         if (lastMonthError) {
@@ -134,8 +149,9 @@ export const useDashboardStats = () => {
         const { count: checkInsCount, error: checkInsError } = await supabase
           .from('appointments')
           .select('*', { count: 'exact' })
-          .eq('salon_id', user.id)
-          .eq('date', today)
+          .eq('organization_id', user.id)
+          .gte('start_time', startOfToday)
+          .lte('start_time', endOfToday)
           .in('status', ['Confirmed', 'In Progress', 'Completed']);
 
         if (checkInsError) {
@@ -145,8 +161,9 @@ export const useDashboardStats = () => {
         const { count: noShowsCount, error: noShowsError } = await supabase
           .from('appointments')
           .select('*', { count: 'exact' })
-          .eq('salon_id', user.id)
-          .eq('date', today)
+          .eq('organization_id', user.id)
+          .gte('start_time', startOfToday)
+          .lte('start_time', endOfToday)
           .eq('status', 'No Show');
 
         if (noShowsError) {
@@ -154,21 +171,21 @@ export const useDashboardStats = () => {
         }
 
         // Calculate growth percentages
-        const currentMonthRevenue = currentMonthAppts?.reduce((sum, apt) => sum + (Number(apt.price) || 0), 0) || 0;
-        const lastMonthRevenue = lastMonthAppts?.reduce((sum, apt) => sum + (Number(apt.price) || 0), 0) || 0;
+        const currentMonthRevenue = (currentMonthAppts || []).reduce((sum, apt) => sum + (Number(apt.services?.price) || 0), 0);
+        const lastMonthRevenue = (lastMonthAppts || []).reduce((sum, apt) => sum + (Number(apt.services?.price) || 0), 0);
 
         const appointmentGrowth = yesterdayCount ? ((todayCount || 0) - yesterdayCount) / yesterdayCount * 100 : 0;
         const clientGrowth = lastMonthClientsCount ? ((totalClientsCount || 0) - lastMonthClientsCount) / lastMonthClientsCount * 100 : 0;
         const revenueGrowth = lastMonthRevenue ? (currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue * 100 : 0;
 
         // Real waiting list based on appointments with status 'waiting' or similar
-        const waitingList = todayAppts
-          ?.filter(apt => apt.status === 'waiting' || apt.status === 'checked-in')
-          ?.map(apt => ({
-            name: apt.client_name,
-            service: apt.service,
-            waitTime: 'Waiting' // You can calculate actual wait time based on appointment time vs current time
-          })) || [];
+        const waitingList = (todayAppts || [])
+          .filter(apt => apt.status === 'waiting' || apt.status === 'checked-in')
+          .map(apt => ({
+            name: apt.clients?.full_name || 'Unknown',
+            service: apt.services?.name || 'Service',
+            waitTime: 'Waiting'
+          }));
 
         return {
           todayAppointments: todayCount || 0,
@@ -188,8 +205,8 @@ export const useDashboardStats = () => {
         throw error;
       }
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: 2 * 60 * 1000, // Refetch every 2 minutes for real-time updates
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 2 * 60 * 1000,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });

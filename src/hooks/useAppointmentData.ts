@@ -4,19 +4,15 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Staff, Appointment } from '@/services/types';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
 
 export const useAppointmentData = (date: string) => {
   const { toast } = useToast();
 
-  // Fetch staff data with better error handling
   const { data: staff = [], isLoading: staffLoading, error: staffError } = useQuery({
     queryKey: ['staff'],
     queryFn: async (): Promise<Staff[]> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
-
-      console.log('Fetching staff data for salon:', user.id);
 
       const { data, error } = await supabase
         .from('staff')
@@ -25,14 +21,9 @@ export const useAppointmentData = (date: string) => {
         .eq('status', 'active')
         .order('name');
       
-      if (error) {
-        console.error('Staff fetch error:', error);
-        throw error;
-      }
+      if (error) throw error;
       
-      console.log('Staff query returned:', data?.length || 0, 'records');
-      
-      const mappedStaff = data?.map(staff => ({
+      return (data || []).map(staff => ({
         id: staff.id,
         name: staff.name,
         email: staff.email,
@@ -57,87 +48,66 @@ export const useAppointmentData = (date: string) => {
         staffLoginPassword: staff.staff_login_password,
         createdAt: staff.created_at,
         updatedAt: staff.updated_at
-      })) || [];
-
-      console.log('Processed staff data:', mappedStaff.length, 'staff members');
-      return mappedStaff;
+      }));
     },
     staleTime: 30 * 1000,
     retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
-  // Fetch appointments with proper payment field mapping
   const { data: appointments = [], isLoading: appointmentsLoading, error: appointmentsError } = useQuery({
     queryKey: ['appointments', date],
     queryFn: async (): Promise<Appointment[]> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      console.log('Fetching appointments for date:', date, 'salon:', user.id);
+      const startOfDay = `${date}T00:00:00`;
+      const endOfDay = `${date}T23:59:59`;
 
       const { data, error } = await supabase
         .from('appointments')
-        .select('*')
-        .eq('salon_id', user.id)
-        .eq('date', date)
+        .select(`
+          *,
+          clients!appointments_client_id_fkey(full_name, phone),
+          services!appointments_service_id_fkey(name, price)
+        `)
+        .eq('organization_id', user.id)
+        .gte('start_time', startOfDay)
+        .lte('start_time', endOfDay)
         .order('start_time');
       
-      if (error) {
-        console.error('Appointments fetch error:', error);
-        throw error;
-      }
+      if (error) throw error;
       
-      console.log('Appointments for date', date, ':', data?.length || 0, 'found');
-      
-      const mappedAppointments = data?.map(appointment => ({
-        id: appointment.id,
-        clientId: appointment.client_id,
-        staffId: appointment.staff_id,
-        clientName: appointment.client_name,
-        clientPhone: appointment.client_phone,
-        service: appointment.service,
-        startTime: appointment.start_time,
-        endTime: appointment.end_time,
-        date: appointment.date,
-        price: appointment.price,
-        duration: appointment.duration || 60,
-        status: appointment.status as Appointment['status'],
-        notes: appointment.notes,
-        salonId: appointment.salon_id,
-        paymentStatus: (appointment.payment_status || 'unpaid') as 'paid' | 'unpaid' | 'partial',
-        paymentMethod: appointment.payment_method,
-        paymentDate: appointment.payment_date,
-        createdAt: appointment.created_at,
-        updatedAt: appointment.updated_at
-      })) || [];
-
-      console.log('Final processed appointments:', mappedAppointments.length);
-      return mappedAppointments;
+      return (data || []).map(apt => ({
+        id: apt.id,
+        clientId: apt.client_id,
+        staffId: apt.staff_id,
+        clientName: apt.clients?.full_name || 'Unknown',
+        clientPhone: apt.clients?.phone,
+        service: apt.services?.name || 'Service',
+        startTime: apt.start_time?.split('T')[1]?.slice(0, 5) || '',
+        endTime: apt.end_time?.split('T')[1]?.slice(0, 5) || '',
+        date: apt.start_time?.split('T')[0] || date,
+        price: apt.services?.price || 0,
+        duration: apt.duration || 60,
+        status: apt.status as Appointment['status'],
+        notes: apt.notes,
+        salonId: apt.organization_id,
+        paymentStatus: 'unpaid' as const,
+        createdAt: apt.created_at,
+        updatedAt: apt.updated_at
+      }));
     },
     staleTime: 15 * 1000,
     refetchInterval: 30 * 1000,
     retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
-  // Enhanced error handling with user feedback
   useEffect(() => {
     if (staffError) {
-      console.error('Staff loading error:', staffError);
-      toast({
-        title: "Staff Data Error",
-        description: `Failed to load staff: ${staffError.message}`,
-        variant: "destructive",
-      });
+      toast({ title: "Staff Data Error", description: `Failed to load staff`, variant: "destructive" });
     }
     if (appointmentsError) {
-      console.error('Appointments loading error:', appointmentsError);
-      toast({
-        title: "Appointments Data Error", 
-        description: `Failed to load appointments: ${appointmentsError.message}`,
-        variant: "destructive",
-      });
+      toast({ title: "Appointments Data Error", description: `Failed to load appointments`, variant: "destructive" });
     }
   }, [staffError, appointmentsError, toast]);
 
@@ -148,7 +118,5 @@ export const useAppointmentData = (date: string) => {
     staffLoading,
     appointmentsLoading,
     error: staffError || appointmentsError,
-    staffError,
-    appointmentsError,
   };
 };

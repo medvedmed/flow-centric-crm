@@ -130,7 +130,7 @@ export const receiptApi = {
     const { data: salon, error: salonError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', appointment.salon_id)
+      .eq('id', appointment.organization_id)
       .single();
 
     if (salonError) throw salonError;

@@ -2071,6 +2071,13 @@ export type Database = {
           settings_count: number
         }[]
       }
+      ensure_organization_for_user: {
+        Args: never
+        Returns: {
+          organization_id: string
+          organization_name: string
+        }[]
+      }
       generate_client_id: { Args: never; Returns: string }
       generate_client_password: { Args: never; Returns: string }
       generate_staff_code: { Args: never; Returns: string }
@@ -2102,6 +2109,7 @@ export type Database = {
           whatsapp_url: string
         }[]
       }
+      get_auth_org_id: { Args: never; Returns: string }
       get_client_category:
         | {
             Args: { visit_count: number }

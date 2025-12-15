@@ -67,7 +67,7 @@ export const retentionApi = {
       .from('client_retention_analytics')
       .select(`
         *,
-        clients!inner(name, email, phone)
+        clients!inner(full_name, email, phone)
       `)
       .eq('salon_id', user.id)
       .order('last_visit_date', { ascending: false });
@@ -169,17 +169,15 @@ export const retentionApi = {
       .from('appointments')
       .select(`
         id,
-        date,
         start_time,
-        service,
-        price,
         status,
-        staff!inner(name)
+        services:service_id(name, price),
+        profiles:staff_id(full_name)
       `)
-      .eq('salon_id', user.id)
+      .eq('organization_id', user.id)
       .eq('client_id', clientId)
       .eq('status', 'Completed')
-      .order('date', { ascending: false });
+      .order('start_time', { ascending: false });
 
     if (error) throw error;
     return data || [];
@@ -194,7 +192,7 @@ export const retentionApi = {
       .from('client_retention_analytics')
       .select(`
         *,
-        clients!inner(name, email, phone)
+        clients!inner(full_name, email, phone)
       `)
       .eq('salon_id', user.id)
       .gt('days_since_last_visit', daysSinceLastVisit)

@@ -2168,10 +2168,13 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_user_role: {
-        Args: { salon_id: string; user_id: string }
-        Returns: Database["public"]["Enums"]["app_role"]
-      }
+      get_user_org_id: { Args: { user_id: string }; Returns: string }
+      get_user_role:
+        | { Args: { user_id: string }; Returns: string }
+        | {
+            Args: { salon_id: string; user_id: string }
+            Returns: Database["public"]["Enums"]["app_role"]
+          }
       get_whatsapp_session: {
         Args: never
         Returns: {
@@ -2225,6 +2228,10 @@ export type Database = {
       update_reminder_status: {
         Args: { new_status: string; reminder_id: string }
         Returns: undefined
+      }
+      user_has_role: {
+        Args: { allowed_roles: string[]; user_id: string }
+        Returns: boolean
       }
       verify_password: {
         Args: { hashed_password: string; password: string }

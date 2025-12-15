@@ -114,17 +114,17 @@ export const retentionApi = {
 
     if (startDate || endDate) {
       // Join with appointments to filter by date
-      const appointmentsQuery = supabase
+      let appointmentsQuery = supabase
         .from('appointments')
         .select('client_id')
-        .eq('salon_id', user.id)
+        .eq('organization_id', user.id)
         .eq('status', 'Completed');
 
-      if (startDate) appointmentsQuery.gte('date', startDate);
-      if (endDate) appointmentsQuery.lte('date', endDate);
+      if (startDate) appointmentsQuery = appointmentsQuery.gte('start_time', startDate);
+      if (endDate) appointmentsQuery = appointmentsQuery.lte('start_time', endDate);
 
       const { data: appointmentClients } = await appointmentsQuery;
-      const clientIds = appointmentClients?.map(a => a.client_id) || [];
+      const clientIds = (appointmentClients || []).map((a: any) => a.client_id).filter(Boolean);
       
       if (clientIds.length > 0) {
         query = query.in('client_id', clientIds);
@@ -143,12 +143,12 @@ export const retentionApi = {
     const { data, error } = await query;
     if (error) throw error;
 
-    const clients = data || [];
+    const clients = (data || []) as any[];
     const totalClients = clients.length;
-    const newClients = clients.filter(c => c.client_category === 'New').length;
-    const returningClients = clients.filter(c => c.client_category === 'Returning').length;
-    const loyalClients = clients.filter(c => c.client_category === 'Loyal').length;
-    const totalVisits = clients.reduce((sum, c) => sum + c.total_visits, 0);
+    const newClients = clients.filter((c: any) => c.client_category === 'New').length;
+    const returningClients = clients.filter((c: any) => c.client_category === 'Returning').length;
+    const loyalClients = clients.filter((c: any) => c.client_category === 'Loyal').length;
+    const totalVisits = clients.reduce((sum: number, c: any) => sum + (c.total_visits || 0), 0);
 
     return {
       totalClients,

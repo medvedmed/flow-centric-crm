@@ -150,9 +150,8 @@ const DragDropCalendar = ({ onAppointmentClick, onTimeSlotClick }) => {
       const { error } = await supabase
         .from("appointments")
         .update({
-          date: moment(start).format("YYYY-MM-DD"),
-          start_time: moment(start).format("HH:mm:ss"),
-          end_time: moment(end).format("HH:mm:ss"),
+          start_time: moment(start).toISOString(),
+          end_time: moment(end).toISOString(),
           staff_id: resourceId,
           updated_at: new Date().toISOString(),
         })

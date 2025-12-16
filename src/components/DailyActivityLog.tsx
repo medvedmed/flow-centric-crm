@@ -21,19 +21,24 @@ export const DailyActivityLog: React.FC<DailyActivityLogProps> = ({ selectedDate
     queryFn: async () => {
       if (!user?.id) return [];
 
+      // Get user's org_id from profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      const orgId = profile?.organization_id || user.id;
+
       const dateStr = selectedDate.toISOString().split('T')[0];
       const startOfDay = `${dateStr}T00:00:00`;
       const endOfDay = `${dateStr}T23:59:59`;
       
-      // Get appointments for the day - using start_time which contains the full timestamp
+      // Get appointments for the day
       const { data: appointments, error: appointmentsError } = await supabase
         .from('appointments')
-        .select(`
-          *,
-          clients:client_id(full_name, phone),
-          services:service_id(name, price)
-        `)
-        .eq('organization_id', user.id)
+        .select('*')
+        .eq('organization_id', orgId)
         .gte('start_time', startOfDay)
         .lte('start_time', endOfDay)
         .order('updated_at', { ascending: false });
@@ -42,11 +47,23 @@ export const DailyActivityLog: React.FC<DailyActivityLogProps> = ({ selectedDate
         console.error('Appointments fetch error:', appointmentsError);
       }
 
+      // Get related client and service data
+      const clientIds = [...new Set((appointments || []).map(a => a.client_id).filter(Boolean))];
+      const serviceIds = [...new Set((appointments || []).map(a => a.service_id).filter(Boolean))];
+
+      const [clientsRes, servicesRes] = await Promise.all([
+        clientIds.length > 0 ? supabase.from('clients').select('id, full_name, phone').in('id', clientIds) : { data: [] },
+        serviceIds.length > 0 ? supabase.from('services').select('id, name, price').in('id', serviceIds) : { data: [] }
+      ]);
+
+      const clientsMap = new Map((clientsRes.data || []).map(c => [c.id, c]));
+      const servicesMap = new Map((servicesRes.data || []).map(s => [s.id, s]));
+
       // Get financial transactions for the day
       const { data: transactions, error: transactionsError } = await supabase
         .from('financial_transactions')
         .select('*')
-        .eq('salon_id', user.id)
+        .eq('salon_id', orgId)
         .eq('transaction_date', dateStr)
         .order('created_at', { ascending: false });
 
@@ -58,7 +75,7 @@ export const DailyActivityLog: React.FC<DailyActivityLogProps> = ({ selectedDate
       const { data: auditLogs, error: auditError } = await supabase
         .from('audit_logs')
         .select('*')
-        .eq('salon_id', user.id)
+        .eq('salon_id', orgId)
         .gte('created_at', startOfDay)
         .lt('created_at', endOfDay)
         .order('created_at', { ascending: false });
@@ -72,9 +89,11 @@ export const DailyActivityLog: React.FC<DailyActivityLogProps> = ({ selectedDate
 
       // Add appointment activities
       (appointments || []).forEach(appointment => {
-        const clientName = appointment.clients?.full_name || 'Unknown Client';
-        const serviceName = appointment.services?.name || 'Service';
-        const servicePrice = appointment.services?.price || 0;
+        const client = appointment.client_id ? clientsMap.get(appointment.client_id) : null;
+        const service = appointment.service_id ? servicesMap.get(appointment.service_id) : null;
+        const clientName = client?.full_name || 'Unknown Client';
+        const serviceName = service?.name || 'Service';
+        const servicePrice = service?.price || 0;
 
         allActivities.push({
           id: `apt-${appointment.id}`,

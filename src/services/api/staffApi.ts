@@ -1,21 +1,17 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Staff } from '../types';
+import { getUserOrgId } from './helpers';
 
 export const staffApi = {
   async getStaff(status?: string): Promise<Staff[]> {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      console.error('Authentication error in getStaff:', userError);
-      throw new Error('Authentication required. Please log in again.');
-    }
+    const orgId = await getUserOrgId();
 
-    console.log('Getting staff for salon:', user.id);
+    console.log('Getting staff for salon:', orgId);
 
     let query = supabase
       .from('staff')
       .select('*')
-      .eq('salon_id', user.id);
+      .eq('salon_id', orgId);
 
     if (status && status !== 'all') {
       query = query.eq('status', status);
@@ -62,20 +58,9 @@ export const staffApi = {
   },
 
   async createStaff(staff: Staff): Promise<Staff> {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      console.error('Authentication error in createStaff:', userError);
-      throw new Error('Authentication required. Please log in again.');
-    }
+    const orgId = await getUserOrgId();
 
-    // Validate that we have a valid salon_id
-    if (!staff.salonId || staff.salonId !== user.id) {
-      console.error('Invalid salon_id:', { staffSalonId: staff.salonId, userId: user.id });
-      throw new Error('Invalid salon association. Please refresh and try again.');
-    }
-
-    console.log('Creating staff for authenticated user:', user.id);
+    console.log('Creating staff for organization:', orgId);
 
     // Helper function to format time properly
     const formatTime = (timeString?: string) => {
@@ -105,7 +90,7 @@ export const staffApi = {
       status: staff.status || 'active',
       notes: staff.notes || null,
       hire_date: staff.hireDate || new Date().toISOString().split('T')[0],
-      salon_id: user.id // Ensure we use the authenticated user's ID
+      salon_id: orgId // Use the organization ID
     };
 
     console.log('Creating staff with data:', {
@@ -252,14 +237,13 @@ export const staffApi = {
   },
 
   async generateMissingCredentials(): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+    const orgId = await getUserOrgId();
 
     // Get staff without credentials
     const { data: staffWithoutCredentials, error } = await supabase
       .from('staff')
       .select('id')
-      .eq('salon_id', user.id)
+      .eq('salon_id', orgId)
       .or('staff_login_id.is.null,staff_login_password.is.null');
 
     if (error) throw error;

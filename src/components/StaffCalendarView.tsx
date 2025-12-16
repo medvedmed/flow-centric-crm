@@ -58,35 +58,56 @@ const StaffCalendarView: React.FC<StaffCalendarViewProps> = ({ staff, events, on
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Get user's org_id from profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      const orgId = profile?.organization_id || user.id;
       const startOfDay = `${selectedDate}T00:00:00`;
       const endOfDay = `${selectedDate}T23:59:59`;
 
-      const { data, error } = await supabase
+      // Get appointments
+      const { data: aptsData, error } = await supabase
         .from('appointments')
-        .select(`
-          *,
-          clients!appointments_client_id_fkey(full_name),
-          services!appointments_service_id_fkey(name, price)
-        `)
-        .eq('organization_id', user.id)
+        .select('*')
+        .eq('organization_id', orgId)
         .gte('start_time', startOfDay)
         .lte('start_time', endOfDay)
         .order('start_time');
       
       if (error) throw error;
       
-      return (data || []).map(apt => ({
-        id: apt.id,
-        staffId: apt.staff_id,
-        title: `${apt.services?.name || 'Service'} - ${apt.clients?.full_name || 'Client'}`,
-        start: apt.start_time,
-        end: apt.end_time,
-        type: 'appointment' as const,
-        clientName: apt.clients?.full_name || 'Unknown Client',
-        service: apt.services?.name || 'Service',
-        status: apt.status,
-        price: apt.services?.price
-      }));
+      // Get related data
+      const clientIds = [...new Set((aptsData || []).map(a => a.client_id).filter(Boolean))];
+      const serviceIds = [...new Set((aptsData || []).map(a => a.service_id).filter(Boolean))];
+
+      const [clientsRes, servicesRes] = await Promise.all([
+        clientIds.length > 0 ? supabase.from('clients').select('id, full_name').in('id', clientIds) : { data: [] },
+        serviceIds.length > 0 ? supabase.from('services').select('id, name, price').in('id', serviceIds) : { data: [] }
+      ]);
+
+      const clientsMap = new Map((clientsRes.data || []).map(c => [c.id, c]));
+      const servicesMap = new Map((servicesRes.data || []).map(s => [s.id, s]));
+      
+      return (aptsData || []).map(apt => {
+        const client = apt.client_id ? clientsMap.get(apt.client_id) : null;
+        const service = apt.service_id ? servicesMap.get(apt.service_id) : null;
+        return {
+          id: apt.id,
+          staffId: apt.staff_id,
+          title: `${service?.name || 'Service'} - ${client?.full_name || 'Client'}`,
+          start: apt.start_time,
+          end: apt.end_time,
+          type: 'appointment' as const,
+          clientName: client?.full_name || 'Unknown Client',
+          service: service?.name || 'Service',
+          status: apt.status,
+          price: service?.price
+        };
+      });
     },
     enabled: !!selectedDate,
     staleTime: 1 * 60 * 1000,

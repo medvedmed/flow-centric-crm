@@ -1,10 +1,10 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Client } from '@/services/types';
+import { getUserOrgId } from '../helpers';
 
 export const createClient = async (client: Client): Promise<Client> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
+  const orgId = await getUserOrgId();
 
   const { data, error } = await supabase
     .from('clients')
@@ -14,7 +14,7 @@ export const createClient = async (client: Client): Promise<Client> => {
       phone: client.phone || '',
       status: client.status || 'active',
       notes: client.notes,
-      organization_id: user.id,
+      organization_id: orgId,
     })
     .select()
     .single();

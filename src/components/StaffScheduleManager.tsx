@@ -67,30 +67,51 @@ const StaffScheduleManager = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Get user's org_id from profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      const orgId = profile?.organization_id || user.id;
       const today = new Date().toISOString();
-      const { data, error } = await supabase
+      
+      const { data: aptsData, error } = await supabase
         .from('appointments')
-        .select(`
-          *,
-          clients!appointments_client_id_fkey(full_name),
-          services!appointments_service_id_fkey(name)
-        `)
-        .eq('organization_id', user.id)
+        .select('*')
+        .eq('organization_id', orgId)
         .gte('start_time', today)
         .order('start_time');
       
       if (error) throw error;
       
-      return (data || []).map(apt => ({
-        id: apt.id,
-        staffId: apt.staff_id,
-        title: `${apt.services?.name || 'Service'} - ${apt.clients?.full_name || 'Client'}`,
-        start: apt.start_time,
-        end: apt.end_time,
-        type: 'appointment' as const,
-        clientName: apt.clients?.full_name || 'Unknown',
-        service: apt.services?.name || 'Service'
-      }));
+      // Get related data
+      const clientIds = [...new Set((aptsData || []).map(a => a.client_id).filter(Boolean))];
+      const serviceIds = [...new Set((aptsData || []).map(a => a.service_id).filter(Boolean))];
+
+      const [clientsRes, servicesRes] = await Promise.all([
+        clientIds.length > 0 ? supabase.from('clients').select('id, full_name').in('id', clientIds) : { data: [] },
+        serviceIds.length > 0 ? supabase.from('services').select('id, name').in('id', serviceIds) : { data: [] }
+      ]);
+
+      const clientsMap = new Map((clientsRes.data || []).map(c => [c.id, c]));
+      const servicesMap = new Map((servicesRes.data || []).map(s => [s.id, s]));
+      
+      return (aptsData || []).map(apt => {
+        const client = apt.client_id ? clientsMap.get(apt.client_id) : null;
+        const service = apt.service_id ? servicesMap.get(apt.service_id) : null;
+        return {
+          id: apt.id,
+          staffId: apt.staff_id,
+          title: `${service?.name || 'Service'} - ${client?.full_name || 'Client'}`,
+          start: apt.start_time,
+          end: apt.end_time,
+          type: 'appointment' as const,
+          clientName: client?.full_name || 'Unknown',
+          service: service?.name || 'Service'
+        };
+      });
     },
     staleTime: 2 * 60 * 1000,
   });

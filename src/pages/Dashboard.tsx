@@ -28,6 +28,16 @@ const Dashboard = () => {
     queryKey: ['dashboard-stats', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
+
+      // Get user's org_id from profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      const orgId = profile?.organization_id || user.id;
+
       const today = new Date();
       const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
       const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
@@ -36,8 +46,8 @@ const Dashboard = () => {
       // Get today's appointments
       const { data: todayAppointments } = await supabase
         .from('appointments')
-        .select('*, services!appointments_service_id_fkey(name, price)')
-        .eq('organization_id', user.id)
+        .select('*')
+        .eq('organization_id', orgId)
         .gte('start_time', startOfToday)
         .lte('start_time', endOfToday);
 
@@ -45,30 +55,40 @@ const Dashboard = () => {
       const { data: clients } = await supabase
         .from('clients')
         .select('id')
-        .eq('organization_id', user.id);
+        .eq('organization_id', orgId);
 
       // Get monthly revenue
       const { data: monthlyTransactions } = await supabase
         .from('financial_transactions')
         .select('amount')
-        .eq('salon_id', user.id)
+        .eq('salon_id', orgId)
         .eq('transaction_type', 'income')
         .gte('transaction_date', monthStart.split('T')[0]);
 
       // Get upcoming appointments for today
       const { data: upcomingAppointments } = await supabase
         .from('appointments')
-        .select(`
-          id, start_time,
-          clients!appointments_client_id_fkey(full_name),
-          services!appointments_service_id_fkey(name),
-          profiles!appointments_staff_id_fkey(full_name)
-        `)
-        .eq('organization_id', user.id)
+        .select('id, start_time, client_id, service_id, staff_id')
+        .eq('organization_id', orgId)
         .gte('start_time', startOfToday)
         .lte('start_time', endOfToday)
         .eq('status', 'pending')
         .order('start_time');
+
+      // Get related data for upcoming appointments
+      const clientIds = [...new Set((upcomingAppointments || []).map(a => a.client_id).filter(Boolean))];
+      const serviceIds = [...new Set((upcomingAppointments || []).map(a => a.service_id).filter(Boolean))];
+      const staffIds = [...new Set((upcomingAppointments || []).map(a => a.staff_id).filter(Boolean))];
+
+      const [clientsRes, servicesRes, staffRes] = await Promise.all([
+        clientIds.length > 0 ? supabase.from('clients').select('id, full_name').in('id', clientIds) : { data: [] },
+        serviceIds.length > 0 ? supabase.from('services').select('id, name').in('id', serviceIds) : { data: [] },
+        staffIds.length > 0 ? supabase.from('staff').select('id, name').in('id', staffIds) : { data: [] }
+      ]);
+
+      const clientsMap = new Map((clientsRes.data || []).map(c => [c.id, c]));
+      const servicesMap = new Map((servicesRes.data || []).map(s => [s.id, s]));
+      const staffMap = new Map((staffRes.data || []).map(s => [s.id, s]));
 
       const monthlyRevenue = monthlyTransactions?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
       const completedToday = todayAppointments?.filter(a => a.status === 'Completed').length || 0;
@@ -78,12 +98,17 @@ const Dashboard = () => {
         totalClients: clients?.length || 0,
         monthlyRevenue,
         checkIns: completedToday,
-        upcomingAppointments: (upcomingAppointments || []).map(apt => ({
-          client: apt.clients?.full_name || 'Unknown',
-          service: apt.services?.name || 'Service',
-          time: apt.start_time?.split('T')[1]?.slice(0, 5) || '',
-          staff: apt.profiles?.full_name || 'Unassigned'
-        }))
+        upcomingAppointments: (upcomingAppointments || []).map(apt => {
+          const client = apt.client_id ? clientsMap.get(apt.client_id) : null;
+          const service = apt.service_id ? servicesMap.get(apt.service_id) : null;
+          const staffMember = apt.staff_id ? staffMap.get(apt.staff_id) : null;
+          return {
+            client: client?.full_name || 'Unknown',
+            service: service?.name || 'Service',
+            time: apt.start_time?.split('T')[1]?.slice(0, 5) || '',
+            staff: staffMember?.name || 'Unassigned'
+          };
+        })
       };
     },
     enabled: !!user?.id,

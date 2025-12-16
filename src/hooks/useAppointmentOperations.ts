@@ -226,18 +226,20 @@ export const useAppointmentOperations = () => {
           updated_at: new Date().toISOString()
         })
         .eq('id', appointmentId)
-        .select(`
-          *,
-          clients(full_name),
-          services(name)
-        `)
+        .select('*')
         .single();
 
       if (appointmentError) throw appointmentError;
 
+      // Get client and service names
+      const [clientRes, serviceRes] = await Promise.all([
+        appointment.client_id ? supabase.from('clients').select('full_name').eq('id', appointment.client_id).maybeSingle() : { data: null },
+        appointment.service_id ? supabase.from('services').select('name').eq('id', appointment.service_id).maybeSingle() : { data: null }
+      ]);
+
       if (paymentStatus === 'paid' && amount) {
-        const serviceName = appointment.services?.name || 'Service';
-        const clientName = appointment.clients?.full_name || 'Client';
+        const serviceName = serviceRes.data?.name || 'Service';
+        const clientName = clientRes.data?.full_name || 'Client';
         
         const { error: transactionError } = await supabase
           .from('financial_transactions')

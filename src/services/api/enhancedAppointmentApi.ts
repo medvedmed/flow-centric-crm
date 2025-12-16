@@ -111,32 +111,34 @@ export const enhancedAppointmentApi = {
   async getAppointmentWithServices(appointmentId: string): Promise<EnhancedAppointment | null> {
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
-      .select(`
-        *,
-        clients(full_name, phone),
-        services:service_id(name, price)
-      `)
+      .select('*')
       .eq('id', appointmentId)
       .single();
 
     if (appointmentError) throw appointmentError;
     if (!appointment) return null;
 
+    // Get related data
+    const [clientRes, serviceRes] = await Promise.all([
+      appointment.client_id ? supabase.from('clients').select('full_name, phone').eq('id', appointment.client_id).maybeSingle() : { data: null },
+      appointment.service_id ? supabase.from('services').select('name, price').eq('id', appointment.service_id).maybeSingle() : { data: null }
+    ]);
+
     const appointmentServices = await this.getAppointmentServices(appointmentId);
 
     return {
       id: appointment.id,
       client_id: appointment.client_id,
-      client_name: appointment.clients?.full_name || '',
-      client_phone: appointment.clients?.phone || '',
+      client_name: clientRes.data?.full_name || '',
+      client_phone: clientRes.data?.phone || '',
       date: appointment.start_time?.split('T')[0] || '',
       start_time: appointment.start_time,
       end_time: appointment.end_time,
-      service: (appointment.services as any)?.name || '',
+      service: serviceRes.data?.name || '',
       service_id: appointment.service_id,
       staff_id: appointment.staff_id,
       status: appointment.status,
-      price: (appointment.services as any)?.price || 0,
+      price: serviceRes.data?.price || 0,
       duration: appointment.duration,
       notes: appointment.notes,
       organization_id: appointment.organization_id,

@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Client, PaginatedResult } from '@/services/types';
 import { transformDatabaseClient, DatabaseClient } from './types';
+import { getUserOrgId } from '../helpers';
 
 export const getClients = async (
   searchTerm?: string, 
@@ -9,15 +10,14 @@ export const getClients = async (
   pageSize: number = 50, 
   status?: string
 ): Promise<PaginatedResult<Client>> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
+  const orgId = await getUserOrgId();
 
   const offset = (page - 1) * pageSize;
   
   let query = supabase
     .from('clients')
     .select('*', { count: 'exact' })
-    .eq('organization_id', user.id)
+    .eq('organization_id', orgId)
     .order('created_at', { ascending: false });
 
   if (searchTerm) {

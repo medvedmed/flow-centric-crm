@@ -118,6 +118,7 @@ export type Database = {
           client_id: string | null
           color: string | null
           created_at: string | null
+          date: string | null
           duration: number
           end_time: string
           id: string
@@ -133,6 +134,7 @@ export type Database = {
           client_id?: string | null
           color?: string | null
           created_at?: string | null
+          date?: string | null
           duration: number
           end_time: string
           id?: string
@@ -148,6 +150,7 @@ export type Database = {
           client_id?: string | null
           color?: string | null
           created_at?: string | null
+          date?: string | null
           duration?: number
           end_time?: string
           id?: string
@@ -159,36 +162,7 @@ export type Database = {
           status?: string | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "appointments_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_service_id_fkey"
-            columns: ["service_id"]
-            isOneToOne: false
-            referencedRelation: "services"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_staff_id_fkey"
-            columns: ["staff_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       audit_logs: {
         Row: {
@@ -434,15 +408,7 @@ export type Database = {
           total_visits?: number | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "clients_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       finance_accounts: {
         Row: {
@@ -1114,6 +1080,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           organization_id: string | null
+          popular: boolean
           price: number
           updated_at: string | null
         }
@@ -1127,6 +1094,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           organization_id?: string | null
+          popular?: boolean
           price: number
           updated_at?: string | null
         }
@@ -1140,6 +1108,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           organization_id?: string | null
+          popular?: boolean
           price?: number
           updated_at?: string | null
         }

@@ -15,12 +15,7 @@ export const useClientCategorizationData = () => {
       
       const { data, error } = await supabase
         .from('appointments')
-        .select(`
-          staff_id,
-          client_id,
-          start_time,
-          clients!appointments_client_id_fkey(full_name)
-        `)
+        .select('staff_id, client_id, start_time')
         .eq('organization_id', user?.id)
         .eq('status', 'Completed')
         .gte('start_time', thirtyDaysAgo.toISOString())
@@ -28,12 +23,17 @@ export const useClientCategorizationData = () => {
 
       if (error) throw error;
 
-      // Get staff names
+      // Get client and staff names
+      const clientIds = [...new Set((data || []).map(item => item.client_id).filter(Boolean))];
       const staffIds = [...new Set((data || []).map(item => item.staff_id).filter(Boolean))];
-      const { data: staffData } = await supabase
-        .from('staff')
-        .select('id, name')
-        .in('id', staffIds);
+      
+      const [clientsRes, staffRes] = await Promise.all([
+        clientIds.length > 0 ? supabase.from('clients').select('id, full_name').in('id', clientIds) : { data: [] },
+        staffIds.length > 0 ? supabase.from('staff').select('id, name').in('id', staffIds) : { data: [] }
+      ]);
+
+      const clientsMap = new Map((clientsRes.data || []).map(c => [c.id, c.full_name]));
+      const staffData = staffRes.data || [];
 
       // Categorize clients by staff
       const staffClientMap = new Map();
@@ -41,7 +41,7 @@ export const useClientCategorizationData = () => {
       (data || []).forEach(appointment => {
         const staffId = appointment.staff_id;
         const clientId = appointment.client_id;
-        const clientName = appointment.clients?.full_name || 'Unknown';
+        const clientName = clientId ? clientsMap.get(clientId) || 'Unknown' : 'Unknown';
         const staffName = staffData?.find(s => s.id === staffId)?.name || 'Unknown';
         const appointmentDate = appointment.start_time?.split('T')[0];
         

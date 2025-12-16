@@ -74,38 +74,48 @@ export const realTimeScheduleApi = {
     // Check existing appointments
     const { data: appointments, error: appointmentsError } = await supabase
       .from('appointments')
-      .select(`
-        *,
-        clients(full_name, phone),
-        services:service_id(name, price)
-      `)
+      .select('*')
       .eq('staff_id', staffId)
       .gte('start_time', `${date}T00:00:00`)
       .lte('start_time', `${date}T23:59:59`)
       .neq('status', 'Cancelled');
 
     if (!appointmentsError && appointments) {
+      // Get related data
+      const clientIds = [...new Set(appointments.map(a => a.client_id).filter(Boolean))];
+      const serviceIds = [...new Set(appointments.map(a => a.service_id).filter(Boolean))];
+      
+      const [clientsRes, servicesRes] = await Promise.all([
+        clientIds.length > 0 ? supabase.from('clients').select('id, full_name, phone').in('id', clientIds) : { data: [] },
+        serviceIds.length > 0 ? supabase.from('services').select('id, name, price').in('id', serviceIds) : { data: [] }
+      ]);
+      
+      const clientsMap = new Map((clientsRes.data || []).map(c => [c.id, c]));
+      const servicesMap = new Map((servicesRes.data || []).map(s => [s.id, s]));
+
       for (const appointment of appointments) {
         const aptStartTime = appointment.start_time?.split('T')[1]?.slice(0, 5) || appointment.start_time;
         const aptEndTime = appointment.end_time?.split('T')[1]?.slice(0, 5) || appointment.end_time;
+        const client = appointment.client_id ? clientsMap.get(appointment.client_id) : null;
+        const service = appointment.service_id ? servicesMap.get(appointment.service_id) : null;
         
         if ((startTime >= aptStartTime && startTime < aptEndTime) ||
             (endTime > aptStartTime && endTime <= aptEndTime) ||
             (startTime < aptStartTime && endTime > aptEndTime)) {
           conflicts.push({
             type: 'overlap',
-            message: `Conflicts with existing appointment: ${appointment.clients?.full_name || 'Client'} (${aptStartTime} - ${aptEndTime})`,
+            message: `Conflicts with existing appointment: ${client?.full_name || 'Client'} (${aptStartTime} - ${aptEndTime})`,
             conflictingAppointment: {
               id: appointment.id,
               clientId: appointment.client_id,
               staffId: appointment.staff_id,
-              clientName: appointment.clients?.full_name || '',
-              clientPhone: appointment.clients?.phone || '',
-              service: (appointment.services as any)?.name || '',
+              clientName: client?.full_name || '',
+              clientPhone: client?.phone || '',
+              service: service?.name || '',
               startTime: appointment.start_time,
               endTime: appointment.end_time,
               date: appointment.start_time?.split('T')[0] || '',
-              price: (appointment.services as any)?.price || 0,
+              price: service?.price || 0,
               duration: appointment.duration,
               status: appointment.status as Appointment['status'],
               notes: appointment.notes,
